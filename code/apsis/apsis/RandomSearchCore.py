@@ -96,11 +96,11 @@ class RandomSearchCore(OptimizationCoreInterface):
         #or we need to generate new ones
         else:
             new_candidate_point = self.generate_new_random_vec()
-
-            while (new_candidate_point in self.finished_candidates) or (new_candidate_point in self.working_candidates) or (new_candidate_point in self.pending_candidates):
-                new_candidate_point = self.generate_new_random_vec()
-
             new_candidate = Candidate(new_candidate_point)
+
+            while (new_candidate in self.finished_candidates) or (new_candidate in self.working_candidates) or (new_candidate in self.pending_candidates):
+                new_candidate_point = self.generate_new_random_vec()
+                new_candidate = Candidate(new_candidate_point)
 
             logging.debug("Core generated new point to evaluate " + new_candidate)
 
