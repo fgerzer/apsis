@@ -93,7 +93,7 @@ class RandomSearchCore(OptimizationCoreInterface):
         if len(self.pending_candidates) > 0:
             new_candidate = self.pending_candidates.pop(0)
 
-            logging.debug("Core providing pending candidate " + new_candidate)
+            logging.debug("Core providing pending candidate " + str(new_candidate))
 
         #or we need to generate new ones
         else:
