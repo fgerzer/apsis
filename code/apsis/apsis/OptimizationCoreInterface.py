@@ -8,15 +8,12 @@ class OptimizationCoreInterface:
     minimization = True
 
     @abstractmethod
-    def __init__(self, params_lower_bound, params_upper_bound, minimization_problem=True):
+    def __init__(self, params):
         """
         Init method to initialize optimization core.
 
-        :param params_lower_bound: Lower bound of optimization search space. Expected is a numpy vector of floats,
-        one per dimension of the parameter space.
-        :param params_upper_bound: Upper bound of optimization search space. Expected is a numpy vector of floats,
-        one per dimension of the parameter space.
-        :param minimization_problem: When true it will care for minimization and if false maximization.
+        :param params: A dictionary of parameters for the optimizer. Should contain at least upper and lower bound.
+        For more arguments (which may be required by the individual optimizers) see their documentation.
         :return: this object.
         """
         pass

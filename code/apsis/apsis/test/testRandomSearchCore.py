@@ -3,6 +3,7 @@ import numpy as np
 import logging
 import math
 import time
+import nose.tools
 
 # noinspection PyPep8Naming,PyPep8Naming
 class testRandomSearchCore():
@@ -26,12 +27,34 @@ class testRandomSearchCore():
         assert isinstance(continuing, bool)
         logging.info(__name__ + " results in " + str(continuing))
 
-    def test_convergence(self):
+    def test_convergence_multiple_workers(self):
         f = math.sin
+        cands = []
+        best_result = None
         for i in range(100):
             cand = self.random_search_core.next_candidate()
             point = cand.params
             value = f(point)
+            if (best_result is None or value < best_result):
+                best_result = value
+            cand.result = value
+            cands.append(cand)
+        for i in range(100):
+            assert self.random_search_core.working(cands[i], "finished") == False
+        nose.tools.eq_(self.random_search_core.best_candidate.result, best_result,
+                       str(self.random_search_core.best_candidate.result) + " != " + str(best_result))
+
+    def test_convergence_one_worker(self):
+        f = math.sin
+        best_result = None
+        for i in range(100):
+            cand = self.random_search_core.next_candidate()
+            point = cand.params
+            value = f(point)
+            if (best_result is None or value < best_result):
+                best_result = value
+
             cand.result = value
             assert self.random_search_core.working(cand, "finished") == False
-        print(self.random_search_core.best_candidate.result)
+        nose.tools.eq_(self.random_search_core.best_candidate.result, best_result,
+                       str(self.random_search_core.best_candidate.result) + " != " + str(best_result))
