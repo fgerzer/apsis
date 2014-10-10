@@ -1,8 +1,8 @@
 from apsis.RandomSearchCore import RandomSearchCore
 import numpy as np
 
-from nose import with_setup
 
+# noinspection PyPep8Naming,PyPep8Naming
 class testRandomSearchCore():
     random_search_core = None
 
@@ -11,7 +11,6 @@ class testRandomSearchCore():
         upper_bound = np.ones((3, 1))
         self.random_search_core = RandomSearchCore(lower_bound, upper_bound)
         print("Random init")
-
 
     def test_initialization(self):
         assert self.random_search_core is not None

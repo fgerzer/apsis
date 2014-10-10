@@ -4,12 +4,12 @@ from apsis.Candidate import Candidate
 import numpy as np
 import random
 
+
+# noinspection PyPep8Naming,PyPep8Naming
 class testCandidate():
 
     test_point = None
     test_candidate = None
-
-
 
     def setUp(self):
         self.test_point = np.ones((3, 1))

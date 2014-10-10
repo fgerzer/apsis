@@ -26,7 +26,6 @@ class OptimizationCoreInterface:
         """
         pass
 
-
     @abstractmethod
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
         """

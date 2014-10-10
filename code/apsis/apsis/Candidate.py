@@ -42,7 +42,6 @@ class Candidate:
             worker_information = {}
         self.worker_information = worker_information
 
-
     def __eq__(self, other):
         """
         Compares two Candidates.
