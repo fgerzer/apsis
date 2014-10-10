@@ -29,6 +29,8 @@ class RandomSearchCore(OptimizationCoreInterface):
 
     #TODO deal with the case that candidate point is the same but objects do not equal
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
+        logging.debug("Worker " + worker_id + " informed me about work in status " + status + "on canidate " + candidate)
+
         #first check if this point is known
         if candidate not in self.working_candidates:
             #work on a finished candidate is discarded and should abort
@@ -37,6 +39,8 @@ class RandomSearchCore(OptimizationCoreInterface):
             #if work is carried out on candidate and it was pending it is no longer pending
             elif candidate in self.pending_candidates:
                 self.pending_candidate.remove(candidate)
+
+            logging.debug("Candidate was UNKNOWN and not FINISHED " + candidate + " Candidate added to WORKING list.")
 
             #but now it is a working item
             self.working_candidates.append(candidate)
@@ -49,6 +53,7 @@ class RandomSearchCore(OptimizationCoreInterface):
             #check for the new best result
             if self.best_candidate is not None:
                 if self.is_better_candidate_as(candidate, self.best_candidate):
+                    logging.info("Cool - found new best candidate " + candidate)
                     self.best_candidate = candidate
 
             else:
@@ -86,6 +91,8 @@ class RandomSearchCore(OptimizationCoreInterface):
         if len(self.pending_candidates) > 0:
             new_candidate = self.pending_candidates.pop(0)
 
+            logging.debug("Core providing pending candidate " + new_candidate)
+
         #or we need to generate new ones
         else:
             new_candidate_point = self.generate_new_random_vec()
@@ -95,6 +102,9 @@ class RandomSearchCore(OptimizationCoreInterface):
 
             new_candidate = Candidate(new_candidate_point)
 
+            logging.debug("Core generated new point to evaluate " + new_candidate)
+
+        #add candidate to working list
         self.working_candidates.append(new_candidate)
 
         return new_candidate
