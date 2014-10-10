@@ -14,7 +14,9 @@ class Candidate:
 
     def __init__(self, params, params_used=None, result=None, valid=True, worker_information=None):
         """
-        Initializes the candidate object. It requires only the used parameter vector, the rest are optional information.
+        Initializes the candidate object.
+
+        It requires only the used parameter vector, the rest are optional information.
         :param params: A numpy vector (of floats) of parameter values representing this candidate's parameters used.
         :param params_used: An (optional) vector of boolean values specifying whether a certain parameter from params
         is used. Use this function for example when describing a neural network where information about the third
@@ -39,3 +41,18 @@ class Candidate:
         if worker_information is None:
             worker_information = {}
         self.worker_information = worker_information
+
+
+    def __eq__(self, other):
+        """
+        Compares two Candidates.
+
+        Candidates are defined as being equal iff their params vectors are equal.
+        :param other: The other Candidate.
+        :return: True iff the Candidates are equal.
+        """
+        if not isinstance(other, Candidate):
+            return False
+        if (self.params == other.params).all():
+            return True
+        return False
