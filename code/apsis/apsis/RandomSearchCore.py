@@ -19,13 +19,15 @@ class RandomSearchCore(OptimizationCoreInterface):
     best_candidate = None
 
 
-    def __init__(self, lower_bound, upper_bound, minimization_problem=True, random_state=0):
-        print("Initializing Random Search Core for bounds..." + str(lower_bound) + " and " + str(upper_bound))
+    def __init__(self, params):
 
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
-        self.random_state = check_random_state(random_state)
-        self.minimization = minimization_problem
+        self.lower_bound = params["lower_bound"]
+        self.upper_bound = params["upper_bound"]
+        logging.debug("Initializing Random Search Core for bounds..." + str(self.lower_bound) +
+                      " and " + str(self.upper_bound))
+
+        self.random_state = check_random_state(params["random_state"])
+        self.minimization = params["minimization_problem"]
 
     #TODO deal with the case that candidate point is the same but objects do not equal
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
