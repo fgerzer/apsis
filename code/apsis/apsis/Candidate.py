@@ -55,3 +55,9 @@ class Candidate:
         if (self.params == other.params).all():
             return True
         return False
+
+    def __str__(self):
+        string = ""
+        string += str(self.params) + "; "
+        string += str(self.result)
+        return string
