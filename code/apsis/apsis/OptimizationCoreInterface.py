@@ -6,7 +6,7 @@ class OptimizationCoreInterface:
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def __init__(self, params_lower_bound, params_upper_bound):
+    def __init__(self, lower_bound, upper_bound):
         """
         Init method to initialize optimization core.
         :param params_lower_bound: Lower bound of optimization search space. Expected is a numpy vector of floats,
@@ -15,6 +15,7 @@ class OptimizationCoreInterface:
         one per dimension of the parameter space.
         :return: this object.
         """
+        pass
 
     @abstractmethod
     def next_candidate(self, worker_id=None):
