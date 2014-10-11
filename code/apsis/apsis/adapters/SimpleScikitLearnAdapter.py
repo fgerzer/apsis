@@ -1,9 +1,7 @@
-from apsis import OptimizationCoreInterface, RandomSearchCore
-from apsis.OptimizationCoreInterface import OptimizationCoreInterface
-from apsis.Candidate import Candidate
 from apsis.helpers import adapter_helpers
 import numpy as np
 from sklearn.cross_validation import train_test_split
+
 
 class SimpleScikitLearnAdapter:
     """
@@ -26,7 +24,8 @@ class SimpleScikitLearnAdapter:
     best_params = None
     best_result = None
 
-    def __init__(self, estimator, n_iter=10, scoring=None, fit_params=None, metric=None, n_jobs=1, refit=True, cv=None, random_state=None, optimizer="RandomSearchCore", optimizer_arguments=None):
+    def __init__(self, estimator, n_iter=10, scoring=None, fit_params=None, metric=None, n_jobs=1,
+                 refit=True, cv=None, random_state=None, optimizer="RandomSearchCore", optimizer_arguments=None):
         self.estimator = estimator
         self.n_iter = n_iter
         self.scoring = scoring
@@ -60,7 +59,6 @@ class SimpleScikitLearnAdapter:
 
         return return_vector
 
-
     def translate_vector_dict(self, optimizer_params):
         """
         Translate back from the vector of hyperparams to the dictionary of hyperparams as used in scikit learn.
@@ -80,7 +78,7 @@ class SimpleScikitLearnAdapter:
 
         return return_dict
 
-
+    # noinspection PyPep8Naming
     def fit(self, X, y=None):
         """
         Method to run the optimizer bound to this adapter. Will optimize
@@ -107,6 +105,7 @@ class SimpleScikitLearnAdapter:
 
             #TODO use CV
             #make a training/test split for later evaluation
+            # noinspection PyPep8Naming
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
 
             self.estimator.fit(X_train, y_train)
@@ -132,7 +131,6 @@ class SimpleScikitLearnAdapter:
 
         else:
             return self.estimator
-
 
     def get_params(self):
         return self.best_params

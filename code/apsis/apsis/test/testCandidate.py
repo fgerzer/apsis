@@ -20,4 +20,4 @@ class testCandidate():
     def test_initialization(self):
         assert self.test_candidate is not None
         assert isinstance(self.test_candidate, Candidate)
-        assert (self.test_candidate.params == self.test_point).all
+        assert (self.test_candidate.params == self.test_point).all()

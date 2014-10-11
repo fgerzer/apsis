@@ -18,7 +18,7 @@ class RandomSearchCore(OptimizationCoreInterface):
 
     best_candidate = None
 
-
+    #TODO insert check for parameters, use defaults otherwise.
     def __init__(self, params):
 
         self.lower_bound = params["lower_bound"]
@@ -31,18 +31,20 @@ class RandomSearchCore(OptimizationCoreInterface):
 
     #TODO deal with the case that candidate point is the same but objects do not equal
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
-        logging.debug("Worker " + str(worker_id) + " informed me about work in status " + str(status) + "on candidate " + str(candidate))
+        logging.debug("Worker " + str(worker_id) + " informed me about work in status " + str(status)
+                      + "on candidate " + str(candidate))
 
         #first check if this point is known
         if candidate not in self.working_candidates:
             #work on a finished candidate is discarded and should abort
-            if candidate in self.finished_candates:
+            if candidate in self.finished_candidates:
                 return False
             #if work is carried out on candidate and it was pending it is no longer pending
             elif candidate in self.pending_candidates:
-                self.pending_candidate.remove(candidate)
+                self.pending_candidates.remove(candidate)
 
-            logging.debug("Candidate was UNKNOWN and not FINISHED " + str(candidate) + " Candidate added to WORKING list.")
+            logging.debug("Candidate was UNKNOWN and not FINISHED " + str(candidate)
+                          + " Candidate added to WORKING list.")
 
             #but now it is a working item
             self.working_candidates.append(candidate)
@@ -100,7 +102,8 @@ class RandomSearchCore(OptimizationCoreInterface):
             new_candidate_point = self.generate_new_random_vec()
             new_candidate = Candidate(new_candidate_point)
 
-            while (new_candidate in self.finished_candidates) or (new_candidate in self.working_candidates) or (new_candidate in self.pending_candidates):
+            while ((new_candidate in self.finished_candidates) or (new_candidate in self.working_candidates)
+                    or (new_candidate in self.pending_candidates)):
                 new_candidate_point = self.generate_new_random_vec()
                 new_candidate = Candidate(new_candidate_point)
 
