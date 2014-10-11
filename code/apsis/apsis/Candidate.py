@@ -4,6 +4,13 @@ import numpy as np
 
 
 class Candidate:
+    """
+    Represents a candidate, that is a set of parameters which we are to check plus metadata.
+
+    This class is used for optimizer-worker communications, and intra-optimizer storage. It stores the parameters,
+    the result, cost and validity of the value and possesses a field for worker-relevant data.
+    """
+
 
     params = None
     params_used = None
@@ -57,7 +64,12 @@ class Candidate:
         return False
 
     def __str__(self):
-        string = ""
-        string += str(self.params) + "; "
-        string += str(self.result)
+        """
+        Stringifies the object. Currently only prints the parameters and the result value.
+
+        :return:
+        """
+        string = "\n"
+        string += "params: " + str(self.params) + "\n"
+        string += "result: " + str(self.result) + "\n"
         return string
