@@ -16,9 +16,9 @@ class RandomSearchCore(OptimizationCoreInterface):
     upper_bound = None
     random_state = None
 
-    finished_candidates = []
-    working_candidates = []
-    pending_candidates = []
+    finished_candidates = None
+    working_candidates = None
+    pending_candidates = None
 
     best_candidate = None
 
@@ -53,6 +53,11 @@ class RandomSearchCore(OptimizationCoreInterface):
                       " and " + str(self.upper_bound))
         self.random_state = check_random_state(params.get("random_state", None))
         self.minimization = params.get("minimization_problem", True)
+
+        self.finished_candidates = []
+        self.working_candidates = []
+        self.pending_candidates = []
+
         super().__init__(params)
 
     #TODO deal with the case that candidate point is the same but objects do not equal
