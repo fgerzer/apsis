@@ -8,6 +8,9 @@ import logging
 
 
 class RandomSearchCore(OptimizationCoreInterface):
+    """
+    Implements a random searcher for parameter optimization.
+    """
     lower_bound = None
     upper_bound = None
     random_state = None
@@ -20,17 +23,35 @@ class RandomSearchCore(OptimizationCoreInterface):
 
     #TODO insert check for parameters, use defaults otherwise.
     def __init__(self, params):
+        """
+        Initializes the random search.
 
+        :param params: The parameters with which the random search should be executed. Currently requires four:
+            lower_bound: A numpy float vector, representing the lower bound for each attribute.
+            upper_bound: A numpy float vector, representing the upper bound for each attribute. Has to be the same
+             dimension as lower_bound. This is currently not tested (see issue #3).
+            random_state: A numpy random state.
+            minimization_problem: Whether the problem is a minimization one (True) or a maximization one (False).
+        """
         self.lower_bound = params["lower_bound"]
         self.upper_bound = params["upper_bound"]
         logging.debug("Initializing Random Search Core for bounds..." + str(self.lower_bound) +
                       " and " + str(self.upper_bound))
-
         self.random_state = check_random_state(params["random_state"])
         self.minimization = params["minimization_problem"]
+        super().__init__(params)
 
     #TODO deal with the case that candidate point is the same but objects do not equal
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
+        """
+        Right now, RandomSearchCore works like this:
+        It ensures candidate is in the working_candidates list. If it is in the finished_candidates list,
+         the worker is told to terminate execution.
+        If the status is 'working', the worker may continue.
+        If the status is 'pausing', candidate is returned to the pending_candidates list.
+        If the status is 'finished', candidate is appended to the finished_candidates list, and possibly the best
+         result updated. Of course, the worker is then told to stop.
+        """
         logging.debug("Worker " + str(worker_id) + " informed me about work in status " + str(status)
                       + "on candidate " + str(candidate))
 
@@ -84,9 +105,9 @@ class RandomSearchCore(OptimizationCoreInterface):
         This method is invoked by workers to obtain next candidate points that need to be evaluated.
 
         The new Candidate object is return following these rules:
-        If pending candidates are there, they are returned first. Otherwise a new random candidate is generated at
-        uniform. It is made sure that this point has not been marked as finished yet. On return of a new candidate
-        it is appended to the pending_candidates list in this core.
+        If there are pending candidates, they are returned first. Otherwise a new random candidate is generated
+        from a uniform distribution. It is made sure that this point has not been marked as finished yet.
+        On return of a new candidate it is appended to the working_candidates list in this core.
 
         :param worker_id: not used here, but needed to satisfy interface of OptimizationCoreInterface.
         :return: an instance of a Candidate object that should be evaluated next.
@@ -99,12 +120,12 @@ class RandomSearchCore(OptimizationCoreInterface):
 
         #or we need to generate new ones
         else:
-            new_candidate_point = self.generate_new_random_vec()
+            new_candidate_point = self._generate_new_random_vector()
             new_candidate = Candidate(new_candidate_point)
 
             while ((new_candidate in self.finished_candidates) or (new_candidate in self.working_candidates)
                     or (new_candidate in self.pending_candidates)):
-                new_candidate_point = self.generate_new_random_vec()
+                new_candidate_point = self._generate_new_random_vector()
                 new_candidate = Candidate(new_candidate_point)
 
             logging.debug("Core generated new point to evaluate " + str(new_candidate))
@@ -114,7 +135,10 @@ class RandomSearchCore(OptimizationCoreInterface):
 
         return new_candidate
 
-    def generate_new_random_vec(self):
+    def _generate_new_random_vector(self):
+        """
+        Generates a new random vector fitting the self.lower_bound and self.upper_bound specifications.
+        """
         new_candidate_point = np.zeros(self.lower_bound.shape)
 
         for i in range(new_candidate_point.shape[0]):
