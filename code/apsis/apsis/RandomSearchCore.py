@@ -58,7 +58,7 @@ class RandomSearchCore(OptimizationCoreInterface):
         self.working_candidates = []
         self.pending_candidates = []
 
-        super().__init__(params)
+        super(RandomSearchCore, self).__init__(params)
 
     #TODO deal with the case that candidate point is the same but objects do not equal
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
