@@ -1,4 +1,4 @@
-from apsis.helpers import adapter_helpers
+from apsis.utilities import adapter_helpers
 import numpy as np
 from sklearn.cross_validation import train_test_split
 

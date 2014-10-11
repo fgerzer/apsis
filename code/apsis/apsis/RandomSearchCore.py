@@ -5,6 +5,7 @@ from apsis.Candidate import Candidate
 from sklearn.utils import check_random_state
 import numpy as np
 import logging
+from apsis.utilities.validation import check_array, check_array_dimensions_equal
 
 
 class RandomSearchCore(OptimizationCoreInterface):
@@ -21,7 +22,6 @@ class RandomSearchCore(OptimizationCoreInterface):
 
     best_candidate = None
 
-    #TODO insert check for parameters, use defaults otherwise.
     def __init__(self, params):
         """
         Initializes the random search.
@@ -29,16 +29,30 @@ class RandomSearchCore(OptimizationCoreInterface):
         :param params: The parameters with which the random search should be executed. Currently requires four:
             lower_bound: A numpy float vector, representing the lower bound for each attribute.
             upper_bound: A numpy float vector, representing the upper bound for each attribute. Has to be the same
-             dimension as lower_bound. This is currently not tested (see issue #3).
-            random_state: A numpy random state.
+             dimension as lower_bound.
+            random_state: A numpy random state. Defaults to None, in which case a new one is generated.
             minimization_problem: Whether the problem is a minimization one (True) or a maximization one (False).
+             Defaults to True.
+        :raise ValueError: If params does not contain lower_bound or upper_bound, or attributes are assigned bad values.
         """
-        self.lower_bound = params["lower_bound"]
-        self.upper_bound = params["upper_bound"]
+        if not "lower_bound" in params:
+            raise ValueError("No lower_bound in params dictionary.")
+        if not "upper_bound" in params:
+            raise ValueError("No lower_bound in params dictionary.")
+        self.lower_bound = check_array(params["lower_bound"])
+        self.upper_bound = check_array(params["upper_bound"])
+
+        if not check_array_dimensions_equal(self.lower_bound, self.upper_bound):
+            raise ValueError("Arrays are not the same dimension: " + str(self.lower_bound) + " and "
+                             + str(self.upper_bound))
+        if not (self.lower_bound < self.upper_bound).all():
+            raise ValueError("Some elements of lower_bound are bigger or equal than some elements of upper_bound. "
+                             "lower_bound: " + str(self.lower_bound) + ", upper_bound: " + str(self.upper_bound))
+
         logging.debug("Initializing Random Search Core for bounds..." + str(self.lower_bound) +
                       " and " + str(self.upper_bound))
-        self.random_state = check_random_state(params["random_state"])
-        self.minimization = params["minimization_problem"]
+        self.random_state = check_random_state(params.get("random_state", None))
+        self.minimization = params.get("minimization_problem", True)
         super().__init__(params)
 
     #TODO deal with the case that candidate point is the same but objects do not equal
