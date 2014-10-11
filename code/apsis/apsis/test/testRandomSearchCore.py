@@ -46,7 +46,6 @@ class testRandomSearchCore():
         lower_bound[0, 3] = 1
         RandomSearchCore({"upper_bound": upper_bound})
 
-
     def test_next_candidate(self):
         next_candidate = self.random_search_core.next_candidate()
         assert next_candidate is not None
@@ -73,7 +72,7 @@ class testRandomSearchCore():
         for i in range(100):
             assert not self.random_search_core.working(cands[i], "finished")
         nt.eq_(self.random_search_core.best_candidate.result, best_result,
-                       str(self.random_search_core.best_candidate.result) + " != " + str(best_result))
+               str(self.random_search_core.best_candidate.result) + " != " + str(best_result))
 
     def test_convergence_one_worker(self):
         self.random_search_core = RandomSearchCore({"lower_bound": [0], "upper_bound": [1]})
