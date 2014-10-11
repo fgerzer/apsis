@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from abc import ABCMeta, abstractmethod
-from apsis import Candidate
+from apsis.Candidate     import Candidate
 
 class OptimizationCoreInterface:
     """
