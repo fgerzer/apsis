@@ -1,8 +1,11 @@
 #!/usr/bin/python
 from abc import ABCMeta, abstractmethod
-
+from apsis import Candidate
 
 class OptimizationCoreInterface:
+    """
+    The interface definition all optimizers have to fulfill.
+    """
     __metaclass__ = ABCMeta
 
     minimization = True
@@ -31,7 +34,12 @@ class OptimizationCoreInterface:
     @abstractmethod
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
         """
-        Method that is used by used by workers to
+        Method that is used by used by workers to announce their currently executed points.
+
+        The working method is the main reply method for workers. It is used to announce to the optimizer that they
+         are working on a point; to return points and to announce that they are paused. It also allows for an optimizer
+         to kill workers.
+        Later, workers may be required by a core to regularly send a working message.
 
         :param candidate: an object of type Candidate that contains information related to the point the worker is
         currently evaluating
@@ -46,6 +54,20 @@ class OptimizationCoreInterface:
         pass
 
     def is_better_candidate_as(self, one, two):
+        """
+        Tests whether one is a better Candidate than two.
+
+        This is dependant on whether the problem is one of minimization or maximization.
+        It is done by comparing their results.
+        :param one: Candidate that should be better.
+        :param two: Candidate that acts as a baseline.
+        :return: True iff one is better than two.
+        """
+        if not isinstance(one, Candidate):
+            raise ValueError("Value is not a candidate " + str(one) + " but a " + str(type(one)))
+        if not isinstance(two, Candidate):
+            raise ValueError("Value is not a candidate " + str(two) + " but a " + str(type(two)))
+
         if self.minimization:
             return one.result < two.result
         else:
