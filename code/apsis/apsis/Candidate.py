@@ -5,12 +5,14 @@ import numpy as np
 
 class Candidate:
     """
-    Represents a candidate, that is a set of parameters which we are to check plus metadata.
+    Represents a candidate, that is a set of parameters which we are to check
+    plus metadata.
 
-    This class is used for optimizer-worker communications, and intra-optimizer storage. It stores the parameters,
-    the result, cost and validity of the value and possesses a field for worker-relevant data.
+    This class is used for optimizer-worker communications, and intra-optimizer
+     storage. It stores the parameters,
+    the result, cost and validity of the value and possesses a field for
+    worker-relevant data.
     """
-
 
     params = None
     params_used = None
@@ -19,20 +21,29 @@ class Candidate:
     valid = None
     worker_information = None
 
-    def __init__(self, params, params_used=None, result=None, valid=True, worker_information=None):
+    def __init__(self, params, params_used=None, result=None, valid=True,
+                 worker_information=None):
         """
         Initializes the candidate object.
 
-        It requires only the used parameter vector, the rest are optional information.
-        :param params: A numpy vector (of floats) of parameter values representing this candidate's parameters used.
-        :param params_used: An (optional) vector of boolean values specifying whether a certain parameter from params
-        is used. Use this function for example when describing a neural network where information about the third
-        hidden layer is irrelevant when having less than three layers used.
-        :param result: The currently achieved result for this candidate. May be None in the beginning.
+        It requires only the used parameter vector, the rest are optional
+        information.
+        :param params: A numpy vector (of floats) of parameter values
+        representing this candidate's parameters used.
+        :param params_used: An (optional) vector of boolean values specifying
+        whether a certain parameter from params
+        is used. Use this function for example when describing a neural network
+        where information about the third hidden layer is irrelevant when
+        having less than three layers used.
+        :param result: The currently achieved result for this candidate. May
+        be None in the beginning.
         :param valid: Whether the candidate's result is valid.
-        This may be False if, for example, the function to optimize crashes at certain (unknown) values.
-        :param worker_information: A dictionary representing information for the workers. Keys should be strings.
-        Can be used to, for example, store file paths where information necessary for continuation is stored.
+        This may be False if, for example, the function to optimize crashes at
+        certain (unknown) values.
+        :param worker_information: A dictionary representing information for
+        the workers. Keys should be strings.
+        Can be used to, for example, store file paths where information
+        necessary for continuation is stored.
         """
         #TODO add parameter validity check.
         self.params = params
@@ -53,7 +64,8 @@ class Candidate:
         """
         Compares two Candidates.
 
-        Candidates are defined as being equal iff their params vectors are equal.
+        Candidates are defined as being equal iff their params vectors are
+        equal.
         :param other: The other Candidate.
         :return: True iff the Candidates are equal.
         """
@@ -65,7 +77,8 @@ class Candidate:
 
     def __str__(self):
         """
-        Stringifies the object. Currently only prints the parameters and the result value.
+        Stringifies the object. Currently only prints the parameters and the
+        result value.
 
         :return:
         """

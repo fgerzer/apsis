@@ -25,7 +25,8 @@ class testRandomSearchCore():
         upper_bound = np.ones((1, 2))
 
         assert self.random_search_core is not None
-        RandomSearchCore({"lower_bound": lower_bound, "upper_bound": upper_bound})
+        RandomSearchCore({"lower_bound": lower_bound,
+                          "upper_bound": upper_bound})
         RandomSearchCore({"lower_bound": [0, 0], "upper_bound": upper_bound})
         RandomSearchCore({"lower_bound": lower_bound, "upper_bound": [1, 1]})
 
@@ -52,12 +53,14 @@ class testRandomSearchCore():
 
     def test_working(self):
         candidate = self.random_search_core.next_candidate()
-        continuing = self.random_search_core.working(candidate, status="finished")
+        continuing = self.random_search_core.working(candidate,
+                                                     status="finished")
         assert isinstance(continuing, bool)
         logging.info(__name__ + " results in " + str(continuing))
 
     def test_convergence_multiple_workers(self):
-        self.random_search_core = RandomSearchCore({"lower_bound": [0], "upper_bound": [1]})
+        self.random_search_core = RandomSearchCore({"lower_bound": [0],
+                                                    "upper_bound": [1]})
         f = math.sin
         cands = []
         best_result = None
@@ -72,10 +75,12 @@ class testRandomSearchCore():
         for i in range(100):
             assert not self.random_search_core.working(cands[i], "finished")
         nt.eq_(self.random_search_core.best_candidate.result, best_result,
-               str(self.random_search_core.best_candidate.result) + " != " + str(best_result))
+               str(self.random_search_core.best_candidate.result) + " != "
+               + str(best_result))
 
     def test_convergence_one_worker(self):
-        self.random_search_core = RandomSearchCore({"lower_bound": [0], "upper_bound": [1]})
+        self.random_search_core = RandomSearchCore({"lower_bound": [0],
+                                                    "upper_bound": [1]})
         f = math.sin
         best_result = None
         for i in range(100):
@@ -88,4 +93,5 @@ class testRandomSearchCore():
             cand.result = value
             assert not self.random_search_core.working(cand, "finished")
         nt.eq_(self.random_search_core.best_candidate.result, best_result,
-                       str(self.random_search_core.best_candidate.result) + " != " + str(best_result))
+                       str(self.random_search_core.best_candidate.result)
+                       + " != " + str(best_result))
