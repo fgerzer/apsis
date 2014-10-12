@@ -1,4 +1,4 @@
-from apsis.utilities import adapter_helpers
+from apsis.utilities import adapter_utils
 import numpy as np
 from sklearn.cross_validation import train_test_split
 
@@ -96,7 +96,7 @@ class SimpleScikitLearnAdapter:
         when refit=True
         """
         #use helper to find optimizer class and instantiate
-        self.optimizer = adapter_helpers.check_optimizer(self.optimizer)(
+        self.optimizer = adapter_utils.check_optimizer(self.optimizer)(
             self.optimizer_arguments)
 
         #now run the optimization for n_iter number of iterations
