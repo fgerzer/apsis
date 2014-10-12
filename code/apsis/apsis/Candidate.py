@@ -3,7 +3,7 @@ __author__ = 'Frederik Diehl'
 import numpy as np
 
 
-class Candidate:
+class Candidate(object):
     """
     Represents a candidate, that is a set of parameters which we are to check
     plus metadata.

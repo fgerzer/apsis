@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 from apsis.Candidate import Candidate
 
 
-class OptimizationCoreInterface:
+class OptimizationCoreInterface(object):
     """
     The interface definition all optimizers have to fulfill.
     """

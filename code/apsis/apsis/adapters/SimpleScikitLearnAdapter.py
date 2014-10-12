@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.cross_validation import train_test_split
 
 
-class SimpleScikitLearnAdapter:
+class SimpleScikitLearnAdapter(object):
     """
     Simple Scikit Learn adaptor to be executed in a single core manner.
     """

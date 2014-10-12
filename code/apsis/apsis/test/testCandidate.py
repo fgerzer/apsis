@@ -6,7 +6,7 @@ import random
 
 
 # noinspection PyPep8Naming,PyPep8Naming
-class testCandidate():
+class testCandidate(object):
 
     test_point = None
     test_candidate = None

@@ -6,7 +6,7 @@ import nose.tools as nt
 
 
 # noinspection PyPep8Naming,PyPep8Naming
-class testRandomSearchCore():
+class testRandomSearchCore(object):
     random_search_core = None
 
     def setUp(self):
