@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-class Param(object):
+class ParamDef(object):
     __metaclass__ = ABCMeta
 
     def __init__(self):
@@ -11,12 +11,12 @@ class Param(object):
         pass
 
 
-class NominalParam(Param):
+class NominalParamDef(ParamDef):
     def is_in_parameter_domain(self, value):
         return True
 
 
-class NumericParam(Param):
+class NumericParamDef(ParamDef):
     lower_bound = None
     upper_bound = None
 

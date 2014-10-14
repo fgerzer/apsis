@@ -9,7 +9,7 @@ from apsis.OptimizationCoreInterface import OptimizationCoreInterface
 from apsis.models import Candidate
 from apsis.utilities.validation import check_array, \
     check_array_dimensions_equal
-from apsis.models.ParamInformation import Param, NominalParam, NumericParam
+from apsis.models.ParamInformation import ParamDef, NominalParamDef, NumericParamDef
 
 
 class RandomSearchCore(OptimizationCoreInterface):
@@ -24,7 +24,7 @@ class RandomSearchCore(OptimizationCoreInterface):
 
     best_candidate = None
 
-    SUPPORTED_PARAM_TYPES = [NominalParam, NumericParam]
+    SUPPORTED_PARAM_TYPES = [NominalParamDef, NumericParamDef]
 
     def __init__(self, params):
         """
@@ -34,13 +34,19 @@ class RandomSearchCore(OptimizationCoreInterface):
         :raise ValueError: If params does not contain lower_bound or
         upper_bound, or attributes are assigned bad values.
         """
+        if params is None:
+            raise ValueError("No params dict given!")
 
-        if not self._is_all_supported_param_types(params):
+        if params.get('param_defs', None) is None:
+            raise ValueError("Parameter definition list is missing!")
+
+        #check if param_defs are supported
+        if not self._is_all_supported_param_types(params["params_defs"]):
             raise ValueError(
                 "Param list contains parameters of unsopported types. "
                 "Supported types are  " + str(self.SUPPORTED_PARAM_TYPES))
 
-        self.param_defs = params
+        self.param_defs = params["params_defs"]
 
         logging.debug("Initializing Random Search Core for bounds...")
 
@@ -177,12 +183,12 @@ class RandomSearchCore(OptimizationCoreInterface):
         for i in range(len(new_candidate_point)):
             param_information = self.param_defs[i]
 
-            if isinstance(param_information, NumericParam):
+            if isinstance(param_information, NumericParamDef):
                 new_candidate_point[i] = self.random_state.uniform(
                     param_information.lower_bound,
                     param_information.upper_bound)
 
-            elif isinstance(param_information, NominalParam):
+            elif isinstance(param_information, NominalParamDef):
                 pass
 
         return new_candidate_point
