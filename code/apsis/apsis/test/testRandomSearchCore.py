@@ -3,7 +3,7 @@ import numpy as np
 import logging
 import math
 import nose.tools as nt
-from apsis.models.ParamInformation import NumericParamDef
+from apsis.models.ParamInformation import NumericParamDef, NominalParamDef
 
 # noinspection PyPep8Naming,PyPep8Naming
 class testRandomSearchCore(object):
@@ -51,6 +51,14 @@ class testRandomSearchCore(object):
                                                      status="finished")
         assert isinstance(continuing, bool)
         logging.info(__name__ + " results in " + str(continuing))
+
+    def test_nominal(self):
+        nominal_list = ["one", "two", "three", "None"]
+        core = RandomSearchCore({"param_defs":
+                                     [NominalParamDef(
+                                         nominal_list)]})
+        for i in range(10):
+            assert core.next_candidate().params[0] in nominal_list
 
     def test_convergence_multiple_workers(self):
         self.random_search_core = RandomSearchCore({"param_defs":
