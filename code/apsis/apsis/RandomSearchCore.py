@@ -4,12 +4,14 @@ import logging
 
 from sklearn.utils import check_random_state
 import numpy as np
+import random
 
 from apsis.OptimizationCoreInterface import OptimizationCoreInterface
 from apsis.models.Candidate import Candidate
 from apsis.utilities.validation import check_array, \
     check_array_dimensions_equal
 from apsis.models.ParamInformation import ParamDef, NominalParamDef, NumericParamDef
+
 
 class RandomSearchCore(OptimizationCoreInterface):
     """
@@ -188,7 +190,8 @@ class RandomSearchCore(OptimizationCoreInterface):
                     param_information.upper_bound)
 
             elif isinstance(param_information, NominalParamDef):
-                pass
+                new_candidate_point[i] = random.choice(param_information.values)
+                
 
         return new_candidate_point
 
