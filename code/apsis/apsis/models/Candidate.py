@@ -86,3 +86,20 @@ class Candidate(object):
         string += "params: " + str(self.params) + "\n"
         string += "result: " + str(self.result) + "\n"
         return string
+
+    def __lt__(self, other):
+        """
+        Compares two Candidate instances.
+
+        Compares their result fields.
+        Parameters
+        ----------
+
+        other : Candidate
+            The Candidate with whom to compare.
+        """
+        if not isinstance(other, Candidate):
+            raise ValueError("Is not compared with a Candidate, but with " + str(other) + ".")
+        if self.result < other.result:
+            return True
+        return False
