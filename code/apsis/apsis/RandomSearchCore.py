@@ -191,7 +191,7 @@ class RandomSearchCore(OptimizationCoreInterface):
 
             elif isinstance(param_information, NominalParamDef):
                 new_candidate_point[i] = random.choice(param_information.values)
-                
+
 
         return new_candidate_point
 
