@@ -99,7 +99,8 @@ class Candidate(object):
             The Candidate with whom to compare.
         """
         if not isinstance(other, Candidate):
-            raise ValueError("Is not compared with a Candidate, but with " + str(other) + ".")
+            raise ValueError("Is not compared with a Candidate, but with "
+                             + str(other) + ".")
         if self.result < other.result:
             return True
         return False
