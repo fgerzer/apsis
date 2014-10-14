@@ -10,7 +10,11 @@ class OptimizationCoreInterface(object):
     """
     __metaclass__ = ABCMeta
 
+    SUPPORTED_PARAM_TYPES = None
+
     minimization = True
+    param_defs = None
+
 
     @abstractmethod
     def __init__(self, params):
@@ -92,3 +96,30 @@ class OptimizationCoreInterface(object):
             return one.result < two.result
         else:
             return one.result > two.result
+
+
+
+    def _is_supported_param_type(self, param):
+        """
+        TODO dok
+        :param param:
+        :return:
+        """
+        if isinstance(self.SUPPORTED_PARAM_TYPES, list):
+            if param.__class__ in self.SUPPORTED_PARAM_TYPES:
+                return True
+
+        return False
+
+    def _is_all_supported_param_types(self, param_list):
+        """
+        TODO dok
+        :param param_list:
+        :return:
+        """
+        for param in param_list:
+            if not self._is_supported_param_type(param):
+                return False
+
+        return True
+

@@ -9,14 +9,13 @@ from apsis.OptimizationCoreInterface import OptimizationCoreInterface
 from apsis.models import Candidate
 from apsis.utilities.validation import check_array, \
     check_array_dimensions_equal
+from apsis.models.ParamInformation import Param, NominalParam, NumericParam
 
 
 class RandomSearchCore(OptimizationCoreInterface):
     """
     Implements a random searcher for parameter optimization.
     """
-    lower_bound = None
-    upper_bound = None
     random_state = None
 
     finished_candidates = None
@@ -25,47 +24,28 @@ class RandomSearchCore(OptimizationCoreInterface):
 
     best_candidate = None
 
+    SUPPORTED_PARAM_TYPES = [NominalParam, NumericParam]
+
     def __init__(self, params):
         """
         Initializes the random search.
 
-        :param params: The parameters with which the random search should be
-        executed. Currently requires four:
-            lower_bound: A numpy float vector, representing the lower bound
-            for each attribute.
-            upper_bound: A numpy float vector, representing the upper bound for
-            each attribute. Has to be the same
-             dimension as lower_bound.
-            random_state: A numpy random state. Defaults to None, in which case
-            a new one is generated.
-            minimization_problem: Whether the problem is a minimization one
-            (True) or a maximization one (False).
-             Defaults to True.
+
         :raise ValueError: If params does not contain lower_bound or
         upper_bound, or attributes are assigned bad values.
         """
-        if not "lower_bound" in params:
-            raise ValueError("No lower_bound in params dictionary.")
-        if not "upper_bound" in params:
-            raise ValueError("No lower_bound in params dictionary.")
-        self.lower_bound = check_array(params["lower_bound"])
-        self.upper_bound = check_array(params["upper_bound"])
 
-        if not check_array_dimensions_equal(self.lower_bound,
-                                            self.upper_bound):
-            raise ValueError("Arrays are not the same dimension: "
-                             + str(self.lower_bound) + " and "
-                             + str(self.upper_bound))
-        if not (self.lower_bound < self.upper_bound).all():
-            raise ValueError("Some elements of lower_bound are bigger or "
-                             "equal than some elements of upper_bound. "
-                             "lower_bound: " + str(self.lower_bound) +
-                             ", upper_bound: " + str(self.upper_bound))
+        if not self._is_all_supported_param_types(params):
+            raise ValueError(
+                "Param list contains parameters of unsopported types. "
+                "Supported types are  " + str(self.SUPPORTED_PARAM_TYPES))
 
-        logging.debug("Initializing Random Search Core for bounds..." +
-                      str(self.lower_bound) + " and " + str(self.upper_bound))
-        self.random_state = check_random_state(params.get("random_state",
-                                                          None))
+        self.param_defs = params
+
+        logging.debug("Initializing Random Search Core for bounds...")
+
+        self.random_state = check_random_state(
+            params.get("random_state", None))
         self.minimization = params.get("minimization_problem", True)
 
         self.finished_candidates = []
@@ -74,7 +54,7 @@ class RandomSearchCore(OptimizationCoreInterface):
 
         super(RandomSearchCore, self).__init__(params)
 
-    #TODO deal with the case that candidate point is the same but
+    # TODO deal with the case that candidate point is the same but
     # objects do not equal
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
         """
@@ -93,9 +73,9 @@ class RandomSearchCore(OptimizationCoreInterface):
                                                    "in status " + str(status)
                       + "on candidate " + str(candidate))
 
-        #first check if this point is known
+        # first check if this point is known
         if candidate not in self.working_candidates:
-            #work on a finished candidate is discarded and should abort
+            # work on a finished candidate is discarded and should abort
             if candidate in self.finished_candidates:
                 return False
             #if work is carried out on candidate and it was pending it is no
@@ -110,7 +90,7 @@ class RandomSearchCore(OptimizationCoreInterface):
             #but now it is a working item
             self.working_candidates.append(candidate)
 
-        #if finished remove from working and put to finished list.
+        # if finished remove from working and put to finished list.
         if status == "finished":
             self.working_candidates.remove(candidate)
             self.finished_candidates.append(candidate)
@@ -161,14 +141,14 @@ class RandomSearchCore(OptimizationCoreInterface):
         :return: an instance of a Candidate object that should be evaluated
         next.
         """
-        #either we have pending candidates
+        # either we have pending candidates
         if len(self.pending_candidates) > 0:
             new_candidate = self.pending_candidates.pop(0)
 
             logging.debug("Core providing pending candidate "
                           + str(new_candidate))
 
-        #or we need to generate new ones
+        # or we need to generate new ones
         else:
             new_candidate_point = self._generate_new_random_vector()
             new_candidate = Candidate(new_candidate_point)
@@ -182,22 +162,28 @@ class RandomSearchCore(OptimizationCoreInterface):
             logging.debug("Core generated new point to evaluate " +
                           str(new_candidate))
 
-        #add candidate to working list
+        # add candidate to working list
         self.working_candidates.append(new_candidate)
 
         return new_candidate
 
     def _generate_new_random_vector(self):
         """
-        Generates a new random vector fitting the self.lower_bound and
-        self.upper_bound specifications.
+        Generates a new random vector. Hast to take care of parameter type
         """
-        new_candidate_point = np.zeros(self.lower_bound.shape)
+        # initialize empty list of correct length
+        new_candidate_point = [None] * len(self.param_defs)
 
-        for i in range(new_candidate_point.shape[0]):
-            new_candidate_point[i] = self.random_state.uniform(
-                self.lower_bound[i],
-                self.upper_bound[i])
+        for i in range(len(new_candidate_point)):
+            param_information = self.param_defs[i]
+
+            if isinstance(param_information, NumericParam):
+                new_candidate_point[i] = self.random_state.uniform(
+                    param_information.lower_bound,
+                    param_information.upper_bound)
+
+            elif isinstance(param_information, NominalParam):
+                pass
 
         return new_candidate_point
 
