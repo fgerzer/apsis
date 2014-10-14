@@ -98,7 +98,7 @@ class SimpleScikitLearnAdapter(object):
         """
 
         #TODO convert param_defs to correct format
-        optimizer_param_defs = _convert_param_defs(given_defs)
+        optimizer_param_defs = self._convert_param_defs(self.param_defs)
 
         if self.optimizer_arguments is None:
             self.optimizer_arguments = {}
@@ -118,7 +118,7 @@ class SimpleScikitLearnAdapter(object):
                 candidate.params)
 
             #build up estimator
-            self.estimator.set_params(candidate_params_sklearn_format)
+            self.estimator.set_params(**candidate_params_sklearn_format)
 
             #TODO use CV
             #make a training/test split for later evaluation
@@ -143,7 +143,8 @@ class SimpleScikitLearnAdapter(object):
 
         #check if estimator shall be refitted with new parameters.
         if self.refit:
-            self.estimator.set_params(self.best_params)
+            self.estimator.set_params(**self.translate_vector_dict(
+                self.best_params))
             self.estimator.fit(X, y)
             return self.estimator
 
@@ -152,7 +153,16 @@ class SimpleScikitLearnAdapter(object):
 
     #TODO implement this method
     def _convert_param_defs(self, given_defs):
-        return given_defs
+        param_list = []
+        param_names = []
+        for k in given_defs:
+            param_list.append(given_defs[k])
+            param_names.append(k)
+
+        self.parameter_names = param_names
+        return param_list
+
+
 
     def get_params(self):
         return self.best_params

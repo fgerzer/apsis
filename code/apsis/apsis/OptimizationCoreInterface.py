@@ -106,8 +106,9 @@ class OptimizationCoreInterface(object):
         :return:
         """
         if isinstance(self.SUPPORTED_PARAM_TYPES, list):
-            if param.__class__ in self.SUPPORTED_PARAM_TYPES:
-                return True
+            for sup in self.SUPPORTED_PARAM_TYPES:
+                if isinstance(param, sup):
+                    return True
 
         return False
 
