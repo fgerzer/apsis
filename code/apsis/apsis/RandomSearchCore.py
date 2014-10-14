@@ -6,11 +6,10 @@ from sklearn.utils import check_random_state
 import numpy as np
 
 from apsis.OptimizationCoreInterface import OptimizationCoreInterface
-from apsis.models import Candidate
+from apsis.models.Candidate import Candidate
 from apsis.utilities.validation import check_array, \
     check_array_dimensions_equal
 from apsis.models.ParamInformation import ParamDef, NominalParamDef, NumericParamDef
-
 
 class RandomSearchCore(OptimizationCoreInterface):
     """
@@ -41,12 +40,12 @@ class RandomSearchCore(OptimizationCoreInterface):
             raise ValueError("Parameter definition list is missing!")
 
         #check if param_defs are supported
-        if not self._is_all_supported_param_types(params["params_defs"]):
+        if not self._is_all_supported_param_types(params["param_defs"]):
             raise ValueError(
                 "Param list contains parameters of unsopported types. "
                 "Supported types are  " + str(self.SUPPORTED_PARAM_TYPES))
 
-        self.param_defs = params["params_defs"]
+        self.param_defs = params["param_defs"]
 
         logging.debug("Initializing Random Search Core for bounds...")
 

@@ -3,18 +3,16 @@ import numpy as np
 import logging
 import math
 import nose.tools as nt
-
+from apsis.models.ParamInformation import NumericParamDef
 
 # noinspection PyPep8Naming,PyPep8Naming
 class testRandomSearchCore(object):
     random_search_core = None
 
     def setUp(self):
-        lower_bound = np.zeros((1, 2))
-        upper_bound = np.ones((1, 2))
+        param_defs = [NumericParamDef(0, 1), NumericParamDef(0, 1)]
         param_dict = {
-            "lower_bound": lower_bound,
-            "upper_bound": upper_bound,
+            "param_defs": param_defs,
             "minimization_problem": True,
             "random_state": None
         }
@@ -25,10 +23,6 @@ class testRandomSearchCore(object):
         upper_bound = np.ones((1, 2))
 
         assert self.random_search_core is not None
-        RandomSearchCore({"lower_bound": lower_bound,
-                          "upper_bound": upper_bound})
-        RandomSearchCore({"lower_bound": [0, 0], "upper_bound": upper_bound})
-        RandomSearchCore({"lower_bound": lower_bound, "upper_bound": [1, 1]})
 
     @nt.raises(ValueError)
     def test_upper_bound_not_filled(self):
@@ -59,34 +53,34 @@ class testRandomSearchCore(object):
         logging.info(__name__ + " results in " + str(continuing))
 
     def test_convergence_multiple_workers(self):
-        self.random_search_core = RandomSearchCore({"lower_bound": [0],
-                                                    "upper_bound": [1]})
+        self.random_search_core = RandomSearchCore({"param_defs":
+                                                        [NumericParamDef(0, 1)]})
         f = math.sin
         cands = []
         best_result = None
-        for i in range(100):
+        for i in range(10):
             cand = self.random_search_core.next_candidate()
             point = cand.params
-            value = f(point)
+            value = f(point[0])
             if best_result is None or value < best_result:
                 best_result = value
             cand.result = value
             cands.append(cand)
-        for i in range(100):
+        for i in range(10):
             assert not self.random_search_core.working(cands[i], "finished")
         nt.eq_(self.random_search_core.best_candidate.result, best_result,
                str(self.random_search_core.best_candidate.result) + " != "
                + str(best_result))
 
     def test_convergence_one_worker(self):
-        self.random_search_core = RandomSearchCore({"lower_bound": [0],
-                                                    "upper_bound": [1]})
+        self.random_search_core = RandomSearchCore({"param_defs":
+                                                        [NumericParamDef(0, 1)]})
         f = math.sin
         best_result = None
-        for i in range(100):
+        for i in range(10):
             cand = self.random_search_core.next_candidate()
             point = cand.params
-            value = f(point)
+            value = f(point[0])
             if best_result is None or value < best_result:
                 best_result = value
 
