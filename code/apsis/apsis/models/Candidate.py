@@ -28,7 +28,7 @@ class Candidate(object):
 
         It requires only the used parameter vector, the rest are optional
         information.
-        :param params: A numpy vector (of floats) of parameter values
+        :param params: A list of parameter values
         representing this candidate's parameters used.
         :param params_used: An (optional) vector of boolean values specifying
         whether a certain parameter from params
@@ -49,7 +49,7 @@ class Candidate(object):
         self.params = params
 
         if params_used is None:
-            params_used = np.ones(params.shape, dtype=bool)
+            params_used = [True]*len(self.params)
         self.params_used = params_used
 
         self.result = result
@@ -71,7 +71,7 @@ class Candidate(object):
         """
         if not isinstance(other, Candidate):
             return False
-        if (self.params == other.params).all():
+        if self.params == other.params:
             return True
         return False
 
@@ -86,3 +86,21 @@ class Candidate(object):
         string += "params: " + str(self.params) + "\n"
         string += "result: " + str(self.result) + "\n"
         return string
+
+    def __lt__(self, other):
+        """
+        Compares two Candidate instances.
+
+        Compares their result fields.
+        Parameters
+        ----------
+
+        other : Candidate
+            The Candidate with whom to compare.
+        """
+        if not isinstance(other, Candidate):
+            raise ValueError("Is not compared with a Candidate, but with "
+                             + str(other) + ".")
+        if self.result < other.result:
+            return True
+        return False
