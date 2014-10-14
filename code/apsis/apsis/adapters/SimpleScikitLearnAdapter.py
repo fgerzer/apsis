@@ -42,25 +42,24 @@ class SimpleScikitLearnAdapter(object):
     def translate_dict_vector(self, sklearn_params):
         """
         Helper method to translate from scikit learn hyperparam dictionaries
-        to plain numpy vectors for
-        use in this optimization framework
+        to lists for this optimization framework
 
 
         :param sklearn_params: the dictionary of hyperparams as given by
         scikit learn's estimator.get_params()
-        :return: a numpy vector representation of these hyperparams
+        :return: a plain python list of the hyperparams
         """
         if self.parameter_names is None:
             self.parameter_names = []
             for k in sklearn_params.keys:
                 self.parameter_names.append(k)
 
-        return_vector = np.zeros(len(self.parameter_names), 1)
+        converted_list = [None] * len(self.parameter_names)
 
         for i, name in enumerate(self.parameter_names):
-            return_vector[i] = sklearn_params[name]
+            converted_list[i] = sklearn_params[name]
 
-        return return_vector
+        return converted_list
 
     def translate_vector_dict(self, optimizer_params):
         """
