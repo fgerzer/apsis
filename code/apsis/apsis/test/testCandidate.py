@@ -1,4 +1,4 @@
-from apsis.models import Candidate
+from apsis.models.Candidate import Candidate
 
 __author__ = 'Frederik Diehl'
 
@@ -21,4 +21,4 @@ class testCandidate(object):
     def test_initialization(self):
         assert self.test_candidate is not None
         assert isinstance(self.test_candidate, Candidate)
-        assert (self.test_candidate.params == self.test_point).all()
+        assert self.test_candidate.params == self.test_point
