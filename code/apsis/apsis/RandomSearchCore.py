@@ -160,11 +160,25 @@ class RandomSearchCore(OptimizationCoreInterface):
             new_candidate_point = self._generate_new_random_vector()
             new_candidate = Candidate(new_candidate_point)
 
-            while ((new_candidate in self.finished_candidates)
-                   or (new_candidate in self.working_candidates)
-                   or (new_candidate in self.pending_candidates)):
-                new_candidate_point = self._generate_new_random_vector()
-                new_candidate = Candidate(new_candidate_point)
+            #Otherwise, a nominal-data-only parameter distribution might
+            #run out of possible parameter combinations.
+            total_possible_param_comb = 1
+            for p in self.param_defs:
+                if isinstance(p, NominalParamDef):
+                    total_possible_param_comb *= len(p.values)
+                elif isinstance(p, NumericParamDef):
+                    total_possible_param_comb = float("inf")
+
+            if (len(self.finished_candidates) + len(self.working_candidates)
+                    + len(self.pending_candidates) < total_possible_param_comb):
+                while ((new_candidate in self.finished_candidates)
+                       or (new_candidate in self.working_candidates)
+                    or (new_candidate in self.pending_candidates)):
+                    new_candidate_point = self._generate_new_random_vector()
+                    new_candidate = Candidate(new_candidate_point)
+            else:
+                logging.info("Core generated more than "
+                             + str(total_possible_param_comb) + " points.")
 
             logging.debug("Core generated new point to evaluate " +
                           str(new_candidate))
