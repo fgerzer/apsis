@@ -1,6 +1,7 @@
+from apsis.models import Candidate
+
 __author__ = 'Frederik Diehl'
 
-from apsis.Candidate import Candidate
 import numpy as np
 import random
 

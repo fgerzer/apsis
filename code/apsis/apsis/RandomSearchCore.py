@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
-from apsis.OptimizationCoreInterface import OptimizationCoreInterface
-from apsis.Candidate import Candidate
+import logging
+
 from sklearn.utils import check_random_state
 import numpy as np
-import logging
+
+from apsis.OptimizationCoreInterface import OptimizationCoreInterface
+from apsis.models import Candidate
 from apsis.utilities.validation import check_array, \
     check_array_dimensions_equal
 
