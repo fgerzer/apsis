@@ -8,6 +8,7 @@ class SimpleScikitLearnAdapter(object):
     Simple Scikit Learn adaptor to be executed in a single core manner.
     """
     estimator = None
+    param_defs = None
     n_iter = None
     scoring = None
     fit_params = None
@@ -24,13 +25,14 @@ class SimpleScikitLearnAdapter(object):
     best_params = None
     best_result = None
 
-    def __init__(self, estimator, n_iter=10, scoring=None, fit_params=None,
+    def __init__(self, estimator, param_defs, n_iter=10, scoring=None, fit_params=None,
                  metric=None, n_jobs=1, refit=True, cv=None, random_state=None,
                  optimizer="RandomSearchCore", optimizer_arguments=None):
         self.estimator = estimator
+        self.param_defs = param_defs
         self.n_iter = n_iter
         self.scoring = scoring
-        self.fit_params = fit_params
+        self.fit_params = fit_params if fit_params is not None else {}
         self.metric = metric
         self.refit = refit
         self.cv = cv
@@ -94,6 +96,14 @@ class SimpleScikitLearnAdapter(object):
         refitted with the new found best hyper params
         when refit=True
         """
+
+        #TODO convert param_defs to correct format
+        optimizer_param_defs = _convert_param_defs(given_defs)
+
+        if self.optimizer_arguments is None:
+            self.optimizer_arguments = {}
+        self.optimizer_arguments['param_defs'] = optimizer_param_defs
+
         #use helper to find optimizer class and instantiate
         self.optimizer = adapter_utils.check_optimizer(self.optimizer)(
             self.optimizer_arguments)
@@ -116,7 +126,7 @@ class SimpleScikitLearnAdapter(object):
             X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                                 test_size=0.33)
 
-            self.estimator.fit(X_train, y_train)
+            self.estimator.fit(X_train, y_train, **self.fit_params)
 
             #run a prediction, and evaluate result
             y_pred = self.estimator.predict(X_test)
@@ -139,6 +149,10 @@ class SimpleScikitLearnAdapter(object):
 
         else:
             return self.estimator
+
+    #TODO implement this method
+    def _convert_param_defs(self, given_defs):
+        return given_defs
 
     def get_params(self):
         return self.best_params
