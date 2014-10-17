@@ -79,7 +79,12 @@ class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
 
         # if both values exist in list forward comparision to __cmp__ of
         #integer type of list index
-        return self.values.index(one).__cmp__(self.values.index(two))
+        if self.values.index(one) < self.values.index(two):
+            return -1
+        if self.values.index(one) > self.values.index(two):
+            return 1
+
+        return 0
 
 
 class NumericParamDef(ParamDef, ComparableParameterDef):
@@ -119,4 +124,9 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
 
         # if both values are value forward comparison to their __cmp__
         # thich all numeric types should have
-        return one.__cmp__(two)
+        if one < two:
+            return -1
+        if one > two:
+            return 1
+
+        return 0
