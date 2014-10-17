@@ -1,9 +1,11 @@
 from abc import ABCMeta, abstractmethod
+import random
 
 
 """
 Base Classes for Param Definition Classes
 """
+
 
 class ParamDef(object):
     __metaclass__ = ABCMeta
@@ -14,6 +16,7 @@ class ParamDef(object):
     @abstractmethod
     def is_in_parameter_domain(self, value):
         pass
+
 
 class ComparableParameterDef(object):
     __metaclass__ = ABCMeta
@@ -47,6 +50,13 @@ class NominalParamDef(ParamDef):
                 "You created a NominalParameterDef object without "
                 "specifying the possible values list.")
 
+        if len(values) < 1:
+            raise ValueError(
+                "You need to specify a list of all possible values for this "
+                "data type in order to make it beeing used for your "
+                "optimization! The given list was empy: " + str(values)
+            )
+
         self.values = values
 
     def is_in_parameter_domain(self, value):
@@ -54,6 +64,24 @@ class NominalParamDef(ParamDef):
 
 
 class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
+    def __init__(self, values):
+        super(OrdinalParamDef, self).__init__(values)
+
+        # to check comparability execute comparison for two random values
+        # from the list
+        try:
+            self.compare_values(random.choice(self.values),
+                                random.choice(self.values))
+        except:
+            raise ValueError("Creation of a OrdinalParamDef parameter "
+                             "not possible for the values you specified. There"
+                             " was an error during comparison. Your values "
+                             "need to be comparable. To make sure they are"
+                             " the best way is to implement __cmp__ in your "
+                             "data type. If you can't do this, you need to "
+                             "a non-comparable param def such as "
+                             "NominalParamDef")
+
     def compare_values(self, one, two):
         """
         Compare values of this ordinal data type. Return is the same
@@ -78,7 +106,7 @@ class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
                 "values domain")
 
         # if both values exist in list forward comparision to __cmp__ of
-        #integer type of list index
+        # integer type of list index
         if self.values.index(one) < self.values.index(two):
             return -1
         if self.values.index(one) > self.values.index(two):
