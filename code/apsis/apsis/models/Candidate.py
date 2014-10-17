@@ -75,6 +75,23 @@ class Candidate(object):
             return True
         return False
 
+    def __hash__(self):
+        """
+        Hash method for Candidate. To be consistant with this class' __eq__.
+
+        The list is first converted to string, then hashed. Since lists
+        are not hashable in python.
+
+        :return: a hash value
+        """
+        #TODO this is a bit odd at the moemnt, since there is a good reason for
+        #lists not beeing hashable. Hence to make this better we should have
+        #a element by element __eq__ method, then this __hash__ makes more
+        #  sense
+
+        return hash(str(self.params))
+
+
     def __str__(self):
         """
         Stringifies the object. Currently only prints the parameters and the
