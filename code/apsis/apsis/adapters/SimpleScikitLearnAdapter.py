@@ -1,6 +1,6 @@
 from apsis.utilities import adapter_utils
-import numpy as np
 from sklearn.cross_validation import train_test_split
+from apsis.models.ParamInformation import ParamDef, NominalParamDef
 
 
 class SimpleScikitLearnAdapter(object):
@@ -156,7 +156,13 @@ class SimpleScikitLearnAdapter(object):
         param_list = []
         param_names = []
         for k in given_defs:
-            param_list.append(given_defs[k])
+            if isinstance(given_defs[k], ParamDef):
+                param_list.append(given_defs[k])
+            elif isinstance(given_defs[k], list):
+                param_list.append(NominalParamDef(given_defs[k]))
+            else:
+                raise ValueError("Parameter " + str(param_list[k])
+                                 + " is not supported.")
             param_names.append(k)
 
         self.parameter_names = param_names
