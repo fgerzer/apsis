@@ -13,7 +13,7 @@ class testSimpleScikitLearnAdapter(object):
         regressor = LogisticRegression()
 
         param_defs = {
-            "penalty": NominalParamDef(['l1', 'l2']),
+            "penalty": ['l1', 'l2'],
             "C": NumericParamDef(0, 1)
         }
         sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
