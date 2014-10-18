@@ -199,13 +199,11 @@ class RandomSearchCore(OptimizationCoreInterface):
             param_information = self.param_defs[i]
 
             if isinstance(param_information, NumericParamDef):
-                new_candidate_point[i] = self.random_state.uniform(
-                    param_information.lower_bound,
-                    param_information.upper_bound)
+                new_candidate_point[i] = param_information.warp_out(
+                    self.random_state.uniform(0, 1))
 
             elif isinstance(param_information, NominalParamDef):
                 new_candidate_point[i] = random.choice(param_information.values)
-
 
         return new_candidate_point
 

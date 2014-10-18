@@ -4,7 +4,9 @@ from sklearn import datasets
 from sklearn.linear_model import LogisticRegression
 from apsis.adapters.SimpleScikitLearnAdapter import SimpleScikitLearnAdapter
 from sklearn.metrics import mean_squared_error
-from apsis.models.ParamInformation import NumericParamDef, NominalParamDef
+from apsis.models.ParamInformation import NumericParamDef, NominalParamDef, \
+    LowerUpperNumericParamDef
+
 
 
 class testSimpleScikitLearnAdapter(object):
@@ -14,7 +16,7 @@ class testSimpleScikitLearnAdapter(object):
 
         param_defs = {
             "penalty": ['l1', 'l2'],
-            "C": NumericParamDef(0, 1)
+            "C": LowerUpperNumericParamDef(0, 1)
         }
         sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
                                               metric=mean_squared_error)

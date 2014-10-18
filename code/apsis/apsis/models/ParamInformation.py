@@ -88,45 +88,49 @@ class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
 
 
 class NumericParamDef(ParamDef, ComparableParameterDef):
-    lower_bound = None
-    upper_bound = None
+    warping_in = None
+    warping_out = None
 
+    def __init__(self, warping_in, warping_out):
+        self.warping_in = warping_in
+        self.warping_out = warping_out
+
+    #TODO add exception catching for not in warping_out.
     def is_in_parameter_domain(self, value):
-        if self.lower_bound <= value <= self.upper_bound:
+        if self.warping_out(0) <= value <= self.warping_out(1):
             return True
-
         return False
 
-    def __init__(self, lower_bound, upper_bound):
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
+    def warp_in(self, value_in):
+        return self.warping_in(value_in)
+
+    def warp_out(self, value_out):
+        return self.warping_out(value_out)
 
     def compare_values(self, one, two):
-        """
-        Compare values of this numerical data type. Return is the same
-        semantic as in __cmp__.
-        Comparison takes place based on the numerical values given in the
-        arguments 'one' and 'two'. For them the comparison is forwarded
-        to their own python __cmp__ method.
-
-
-        :param one: the first value used in comparison
-        :param two: the second value used in comparison
-        :return:
-            Returns  negative integer if one < two,
-            zero if one == two, a positive integer if one > two
-        """
-        if not (self.is_in_parameter_domain(one) and
-                    self.is_in_parameter_domain(two)):
-            raise ValueError(
-                "Values not comparable! Either one or the other is not in the "
-                "values domain")
-
-        # if both values are value forward comparison to their __cmp__
-        # thich all numeric types should have
         if one < two:
             return -1
-        if one > two:
+        elif one > two:
             return 1
+        else:
+            return 0
 
-        return 0
+
+class LowerUpperNumericParamDef(NumericParamDef):
+
+    x_min = None
+    x_max = None
+
+    def __init__(self, lower_bound, upper_bound):
+        self.x_min = lower_bound
+        self.x_max = upper_bound
+
+    def warp_in(self, value_in):
+        return (value_in - self.x_min)/(self.x_max-self.x_min)
+    #TODO implement warping function for upper/lower bound.
+
+    def warp_out(self, value_out):
+        return value_out*(self.x_max - self.x_min) + self.x_min
+
+    def is_in_parameter_domain(self, value):
+        return self.x_min <= value <= self.x_max

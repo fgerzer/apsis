@@ -3,14 +3,16 @@ import numpy as np
 import logging
 import math
 import nose.tools as nt
-from apsis.models.ParamInformation import NumericParamDef, NominalParamDef
+from apsis.models.ParamInformation import NumericParamDef, NominalParamDef, \
+    LowerUpperNumericParamDef
 
 # noinspection PyPep8Naming,PyPep8Naming
 class testRandomSearchCore(object):
     random_search_core = None
 
     def setUp(self):
-        param_defs = [NumericParamDef(0, 1), NumericParamDef(0, 1)]
+        param_defs = [LowerUpperNumericParamDef(0, 1),
+                      LowerUpperNumericParamDef(0, 1)]
         param_dict = {
             "param_defs": param_defs,
             "minimization_problem": True,
@@ -19,9 +21,6 @@ class testRandomSearchCore(object):
         self.random_search_core = RandomSearchCore(param_dict)
 
     def test_initialization(self):
-        lower_bound = np.zeros((1, 2))
-        upper_bound = np.ones((1, 2))
-
         assert self.random_search_core is not None
 
     @nt.raises(ValueError)
@@ -62,7 +61,7 @@ class testRandomSearchCore(object):
 
     def test_convergence_multiple_workers(self):
         self.random_search_core = RandomSearchCore({"param_defs":
-                                                        [NumericParamDef(0, 1)]})
+            [LowerUpperNumericParamDef(0, 1)]})
         f = math.sin
         cands = []
         best_result = None
@@ -82,7 +81,7 @@ class testRandomSearchCore(object):
 
     def test_convergence_one_worker(self):
         self.random_search_core = RandomSearchCore({"param_defs":
-                                                        [NumericParamDef(0, 1)]})
+            [LowerUpperNumericParamDef(0, 1)]})
         f = math.sin
         best_result = None
         for i in range(10):
