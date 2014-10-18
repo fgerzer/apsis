@@ -1,5 +1,5 @@
-from __builtin__ import object
-from apsis.models.ParamInformation import NumericParamDef, OrdinalParamDef, NominalParamDef
+from apsis.models.ParamInformation import NumericParamDef, OrdinalParamDef, \
+    NominalParamDef, LowerUpperNumericParamDef
 import nose.tools as nt
 
 __author__ = 'ajauch'
@@ -11,7 +11,7 @@ class TestNumericParamDef(object):
 
     def test_compare_values(self):
         #test numeric param def
-        numeric_param = NumericParamDef(0, 5)
+        numeric_param = LowerUpperNumericParamDef(0, 5)
 
         assert numeric_param.compare_values(3.795, 4.20) == -1
         assert numeric_param.compare_values(3.795, 3.795000) == 0
@@ -19,13 +19,13 @@ class TestNumericParamDef(object):
 
     @nt.raises(ValueError)
     def test_compare_values_exception(self):
-        numeric_param = NumericParamDef(0, 5)
+        numeric_param = LowerUpperNumericParamDef(0, 5)
 
         numeric_param.compare_values(7, 1.5)
 
 
     def test_initialization_success(self):
-        numeric_param = NumericParamDef(4,6)
+        numeric_param = LowerUpperNumericParamDef(4,6)
 
     #@nt.raises(ValueError)
     def test_initialization_error(self):

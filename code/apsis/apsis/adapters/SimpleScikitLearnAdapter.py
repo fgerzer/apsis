@@ -1,5 +1,5 @@
 from apsis.utilities import adapter_utils
-from sklearn.cross_validation import train_test_split
+from sklearn.cross_validation import cross_val_score
 from apsis.models.ParamInformation import ParamDef, NominalParamDef
 
 
@@ -120,19 +120,15 @@ class SimpleScikitLearnAdapter(object):
             #build up estimator
             self.estimator.set_params(**candidate_params_sklearn_format)
 
-            #TODO use CV
-            #make a training/test split for later evaluation
             # noinspection PyPep8Naming
-            X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                                test_size=0.33)
 
-            self.estimator.fit(X_train, y_train, **self.fit_params)
+            #Get the scores in sklearn crossval notation.
+            #scores is then a list of the results, and can be checked via
+            #scores.mean() and scores.std().
+            scores = cross_val_score(self.estimator, X, y,
+                                     scoring=self.scoring)
 
-            #run a prediction, and evaluate result
-            y_pred = self.estimator.predict(X_test)
-            result = self.metric(y_test, y_pred)
-
-            candidate.result = result
+            candidate.result = scores.mean()
 
             #notify optimization core of completed evaluation result
             self.optimizer.working(candidate, "finished", self.worker_id)
@@ -151,7 +147,6 @@ class SimpleScikitLearnAdapter(object):
         else:
             return self.estimator
 
-    #TODO implement this method
     def _convert_param_defs(self, given_defs):
         param_list = []
         param_names = []

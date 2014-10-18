@@ -10,6 +10,7 @@ from apsis.models.ParamInformation import NumericParamDef, NominalParamDef, \
 
 
 class testSimpleScikitLearnAdapter(object):
+
     def test_setup(self):
         boston_data = datasets.load_boston()
         regressor = LogisticRegression()
@@ -19,7 +20,7 @@ class testSimpleScikitLearnAdapter(object):
             "C": LowerUpperNumericParamDef(0, 1)
         }
         sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
-                                              metric=mean_squared_error)
+                                              scoring="mean_squared_error")
 
         fitted = sk_adapter.fit(boston_data.data, boston_data.target)
 

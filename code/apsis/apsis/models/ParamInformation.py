@@ -73,14 +73,12 @@ class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
             self.compare_values(random.choice(self.values),
                                 random.choice(self.values))
         except:
-            raise ValueError("Creation of a OrdinalParamDef parameter "
-                             "not possible for the values you specified. There"
-                             " was an error during comparison. Your values "
-                             "need to be comparable. To make sure they are"
-                             " the best way is to implement __cmp__ in your "
-                             "data type. If you can't do this, you need to "
-                             "a non-comparable param def such as "
-                             "NominalParamDef")
+            raise ValueError("Creation of a OrdinalParamDef parameter not "
+                "possible for the values you specified. There was an error "
+                "during comparison. Your values need to be comparable. To "
+                "make sure they are the best way is to implement __cmp__ in "
+                "your data type. If you can't do this, you need to a non-"
+                "comparable param def such as NominalParamDef")
 
     def compare_values(self, one, two):
         """
@@ -136,6 +134,12 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
         return self.warping_out(value_out)
 
     def compare_values(self, one, two):
+        if not self.is_in_parameter_domain(one):
+            raise ValueError("Parameter one = " + str(one) + " not in value "
+                "domain.")
+        if not self.is_in_parameter_domain(two):
+            raise ValueError("Parameter two = " + str(two) + " not in value "
+                "domain.")
         if one < two:
             return -1
         elif one > two:
