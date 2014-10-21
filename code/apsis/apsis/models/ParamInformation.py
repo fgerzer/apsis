@@ -159,7 +159,6 @@ class LowerUpperNumericParamDef(NumericParamDef):
 
     def warp_in(self, value_in):
         return (value_in - self.x_min)/(self.x_max-self.x_min)
-    #TODO implement warping function for upper/lower bound.
 
     def warp_out(self, value_out):
         return value_out*(self.x_max - self.x_min) + self.x_min

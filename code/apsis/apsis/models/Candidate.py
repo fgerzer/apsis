@@ -121,3 +121,6 @@ class Candidate(object):
         if self.result < other.result:
             return True
         return False
+
+    def as_vector(self):
+        return np.array(self.params)

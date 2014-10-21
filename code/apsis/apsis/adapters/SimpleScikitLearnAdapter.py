@@ -126,7 +126,7 @@ class SimpleScikitLearnAdapter(object):
             #scores is then a list of the results, and can be checked via
             #scores.mean() and scores.std().
             scores = cross_val_score(self.estimator, X, y,
-                                     scoring=self.scoring)
+                                     scoring=self.scoring, cv=self.cv)
 
             candidate.result = scores.mean()
 
