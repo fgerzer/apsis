@@ -1,7 +1,8 @@
 from apsis.RandomSearchCore import RandomSearchCore
+from apsis.SimpleBayesianOptimizationCore import SimpleBayesianOptimizationCore
 from apsis.OptimizationCoreInterface import OptimizationCoreInterface
 
-optimizers_available = [RandomSearchCore]
+optimizers_available = [RandomSearchCore, SimpleBayesianOptimizationCore]
 
 
 def check_optimizer(optimizer):

@@ -1,7 +1,7 @@
 from apsis.utilities import adapter_utils
 from sklearn.cross_validation import cross_val_score
 from apsis.models.ParamInformation import ParamDef, NominalParamDef
-
+import logging
 
 class SimpleScikitLearnAdapter(object):
     """
@@ -77,6 +77,8 @@ class SimpleScikitLearnAdapter(object):
         self.translate_dict_vector(self.estimator.get_params())
 
         return_dict = {}
+
+        logging.debug("optimizer params %s, param names %s", str(optimizer_params), str(self.parameter_names))
 
         for i, name in enumerate(self.parameter_names):
             return_dict[name] = optimizer_params[i]
