@@ -6,24 +6,18 @@ from sklearn.utils import check_random_state
 import numpy as np
 import random
 
-from apsis.OptimizationCoreInterface import OptimizationCoreInterface
+from apsis.OptimizationCoreInterface import OptimizationCoreInterface, ListBasedCore
 from apsis.models.Candidate import Candidate
 from apsis.utilities.validation import check_array, \
     check_array_dimensions_equal
 from apsis.models.ParamInformation import ParamDef, NominalParamDef, NumericParamDef
 
 
-class RandomSearchCore(OptimizationCoreInterface):
+class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
     """
     Implements a random searcher for parameter optimization.
     """
     random_state = None
-
-    finished_candidates = None
-    working_candidates = None
-    pending_candidates = None
-
-    best_candidate = None
 
     SUPPORTED_PARAM_TYPES = [NominalParamDef, NumericParamDef]
 
@@ -81,36 +75,11 @@ class RandomSearchCore(OptimizationCoreInterface):
                       + "on candidate " + str(candidate))
 
         # first check if this point is known
-        if candidate not in self.working_candidates:
-            # work on a finished candidate is discarded and should abort
-            if candidate in self.finished_candidates:
-                return False
-            #if work is carried out on candidate and it was pending it is no
-            # longer pending
-            elif candidate in self.pending_candidates:
-                self.pending_candidates.remove(candidate)
-
-            logging.debug("Candidate was UNKNOWN and not FINISHED "
-                          + str(candidate)
-                          + " Candidate added to WORKING list.")
-
-            #but now it is a working item
-            self.working_candidates.append(candidate)
+        self.perform_candidate_state_check(candidate)
 
         # if finished remove from working and put to finished list.
         if status == "finished":
-            self.working_candidates.remove(candidate)
-            self.finished_candidates.append(candidate)
-
-            #check for the new best result
-            if self.best_candidate is not None:
-                if self.is_better_candidate_as(candidate, self.best_candidate):
-                    logging.info("Cool - found new best candidate "
-                                 + str(candidate))
-                    self.best_candidate = candidate
-
-            else:
-                self.best_candidate = candidate
+            self.deal_with_finished(candidate)
 
             return False
         elif status == "working":

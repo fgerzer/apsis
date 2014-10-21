@@ -3,6 +3,8 @@ from abc import ABCMeta, abstractmethod
 
 from apsis.models.Candidate import Candidate
 
+import logging
+
 
 class OptimizationCoreInterface(object):
     """
@@ -123,4 +125,43 @@ class OptimizationCoreInterface(object):
                 return False
 
         return True
+
+class ListBasedCore(object):
+    finished_candidates = None
+    working_candidates = None
+    pending_candidates = None
+
+    best_candidate = None
+
+    def perform_candidate_state_check(self, candidate):
+        if candidate not in self.working_candidates:
+            # work on a finished candidate is discarded and should abort
+            if candidate in self.finished_candidates:
+                return False
+            #if work is carried out on candidate and it was pending it is no
+            # longer pending
+            elif candidate in self.pending_candidates:
+                self.pending_candidates.remove(candidate)
+
+            logging.debug("Candidate was UNKNOWN and not FINISHED "
+                          + str(candidate)
+                          + " Candidate added to WORKING list.")
+
+            #but now it is a working item
+            self.working_candidates.append(candidate)
+
+    def deal_with_finished(self, candidate):
+        self.working_candidates.remove(candidate)
+        self.finished_candidates.append(candidate)
+
+        #check for the new best result
+        if self.best_candidate is not None:
+            if self.is_better_candidate_as(candidate, self.best_candidate):
+                logging.info("Cool - found new best candidate "
+                             + str(candidate))
+                self.best_candidate = candidate
+
+        else:
+            self.best_candidate = candidate
+
 
