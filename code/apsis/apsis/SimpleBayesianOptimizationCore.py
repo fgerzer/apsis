@@ -68,6 +68,8 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
 
         self.param_defs = params["param_defs"]
 
+        self.minimization = params.get('minimization', True)
+
         self.initial_random_runs = params.get('initial_random_runs',
                                               self.initial_random_runs)
         self.random_state = params.get('random_state', None)
@@ -86,7 +88,7 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
         dimensions = len(self.param_defs)
         logging.debug(dimensions)
         self.kernel = params.get('kernel',
-                                 GPy.kern.rbf)(dimensions)
+                                 GPy.kern.rbf)(dimensions, ARD=True)
 
         logging.debug("Kernel input dim " + str(self.kernel.input_dim))
         logging.debug("Kernel %s", str(self.kernel))
@@ -144,7 +146,8 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
 
         self.gp = GPy.models.GPRegression(candidate_matrix, results_vector,
                                           self.kernel)
-
+        self.gp.constrain_bounded('.*lengthscale*',0.1,1.)
+        self.gp.constrain_bounded('.*noise*',0.1,1.)
         logging.debug("Generated gp model. Refitting now.")
         #ensure restart
         self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,

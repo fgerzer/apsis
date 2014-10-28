@@ -158,7 +158,7 @@ class ListBasedCore(object):
         if self.best_candidate is not None:
             if self.is_better_candidate_as(candidate, self.best_candidate):
                 logging.info("Cool - found new best candidate "
-                             + str(candidate))
+                             + str(candidate) + " with score " + str(candidate.result) + " instead of " + str(self.best_candidate.result))
                 self.best_candidate = candidate
 
         else:
