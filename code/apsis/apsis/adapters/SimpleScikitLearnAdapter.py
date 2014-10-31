@@ -129,7 +129,7 @@ class SimpleScikitLearnAdapter(object):
             #scores.mean() and scores.std().
             scores = cross_val_score(self.estimator, X, y,
                                      scoring=self.scoring, cv=self.cv)
-
+            print("ScoresUIU: " +str(scores))
             candidate.result = scores.mean()
 
             #notify optimization core of completed evaluation result
@@ -144,6 +144,7 @@ class SimpleScikitLearnAdapter(object):
             self.estimator.set_params(**self.translate_vector_dict(
                 self.best_params))
             self.estimator.fit(X, y)
+            logging.debug("Returning refitted estimator.")
             return self.estimator
 
         else:
