@@ -21,12 +21,12 @@ class testSimpleBayesianOptimizationCore(object):
         regressor = LogisticRegression()
 
         param_defs = {
-            "C": LowerUpperNumericParamDef(0.00001, 10)
+            "C": LowerUpperNumericParamDef(0.001, 10)
         }
 
         sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
                                               scoring="mean_squared_error",
-                                              n_iter=20,
+                                              n_iter=10,
                                               cv=5,
                                               optimizer='SimpleBayesianOptimizationCore',
                                               optimizer_arguments={
@@ -51,7 +51,6 @@ class testSimpleBayesianOptimizationCore(object):
         max_val = 10
         resolution = 1000
 
-
         logging.basicConfig(level=logging.DEBUG)
         self.bay_search = SimpleBayesianOptimizationCore({"param_defs":
             [LowerUpperNumericParamDef(min_val, max_val)],
@@ -60,16 +59,16 @@ class testSimpleBayesianOptimizationCore(object):
         f = function
         best_result = None
 
-        for i in range(20):
+        for i in range(10):
             cand = self.bay_search.next_candidate()
 
             point = cand.params
             value = f(point[0])
-            if (i >= 5):
+            #if (i >= 5):
 
-                self.plot_nicely(min_val, max_val, resolution, point[0])
-                print(self.bay_search.gp)
-                raw_input()
+                #self.plot_nicely(min_val, max_val, resolution, point[0])
+                #print(self.bay_search.gp)
+                #raw_input()
 
             strings.append(("%i: %f at %f" % (i, value, point[0])))
             if best_result is None or value < best_result:
@@ -82,11 +81,10 @@ class testSimpleBayesianOptimizationCore(object):
                        str(self.bay_search.best_candidate.result)
                        + " != " + str(best_result))
         #self.bay_search.gp.plot()
-        self.plot_nicely(min_val, max_val, resolution)
+        #self.plot_nicely(min_val, max_val, resolution)
         for s in strings:
             print(s)
-        raw_input()
-
+        #raw_input()
 
     def plot_nicely(self, min_val, max_val, resolution, next_pt=None):
         step_res = (max_val - min_val)/float(resolution)

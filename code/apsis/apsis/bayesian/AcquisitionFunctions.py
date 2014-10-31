@@ -6,6 +6,7 @@ from scipy.integrate import quad
 from scipy.stats import multivariate_normal
 import collections
 
+
 class AcquisitionFunction(object):
     __metaclass__ = ABCMeta
 
@@ -16,7 +17,6 @@ class AcquisitionFunction(object):
 
         if self.params is None:
             self.params = {}
-
 
 
     @abstractmethod
@@ -33,8 +33,10 @@ class AcquisitionFunction(object):
 
         pass
 
+
 class ExpectedImprovement(AcquisitionFunction):
-    SUPPORTED_OPTIMIZATION_STRATEGIES = ["SLSQP", "L-BFGS-B", "TNC", "grid-simple-1d", "grid-scipy-brute"]
+    SUPPORTED_OPTIMIZATION_STRATEGIES = ["SLSQP", "L-BFGS-B", "TNC",
+                                         "grid-simple-1d", "grid-scipy-brute"]
 
     optimization_strategy = "grid-scipy-brute"
 
@@ -42,13 +44,14 @@ class ExpectedImprovement(AcquisitionFunction):
         super(ExpectedImprovement, self).__init__(params)
 
         if 'optimization_strategy' in self.params:
-            if self.params['optimization_strategy'] in self.SUPPORTED_OPTIMIZATION_STRATEGIES:
-                self.optimization_strategy = self.params['optimization_strategy']
+            if self.params[
+                'optimization_strategy'] in self.SUPPORTED_OPTIMIZATION_STRATEGIES:
+                self.optimization_strategy = self.params[
+                    'optimization_strategy']
             else:
                 raise ValueError("You specified the non supported optimization"
                                  "strategy for Expected Improvement %s",
                                  self.params['optimization_strategy'])
-
 
 
     def compute_max(self, args_):
@@ -90,8 +93,10 @@ class ExpectedImprovement(AcquisitionFunction):
 
         logging.debug("Computing max with scipy optimize method %s for %s "
                       "dimensional problem using %s points per dimension"
-                      " and bounds %s bounds type %s.", self.optimization_strategy,
-                      str(dimensions), str(grid_points), str(bounds), str(type(bounds[0])))
+                      " and bounds %s bounds type %s.",
+                      self.optimization_strategy,
+                      str(dimensions), str(grid_points), str(bounds),
+                      str(type(bounds[0])))
 
         # make sure to use maximizing value from the result object
         maximum = scipy.optimize.brute(self.compute_negated_evaluate,
@@ -126,14 +131,13 @@ class ExpectedImprovement(AcquisitionFunction):
         min_value = self.evaluate(maximum, args_)[0, 0]
 
         for i in range(1000):
-           #walk in grid and check current objective value
-           cur[0, 0] += 1./1000
-           cur_obj = self.evaluate(cur, args_)
+            #walk in grid and check current objective value
+            cur[0, 0] += 1. / 1000
+            cur_obj = self.evaluate(cur, args_)
 
-           if cur_obj[0, 0] > min_value:
-               maximum[0, 0] = cur[0, 0]
-               min_value = cur_obj
-               print("new max at %s for obj alue %s", str(maximum), str(cur_obj))
+            if cur_obj[0, 0] > min_value:
+                maximum[0, 0] = cur[0, 0]
+                min_value = cur_obj
 
         logging.debug("EI maximum found at %s", str(maximum))
 
@@ -167,13 +171,11 @@ class ExpectedImprovement(AcquisitionFunction):
 
         return maximum
 
-
     def compute_negated_evaluate(self, x, args_):
         value = self.evaluate(x, args_)
         value = -value
 
         return value
-
 
 
     def evaluate(self, x, args_):
@@ -197,15 +199,16 @@ class ExpectedImprovement(AcquisitionFunction):
         #TODO scale is stand dev, variance is var. Need to scale.
         #return 1 - scipy.stats.norm(loc=mean, scale=variance).cdf(args_["cur_max"])# *max(0, mean - args_["cur_max"])
 
-        Z = (mean - args_["cur_max"])/variance
-        cdfZ = 1 - scipy.stats.norm(loc=mean, scale=variance).cdf(Z)# *max(0, mean - args_["cur_max"])
-        pdfZ = 1 - scipy.stats.norm(loc=mean, scale=variance).pdf(Z)# *max(0, mean - args_["cur_max"])
+        Z = (mean - args_["cur_max"]) / variance
+        cdfZ = 1 - scipy.stats.norm(loc=mean, scale=variance).cdf(
+            Z)  # *max(0, mean - args_["cur_max"])
+        pdfZ = 1 - scipy.stats.norm(loc=mean, scale=variance).pdf(
+            Z)  # *max(0, mean - args_["cur_max"])
 
         if variance != 0:
-            return (mean - args_["cur_max"])*cdfZ + variance*pdfZ
+            return (mean - args_["cur_max"]) * cdfZ + variance * pdfZ
         else:
             return 0
-
 
 
 class ProbabilityOfImprovement(AcquisitionFunction):
@@ -214,7 +217,8 @@ class ProbabilityOfImprovement(AcquisitionFunction):
 
         mean, variance, _025pm, _975pm = args_['gp'].predict(x)
 
-        logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s", str(mean),
+        logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s",
+                      str(mean),
                       str(variance), str(_025pm), str(_975pm))
 
         # do not standardize on our own, but use the mean, and covariance
@@ -241,9 +245,11 @@ class ProbabilityOfImprovement(AcquisitionFunction):
 
         # use scipy.optimize.minimize,
         # make sure to use minimizing value from the result object
-        minimum = scipy.optimize.minimize(self.compute_negated_evaluate,
-                                          initial_guess, args=tuple([args_]),
-                                          bounds=bounds, method="Anneal").x
+        minimum = scipy.optimize.minimize_scalar(self.compute_negated_evaluate,
+                                                 initial_guess,
+                                                 args=tuple([args_]),
+                                                 bounds=bounds,
+                                                 method="Anneal").x
 
         return minimum
 
