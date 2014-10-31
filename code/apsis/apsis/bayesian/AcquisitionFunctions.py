@@ -55,18 +55,17 @@ class ExpectedImprovement(AcquisitionFunction):
         minimum = scipy.optimize.minimize(self.compute_negated_evaluate,
                                           initial_guess, args=tuple([args_]),
                                           bounds=bounds, method="SLSQP").x
-        #cur = np.zeros((1, 1))
-        #minimum = np.zeros((1, 1))
-        #min_value = self.evaluate(minimum, args_)[0, 0]
-        #for i in range(1000):
-        #    cur[0, 0] += 1./1000
-        #    if (self.evaluate(cur, args_))[0, 0] > min_value:
-        #        #print("new max: %s, %s" %(str(self.evaluate(cur, args_)), str(cur)))
-        #        minimum[0, 0] = cur[0, 0]
-        #        min_value = self.evaluate(cur, args_)
-                #print("new max: %s, %s" %(str(self.evaluate(minimum, args_)), str(minimum)))
+        # cur = np.zeros((1, 1))
+        # minimum = np.zeros((1, 1))
+        # min_value = self.evaluate(minimum, args_)[0, 0]
+        # for i in range(1000):
+        #     cur[0, 0] += 1./1000
+        #     if (self.evaluate(cur, args_))[0, 0] > min_value:
+        #         #print("new max: %s, %s" %(str(self.evaluate(cur, args_)), str(cur)))
+        #         minimum[0, 0] = cur[0, 0]
+        #         min_value = self.evaluate(cur, args_)
+        #         #print("new max: %s, %s" %(str(self.evaluate(minimum, args_)), str(minimum)))
 
-        print("min. " + str(minimum))
         return minimum
 
     def compute_negated_evaluate(self, x, args_):
@@ -139,7 +138,7 @@ class ProbabilityOfImprovement(AcquisitionFunction):
 
         # use scipy.optimize.minimize,
         # make sure to use minimizing value from the result object
-        minimum = scipy.optimize.minimize(self.compute_negated_evaluate,
+        minimum = scipy.optimize.minimize_scalar(self.compute_negated_evaluate,
                                           initial_guess, args=tuple([args_]),
                                           bounds=bounds, method="Anneal").x
 
