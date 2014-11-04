@@ -8,11 +8,34 @@ import collections
 
 
 class AcquisitionFunction(object):
+    """
+    An acquisition function is used to decide which point to evaluate next.
+
+    For a detailed explanation, see for example "A Tutorial on Bayesian
+    Optimization of Expensive Cost Functions, with Application to Active User
+    Modeling and Hierarchical Reinforcement Learning", Brochu et.al., 2010
+    In general, each acquisition function implements two functions, evaluate
+    and compute_max.
+    """
     __metaclass__ = ABCMeta
 
     params = None
 
+
     def __init__(self, params=None):
+        """
+        Initializes an acquisition function.
+
+        Parameters
+        ----------
+        params: dict, keys are strings
+            A dictionary of parameters for the corresponding
+            acquisition function. New params must be added in the Bayesian
+            Optimization core, but several are available. These include at least:
+             - The acquisition function
+             - The current gp instance
+             - The score of the currently best point.
+        """
         self.params = params
 
         if self.params is None:
@@ -21,6 +44,15 @@ class AcquisitionFunction(object):
 
     @abstractmethod
     def evaluate(self, x, args_):
+        """
+
+        Parameters
+        ----------
+        x : np.array of floats
+        :param x:
+        :param args_:
+        :raise ValueError:
+        """
         if args_ is None:
             raise ValueError("No arguments dict given!")
 
