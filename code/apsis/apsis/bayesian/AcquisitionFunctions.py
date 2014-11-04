@@ -217,7 +217,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
 
     def evaluate(self, x, args_):
-        dimensions = args_['param_defs']
+        dimensions = len(args_['param_defs'])
         x_value = x
         if (dimensions == 1):
             x_value = np.zeros((1, 1))
