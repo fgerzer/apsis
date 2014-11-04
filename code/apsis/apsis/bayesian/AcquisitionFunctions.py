@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from itertools import islice
 import numpy as np
 import scipy.optimize
 import logging
@@ -105,7 +106,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
         It relies on the following arguments in the classes' params hash:
 
-            'num_grid_point_per_axsis': to say how coarse the grid will be.
+            'num_grid_point_per_axis': to say how coarse the grid will be.
 
         :return: the maximizing hyperparam vectorr of expected improvement as
                  ndarray.
@@ -117,11 +118,17 @@ class ExpectedImprovement(AcquisitionFunction):
         #scipy.optimize does a lot of extra handling for 1d, so we should try 2d.
         #consider replacing bounds by creating a slice object to manually
         #create the grid
-        bounds = tuple([(0.0, 1.0) * dimensions])
-        grid_points = 1000
+        #bounds = tuple([(0.0, 1.0)] * dimensions)
 
-        if 'num_grid_point_per_axsis' in self.params:
-            grid_points = self.params['num_grid_point_per_axsis']
+
+        grid_points = 1000
+        #bounds = tuple([slice(0.0, 1.0, 0.1)]*dimensions)
+        bounds = tuple([(0., 1.)]*dimensions)
+        #bounds = tuple([(0., 1.)])
+        logging.debug("Bounds: %s", str(bounds))
+
+        if 'num_grid_point_per_axis' in self.params:
+            grid_points = self.params['num_grid_point_per_axis']
 
         logging.debug("Computing max with scipy optimize method %s for %s "
                       "dimensional problem using %s points per dimension"
@@ -131,10 +138,9 @@ class ExpectedImprovement(AcquisitionFunction):
                       str(type(bounds[0])))
 
         # make sure to use maximizing value from the result object
-        maximum = scipy.optimize.brute(self.compute_negated_evaluate,
+        maximum, max_value, grid, joust = scipy.optimize.brute(self.compute_negated_evaluate,
                                        bounds, Ns=grid_points,
-                                       args=tuple([args_]))[0]
-
+                                       args=tuple([args_]), full_output=True, disp=True, finish=None)
         #a bit hacky, but for 1d check if array, if not make one manually
         if dimensions == 1 and not isinstance(maximum, np.ndarray):
             logging.debug("Converting to array manually.")
@@ -215,7 +221,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
         cur_format = np.zeros((1, 1))
         cur_format[0, 0] = x
-        #TODO !!!! Only for testing!!!
+        ##TODO !!!! Only for testing!!!
         mean, variance, _025pm, _975pm = args_['gp'].predict(cur_format)
 
         #logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s", str(mean),
