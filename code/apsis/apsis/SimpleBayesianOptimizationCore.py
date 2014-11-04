@@ -69,6 +69,7 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
         self.param_defs = params["param_defs"]
 
         self.minimization = params.get('minimization', True)
+        logging.debug("Doing minimization? " + str(self.minimization))
 
         self.initial_random_runs = params.get('initial_random_runs',
                                               self.initial_random_runs)
@@ -111,7 +112,8 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
         else:
             acquisition_params = {'param_defs': self.param_defs,
                                   'gp': self.gp,
-                                  'cur_max': self.best_candidate.result
+                                  'cur_max': self.best_candidate.result,
+                                  "minimization": self.minimization
                                   }
 
             logging.debug("Running acquisition with args %s", str(acquisition_params))

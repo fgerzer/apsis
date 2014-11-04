@@ -1,5 +1,6 @@
+from sklearn.metrics import mean_squared_error
 from apsis.utilities import adapter_utils
-from sklearn.cross_validation import cross_val_score
+from sklearn.cross_validation import cross_val_score, train_test_split
 from apsis.models.ParamInformation import ParamDef, NominalParamDef
 import logging
 
@@ -129,8 +130,8 @@ class SimpleScikitLearnAdapter(object):
             #scores.mean() and scores.std().
             scores = cross_val_score(self.estimator, X, y,
                                      scoring=self.scoring, cv=self.cv)
-            candidate.result = scores.mean()
 
+            candidate.result = scores.mean()
             #notify optimization core of completed evaluation result
             self.optimizer.working(candidate, "finished", self.worker_id)
 

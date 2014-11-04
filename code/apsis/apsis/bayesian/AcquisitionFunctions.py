@@ -224,17 +224,19 @@ class ExpectedImprovement(AcquisitionFunction):
             x_value[0, 0] = x
         mean, variance, _025pm, _975pm = args_['gp'].predict(x_value)
 
-        std_dev = variance**0.5
+        std_dev = variance#**0.5
         #logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s", str(mean),
         #              str(variance), str(_025pm), str(_975pm))
 
 
         #Formula adopted from the phd thesis of Jasper Snoek page 48 with
         # \gamma equals Z here
-
         #Z = (f(x_max) - \mu(x)) / (\sigma(x))
         X_best = args_["cur_max"]
-        Z_numerator = (X_best - mean)
+        sign = 1
+        if not args_.get("minimization", True):
+            sign = -1
+        Z_numerator = sign * (X_best - mean)
         Z = float(Z_numerator) / std_dev
 
         #cdf_z = \Phi(Z), pdf_z = \phi(Z)
