@@ -2,6 +2,7 @@ from sklearn import datasets
 from sklearn.linear_model import LogisticRegression
 from apsis.adapters.SimpleScikitLearnAdapter import SimpleScikitLearnAdapter
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from apsis.bayesian.AcquisitionFunctions import ExpectedImprovement
 from apsis.models.ParamInformation import NumericParamDef, NominalParamDef, \
     LowerUpperNumericParamDef
 from apsis.SimpleBayesianOptimizationCore import SimpleBayesianOptimizationCore
@@ -15,83 +16,87 @@ import GPy
 
 class testSimpleBayesianOptimizationCore(object):
 
-    def test_setup(self):
-        logging.basicConfig(level=logging.DEBUG)
-        boston_data = datasets.load_boston()
-        regressor = LogisticRegression()
-
-        param_defs = {
-            "C": LowerUpperNumericParamDef(0.001, 100)
-        }
-
-        sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
-                                              scoring="mean_squared_error",
-                                              n_iter=20,
-                                              cv=5,
-                                              optimizer='SimpleBayesianOptimizationCore',
-                                              optimizer_arguments={
-                                                  'initial_random_runs': 5,
-                                                  'num_gp_restarts': 10,
-                                                  'minimization': False}
-                                              )
-
-        fitted = sk_adapter.fit(boston_data.data, boston_data.target)
-        print(fitted.get_params())
-        print("Final MSE: " + str(mean_squared_error(boston_data.target,
-                                 fitted.predict(boston_data.data))))
-
-        print("Final MAE: " + str(mean_absolute_error(boston_data.target,
-                                 fitted.predict(boston_data.data))))
-
-        for c in sk_adapter.optimizer.finished_candidates:
-            print("- " + str(c.params) + ": " + str(c.result))
-
-    # def test_convergence_one_worker(self):
-    #     min_val = -1
-    #     max_val = 5
-    #     random_runs = 7
-    #     gauss_runs = 15
-    #     resolution = 1000
-    #     minimization=False
-    #
+    # def test_setup(self):
     #     logging.basicConfig(level=logging.DEBUG)
-    #     self.bay_search = SimpleBayesianOptimizationCore(
-    #         {"param_defs":
-    #             [LowerUpperNumericParamDef(min_val, max_val)],
-    #         "initial_random_runs": random_runs,
-    #         'num_gp_restarts': 10,
-    #         "minimization": minimization})
-    #     strings = []
-    #     f = function
-    #     best_result = None
+    #     boston_data = datasets.load_boston()
+    #     regressor = LogisticRegression()
     #
+    #     param_defs = {
+    #         "C": LowerUpperNumericParamDef(0.001, 100)
+    #     }
     #
+    #     sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
+    #                                           scoring="mean_squared_error",
+    #                                           n_iter=20,
+    #                                           cv=5,
+    #                                           optimizer='SimpleBayesianOptimizationCore',
+    #                                           optimizer_arguments={
+    #                                               'initial_random_runs': 5,
+    #                                               'num_gp_restarts': 10,
+    #                                               'minimization': False}
+    #                                           )
     #
-    #     for i in range(gauss_runs):
-    #         cand = self.bay_search.next_candidate()
+    #     fitted = sk_adapter.fit(boston_data.data, boston_data.target)
+    #     print(fitted.get_params())
+    #     print("Final MSE: " + str(mean_squared_error(boston_data.target,
+    #                              fitted.predict(boston_data.data))))
     #
-    #         point = cand.params
-    #         value = f(point[0])
-    #         if (i >= random_runs):
-    #             self.plot_nicely(min_val, max_val, resolution, point[0], minimization)
-    #             print(self.bay_search.gp)
-    #             raw_input()
+    #     print("Final MAE: " + str(mean_absolute_error(boston_data.target,
+    #                              fitted.predict(boston_data.data))))
     #
-    #         strings.append(("%i: %f at %f" % (i, value, point[0])))
-    #         if best_result is None or value < best_result:
-    #             best_result = value
-    #
-    #         cand.result = value
-    #         assert not self.bay_search.working(cand, "finished")
-    #
-    #     nt.eq_(self.bay_search.best_candidate.result, best_result,
-    #                    str(self.bay_search.best_candidate.result)
-    #                    + " != " + str(best_result))
-    #     #self.bay_search.gp.plot()
-    #     self.plot_nicely(min_val, max_val, resolution, minimization)
-    #     for s in strings:
-    #         print(s)
-    #     raw_input()
+    #     for c in sk_adapter.optimizer.finished_candidates:
+    #         print("- " + str(c.params) + ": " + str(c.result))
+
+    def test_convergence_one_worker(self):
+        min_val = -1
+        max_val = 5
+        random_runs = 7
+        gauss_runs = 15
+        resolution = 1000
+        minimization=False
+
+        logging.basicConfig(level=logging.DEBUG)
+        self.bay_search = SimpleBayesianOptimizationCore(
+            {"param_defs":
+                [LowerUpperNumericParamDef(min_val, max_val)],
+            "initial_random_runs": random_runs,
+            'num_gp_restarts': 10,
+            "minimization": minimization,
+            "acquision": ExpectedImprovement,
+            "acquisition_hyperparams": {"exploitation_tradeoff": 0}
+             #suggested by Brochu
+            })
+        strings = []
+        f = function
+        best_result = None
+
+
+
+        for i in range(gauss_runs):
+            cand = self.bay_search.next_candidate()
+
+            point = cand.params
+            value = f(point[0])
+            if (i >= random_runs):
+                self.plot_nicely(min_val, max_val, resolution, point[0], minimization)
+                print(self.bay_search.gp)
+                raw_input()
+
+            strings.append(("%i: %f at %f" % (i, value, point[0])))
+            if best_result is None or value < best_result:
+                best_result = value
+
+            cand.result = value
+            assert not self.bay_search.working(cand, "finished")
+
+        nt.eq_(self.bay_search.best_candidate.result, best_result,
+                       str(self.bay_search.best_candidate.result)
+                       + " != " + str(best_result))
+        #self.bay_search.gp.plot()
+        self.plot_nicely(min_val, max_val, resolution, minimization)
+        for s in strings:
+            print(s)
+        raw_input()
 
     # def test_convergence_one_worker_multi_dim(self):
     #     min_val = 0

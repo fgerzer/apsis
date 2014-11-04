@@ -73,8 +73,14 @@ class ExpectedImprovement(AcquisitionFunction):
 
     optimization_strategy = "grid-scipy-brute"
 
+    exploitation_exploration_tradeoff = 0
+
+
     def __init__(self, params=None):
         super(ExpectedImprovement, self).__init__(params)
+
+        if not params is None:
+            self.exploitation_exploration_tradeoff = params.get("exploitation_tradeoff", 0)
 
         if 'optimization_strategy' in self.params:
             if self.params[
@@ -222,6 +228,7 @@ class ExpectedImprovement(AcquisitionFunction):
         if (dimensions == 1):
             x_value = np.zeros((1, 1))
             x_value[0, 0] = x
+
         mean, variance, _025pm, _975pm = args_['gp'].predict(x_value)
 
         std_dev = variance#**0.5
@@ -231,12 +238,19 @@ class ExpectedImprovement(AcquisitionFunction):
 
         #Formula adopted from the phd thesis of Jasper Snoek page 48 with
         # \gamma equals Z here
+
+        #Additionally support for the exploration exploitation trade-off
+        #as suggested by Brochut et al.
+
         #Z = (f(x_max) - \mu(x)) / (\sigma(x))
         X_best = args_["cur_max"]
+
+        #handle case of maximization
         sign = 1
         if not args_.get("minimization", True):
             sign = -1
-        Z_numerator = sign * (X_best - mean)
+
+        Z_numerator = sign * (X_best - mean + self.exploitation_exploration_tradeoff)
         Z = float(Z_numerator) / std_dev
 
         #cdf_z = \Phi(Z), pdf_z = \phi(Z)

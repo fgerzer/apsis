@@ -13,6 +13,7 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
 
     kernel = None
     acquisition_function = None
+    acquisition_hyperparams = None
 
     random_state = None
 
@@ -69,7 +70,6 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
         self.param_defs = params["param_defs"]
 
         self.minimization = params.get('minimization', True)
-        logging.debug("Doing minimization? " + str(self.minimization))
 
         self.initial_random_runs = params.get('initial_random_runs',
                                               self.initial_random_runs)
@@ -78,9 +78,11 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
         self.working_candidates = []
         self.pending_candidates = []
 
+        self.acquisition_hyperparams = params.get('acquisition_hyperparams', None)
+
         # either we have a given acquisition func or we use the standard one
         self.acquisition_function = params.get('acquisition',
-                                               ExpectedImprovement)()
+                                               ExpectedImprovement)(self.acquisition_hyperparams)
 
         self.num_gp_restarts = params.get('num_gp_restarts',
                                           self.num_gp_restarts)
