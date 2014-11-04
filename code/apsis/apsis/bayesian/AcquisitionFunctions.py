@@ -179,34 +179,29 @@ class ExpectedImprovement(AcquisitionFunction):
 
 
     def evaluate(self, x, args_):
-        #TODO @Frederik: What is the cur_format here for???
+        dimensions = args_['param_defs']
 
-        cur_format = np.zeros((1, 1))
-        cur_format[0, 0] = x
-        #TODO !!!! Only for testing!!!
-        mean, variance, _025pm, _975pm = args_['gp'].predict(cur_format)
+        mean, variance, _025pm, _975pm = args_['gp'].predict(x)
 
+        std_dev = variance**0.5
         #logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s", str(mean),
         #              str(variance), str(_025pm), str(_975pm))
 
-        # do not standardize on our own, but use the mean, and covariance
-        #we get from the gp
-        #pdf = scipy.stats.multivariate_normal.pdf
-        #cdf_calculate = quad(pdf, 0, x, (mean[0, :], variance))
 
+        #Formula adopted from the phd thesis of Jasper Snoek page 48 with
+        # \gamma equals Z here
 
-        #return cdf_calculate[0] * max(0, mean - args_["cur_max"])
-        #TODO scale is stand dev, variance is var. Need to scale.
-        #return 1 - scipy.stats.norm(loc=mean, scale=variance).cdf(args_["cur_max"])# *max(0, mean - args_["cur_max"])
+        #Z = (f(x_max) - \mu(x)) / (\sigma(x))
+        X_best = args_["cur_max"]
+        Z_numerator = (X_best - mean)
+        Z = float(Z_numerator) / std_dev
 
-        Z = (mean - args_["cur_max"]) / variance
-        cdfZ = 1 - scipy.stats.norm(loc=mean, scale=variance).cdf(
-            Z)  # *max(0, mean - args_["cur_max"])
-        pdfZ = 1 - scipy.stats.norm(loc=mean, scale=variance).pdf(
-            Z)  # *max(0, mean - args_["cur_max"])
+        #cdf_z = \Phi(Z), pdf_z = \phi(Z)
+        cdf_z = scipy.stats.norm().cdf(Z)  # *max(0, mean - args_["cur_max"])
+        pdf_z = scipy.stats.norm().pdf(Z)  # *max(0, mean - args_["cur_max"])
 
         if variance != 0:
-            return (mean - args_["cur_max"]) * cdfZ + variance * pdfZ
+            return Z_numerator * cdf_z + std_dev * pdf_z
         else:
             return 0
 
