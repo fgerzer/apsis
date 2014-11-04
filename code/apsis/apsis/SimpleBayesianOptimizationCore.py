@@ -35,7 +35,7 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
             self.deal_with_finished(candidate)
 
             # invoke the refitting
-            if len(self.finished_candidates) >= self.initial_random_runs:
+            if len(self.finished_candidates) > self.initial_random_runs:
                 self._refit_gp()
 
             return False
