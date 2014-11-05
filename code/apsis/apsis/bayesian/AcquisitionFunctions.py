@@ -1,12 +1,8 @@
 from abc import ABCMeta, abstractmethod
-from itertools import islice
 import numpy as np
 import scipy.optimize
 import logging
-from scipy.integrate import quad
 from scipy.stats import multivariate_normal
-import collections
-
 
 class AcquisitionFunction(object):
     """
@@ -27,7 +23,6 @@ class AcquisitionFunction(object):
 
     params = None
 
-
     def __init__(self, params=None):
         """
         Initializes an acquisition function.
@@ -37,7 +32,8 @@ class AcquisitionFunction(object):
         params: dict, keys are strings
             A dictionary of parameters for the corresponding
             acquisition function. New params must be added in the Bayesian
-            Optimization core, but several are available. These include at least:
+            Optimization core, but several are available. These include at
+            least:
              - The acquisition function
              - The current gp instance
              - The score of the currently best point.
@@ -56,7 +52,6 @@ class AcquisitionFunction(object):
                 raise ValueError("You specified the non supported optimization"
                                  "strategy for Expected Improvement %s",
                                  self.params['optimization_strategy'])
-
 
     @abstractmethod
     def evaluate(self, x, args_):
@@ -110,7 +105,6 @@ class AcquisitionFunction(object):
 
         elif self.optimization_strategy == "grid-scipy-brute":
             return self.compute_max_scipy_grid_search(args_)
-
 
     def compute_max_scipy_grid_search(self, args_):
         """
@@ -181,7 +175,6 @@ class AcquisitionFunction(object):
 
         return maximum
 
-
     def compute_max_scipy_optimize(self, args_):
         """
         Computes the maximum of the acquisition function using the scipy
@@ -218,13 +211,13 @@ class AcquisitionFunction(object):
         This the function to do so. Each compute_max can therefore just call
         this function, and know that the returned function has the best value
         as a global minimum.
+        As a standard - as here - the function is returned unchanged. If you
+        require a negated evaluate function, you have to change this.
 
         Function signature is as evaluate.
         """
         value = self.evaluate(x, args_)
         return value
-
-
 
 
 class ExpectedImprovement(AcquisitionFunction):
@@ -233,37 +226,46 @@ class ExpectedImprovement(AcquisitionFunction):
     See page 13 of "A Tutorial on Bayesian Optimization of Expensive Cost
     Functions, with Application to Active User Modeling and Hierarchical
     Reinforcement Learning", Brochu et. al., 2010.
-
-    Also implements different optimization strategies.
     """
 
     exploitation_exploration_tradeoff = 0
 
-
     def __init__(self, params=None):
+        """
+        Initializes the EI instance.
+
+        Parameters: dict of string keys
+            Defines behaviour of the function. Includes:
+            exploitation_tradeoff: float
+                See Brochu, page 14.
+            Also see AcquisitionFunction for other parameters.
+        """
         super(ExpectedImprovement, self).__init__(params)
 
         self.exploitation_exploration_tradeoff = params.get(
             "exploitation_tradeoff", 0)
 
-
     def compute_minimizing_evaluate(self, x, args_):
+        """
+        Changes the sign of the evaluate function.
+        """
         value = self.evaluate(x, args_)
         return -value
 
     def evaluate(self, x, args_):
+        """
+        Evaluates the Expected Improvement acquisition function.
+        """
         dimensions = len(args_['param_defs'])
         x_value = x
-        if (dimensions == 1):
+        if dimensions == 1:
             x_value = np.zeros((1, 1))
             x_value[0, 0] = x
 
         mean, variance, _025pm, _975pm = args_['gp'].predict(x_value)
 
+        #See issue #?? on github. using the variance works better than std_dev.
         std_dev = variance  # **0.5
-        # logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s", str(mean),
-        #              str(variance), str(_025pm), str(_975pm))
-
 
         #Formula adopted from the phd thesis of Jasper Snoek page 48 with
         # \gamma equals Z here
@@ -272,31 +274,40 @@ class ExpectedImprovement(AcquisitionFunction):
         #as suggested by Brochut et al.
 
         #Z = (f(x_max) - \mu(x)) / (\sigma(x))
-        X_best = args_["cur_max"]
+        x_best = args_["cur_max"]
 
         #handle case of maximization
         sign = 1
         if not args_.get("minimization", True):
             sign = -1
 
-        Z_numerator = sign * (
-            X_best - mean + self.exploitation_exploration_tradeoff)
-        Z = float(Z_numerator) / std_dev
-
-        #cdf_z = \Phi(Z), pdf_z = \phi(Z)
-        cdf_z = scipy.stats.norm().cdf(Z)  # *max(0, mean - args_["cur_max"])
-        pdf_z = scipy.stats.norm().pdf(Z)  # *max(0, mean - args_["cur_max"])
+        z_numerator = sign * (x_best - mean +
+                              self.exploitation_exploration_tradeoff)
 
         if variance != 0:
-            return Z_numerator * cdf_z + std_dev * pdf_z
+            z = float(z_numerator) / std_dev
+
+            cdf_z = scipy.stats.norm().cdf(z)
+            pdf_z = scipy.stats.norm().pdf(z)
+
+            return z_numerator * cdf_z + std_dev * pdf_z
         else:
             return 0
 
 
 class ProbabilityOfImprovement(AcquisitionFunction):
-    def evaluate(self, x, args_):
-        # TODO arg check: gpy, x, bestY,
+    """
+    Implements the probability of improvement function.
 
+    See page 12 of "A Tutorial on Bayesian Optimization of Expensive Cost
+    Functions, with Application to Active User Modeling and Hierarchical
+    Reinforcement Learning", Brochu et. al., 2010.
+    """
+
+    def evaluate(self, x, args_):
+        """
+        Evaluates the function.
+        """
         mean, variance, _025pm, _975pm = args_['gp'].predict(x)
 
         logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s",
@@ -305,39 +316,16 @@ class ProbabilityOfImprovement(AcquisitionFunction):
 
         # do not standardize on our own, but use the mean, and covariance
         # we get from the gp
-        #TODO only one dimensional - don't need multivariate
-        pdf = scipy.stats.multivariate_normal.pdf
-        cdf_calculate = quad(pdf, 0, x, (mean[0, :], variance))
-        result = cdf_calculate[0]
+        cdf = scipy.stats.norm().cdf(x, mean)
+        result = cdf
         if not args_.get("minimization", True):
-            result = 1 - result
+            result = 1 - cdf
         return result
 
-    def compute_max(self, args_):
-        dimensions = len(args_['param_defs'])
-
-        logging.debug("dimensions of param defs %s", str(dimensions))
-
-        initial_guess = [0.5] * dimensions
-        initial_guess = tuple(initial_guess)
-
-        bounds = tuple([(0, 1) * dimensions])
-
-        logging.debug("Random guess %s length %s, bounds %s, length %s",
-                      str(initial_guess), str(len(initial_guess)), str(bounds),
-                      str(len(bounds)))
-
-        # use scipy.optimize.minimize,
-        # make sure to use minimizing value from the result object
-        minimum = scipy.optimize.minimize_scalar(self.compute_negated_evaluate,
-                                                 initial_guess,
-                                                 args=tuple([args_]),
-                                                 bounds=bounds,
-                                                 method="Anneal").x
-
-        return minimum
-
     def compute_negated_evaluate(self, x, args_):
+        """
+        Changes the sign of the evaluate function.
+        """
         value = self.evaluate(x, args_)
         value = -value
 
