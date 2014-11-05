@@ -20,6 +20,11 @@ class AcquisitionFunction(object):
     """
     __metaclass__ = ABCMeta
 
+    SUPPORTED_OPTIMIZATION_STRATEGIES = ["SLSQP", "L-BFGS-B", "TNC",
+                                         "grid-simple-1d", "grid-scipy-brute"]
+
+    optimization_strategy = "grid-scipy-brute"
+
     params = None
 
 
@@ -41,6 +46,16 @@ class AcquisitionFunction(object):
 
         if self.params is None:
             self.params = {}
+
+        if 'optimization_strategy' in self.params:
+            if self.params[
+                'optimization_strategy'] in self.SUPPORTED_OPTIMIZATION_STRATEGIES:
+                self.optimization_strategy = self.params[
+                    'optimization_strategy']
+            else:
+                raise ValueError("You specified the non supported optimization"
+                                 "strategy for Expected Improvement %s",
+                                 self.params['optimization_strategy'])
 
 
     @abstractmethod
@@ -64,7 +79,6 @@ class AcquisitionFunction(object):
 
         pass
 
-    @abstractmethod
     def compute_max(self, args_):
         """
         Computes the point where the acquisition function is maximized.
@@ -81,46 +95,6 @@ class AcquisitionFunction(object):
         if args_ is None:
             raise ValueError("No arguments dict given!")
 
-        pass
-
-
-class ExpectedImprovement(AcquisitionFunction):
-    """
-    Implements the Expected Improvement acquisition function.
-    See page 13 of "A Tutorial on Bayesian Optimization of Expensive Cost
-    Functions, with Application to Active User Modeling and Hierarchical
-    Reinforcement Learning", Brochu et. al., 2010.
-
-    Also implements different optimization strategies.
-    """
-    SUPPORTED_OPTIMIZATION_STRATEGIES = ["SLSQP", "L-BFGS-B", "TNC",
-                                         "grid-simple-1d", "grid-scipy-brute"]
-
-    optimization_strategy = "grid-scipy-brute"
-
-    exploitation_exploration_tradeoff = 0
-
-
-    def __init__(self, params=None):
-        super(ExpectedImprovement, self).__init__(params)
-
-        if not params is None:
-            self.exploitation_exploration_tradeoff = params.get(
-                "exploitation_tradeoff", 0)
-
-        if 'optimization_strategy' in self.params:
-            if self.params[
-                'optimization_strategy'] in self.SUPPORTED_OPTIMIZATION_STRATEGIES:
-                self.optimization_strategy = self.params[
-                    'optimization_strategy']
-            else:
-                raise ValueError("You specified the non supported optimization"
-                                 "strategy for Expected Improvement %s",
-                                 self.params['optimization_strategy'])
-
-
-    def compute_max(self, args_):
-        # forward to the corresponding method based by optimization strategy
         if self.optimization_strategy == "grid-simple-1d":
             return self.compute_max_grid_search_1d(args_)
 
@@ -131,6 +105,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
         elif self.optimization_strategy == "grid-scipy-brute":
             return self.compute_max_scipy_grid_search(args_)
+
 
     def compute_max_scipy_grid_search(self, args_):
         """
@@ -171,7 +146,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
         # make sure to use maximizing value from the result object
         maximum, max_value, grid, joust = scipy.optimize.brute(
-            self.compute_negated_evaluate,
+            self.compute_minimizing_evaluate,
             bounds, Ns=grid_points,
             args=tuple([args_]), full_output=True, disp=True, finish=None)
         #a bit hacky, but for 1d check if array, if not make one manually
@@ -233,7 +208,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
 
         # make sure to use maximizing value from the result object
-        maximum = scipy.optimize.minimize(self.compute_negated_evaluate,
+        maximum = scipy.optimize.minimize(self.compute_minimizing_evaluate,
                                           initial_guess, args=tuple([args_]),
                                           bounds=bounds,
                                           method=self.optimization_strategy).x
@@ -242,12 +217,36 @@ class ExpectedImprovement(AcquisitionFunction):
 
         return maximum
 
-    def compute_negated_evaluate(self, x, args_):
+    def compute_minimizing_evaluate(self, x, args_):
         value = self.evaluate(x, args_)
-        value = -value
-
         return value
 
+
+
+
+class ExpectedImprovement(AcquisitionFunction):
+    """
+    Implements the Expected Improvement acquisition function.
+    See page 13 of "A Tutorial on Bayesian Optimization of Expensive Cost
+    Functions, with Application to Active User Modeling and Hierarchical
+    Reinforcement Learning", Brochu et. al., 2010.
+
+    Also implements different optimization strategies.
+    """
+
+    exploitation_exploration_tradeoff = 0
+
+
+    def __init__(self, params=None):
+        super(ExpectedImprovement, self).__init__(params)
+
+        self.exploitation_exploration_tradeoff = params.get(
+            "exploitation_tradeoff", 0)
+
+
+    def compute_minimizing_evaluate(self, x, args_):
+        value = self.evaluate(x, args_)
+        return -value
 
     def evaluate(self, x, args_):
         dimensions = len(args_['param_defs'])

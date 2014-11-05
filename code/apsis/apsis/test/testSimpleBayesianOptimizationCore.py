@@ -77,10 +77,10 @@ class testSimpleBayesianOptimizationCore(object):
 
             point = cand.params
             value = f(point[0])
-            if (i >= random_runs):
-                self.plot_nicely(min_val, max_val, resolution, point[0], minimization)
-                print(self.bay_search.gp)
-                raw_input()
+            #if (i >= random_runs):
+            #    self.plot_nicely(min_val, max_val, resolution, point[0], minimization)
+            #    print(self.bay_search.gp)
+            #    raw_input()
 
             strings.append(("%i: %f at %f" % (i, value, point[0])))
             if best_result is None or value < best_result:
@@ -93,10 +93,10 @@ class testSimpleBayesianOptimizationCore(object):
                        str(self.bay_search.best_candidate.result)
                        + " != " + str(best_result))
         #self.bay_search.gp.plot()
-        self.plot_nicely(min_val, max_val, resolution, minimization)
+        #self.plot_nicely(min_val, max_val, resolution, minimization)
         for s in strings:
             print(s)
-        raw_input()
+        #raw_input()
 
     # def test_convergence_one_worker_multi_dim(self):
     #     min_val = 0
