@@ -48,8 +48,8 @@ class AcquisitionFunction(object):
             self.params = {}
 
         if 'optimization_strategy' in self.params:
-            if self.params[
-                'optimization_strategy'] in self.SUPPORTED_OPTIMIZATION_STRATEGIES:
+            if self.params['optimization_strategy'] in \
+                    self.SUPPORTED_OPTIMIZATION_STRATEGIES:
                 self.optimization_strategy = self.params[
                     'optimization_strategy']
             else:
@@ -83,6 +83,10 @@ class AcquisitionFunction(object):
         """
         Computes the point where the acquisition function is maximized.
 
+        This can be toggled via the optimization_strategy keyword in the
+        __init__ function's params dict. Supported strategies are in
+        SUPPORTED_OPTIMIZATION_STRATEGIES.
+
         Parameters
         ----------
         args_: dict of string keys
@@ -90,7 +94,8 @@ class AcquisitionFunction(object):
 
         Returns
         -------
-        maximum of the acquisition function.
+        result np.ndarray of floats
+            The maximum point for the acquisition function.
         """
         if args_ is None:
             raise ValueError("No arguments dict given!")
@@ -115,24 +120,12 @@ class AcquisitionFunction(object):
 
             'num_grid_point_per_axis': to say how coarse the grid will be.
 
-        :return: the maximizing hyperparam vectorr of expected improvement as
-                 ndarray.
+        Otherwise, method signatures are identical to compute_max.
         """
         dimensions = len(args_['param_defs'])
 
-        # prepare for scipy optimize
-        #TODO these bounds here seem to be ignored. At least for 1d,
-        #scipy.optimize does a lot of extra handling for 1d, so we should try 2d.
-        #consider replacing bounds by creating a slice object to manually
-        #create the grid
-        #bounds = tuple([(0.0, 1.0)] * dimensions)
-
-
-        grid_points = 1000
-        #bounds = tuple([slice(0.0, 1.0, 0.1)]*dimensions)
+        grid_points = args_.get("grid_points", 1000)
         bounds = tuple([(0., 1.)] * dimensions)
-        #bounds = tuple([(0., 1.)])
-        logging.debug("Bounds: %s", str(bounds))
 
         if 'num_grid_point_per_axis' in self.params:
             grid_points = self.params['num_grid_point_per_axis']
@@ -149,7 +142,7 @@ class AcquisitionFunction(object):
             self.compute_minimizing_evaluate,
             bounds, Ns=grid_points,
             args=tuple([args_]), full_output=True, disp=True, finish=None)
-        #a bit hacky, but for 1d check if array, if not make one manually
+
         if dimensions == 1 and not isinstance(maximum, np.ndarray):
             logging.debug("Converting to array manually.")
             maximum = np.asarray([maximum])
@@ -164,8 +157,7 @@ class AcquisitionFunction(object):
         Very simple 1 dimensional grid search implementation. Optimization
         relies on that input is 1d and in value range between 0 and 1.
 
-        :param args_:
-        :return:
+        Otherwise, method signatures are identical to compute_max.
         """
         dimensions = len(args_['param_defs'])
 
@@ -191,6 +183,12 @@ class AcquisitionFunction(object):
 
 
     def compute_max_scipy_optimize(self, args_):
+        """
+        Computes the maximum of the acquisition function using the scipy
+        optimizer.
+
+        Method signatures are identical to compute_max.
+        """
         dimensions = len(args_['param_defs'])
 
         logging.debug("Computing max with scipy optimize method %s for %s "
@@ -202,22 +200,27 @@ class AcquisitionFunction(object):
         initial_guess = tuple(initial_guess)
         bounds = tuple([(0, 1) * dimensions])
 
-        #logging.debug("Random guess %s length %s, bounds %s, length %s",
-        #              str(initial_guess), str(len(initial_guess)), str(bounds),
-        #              str(len(bounds)))
-
-
         # make sure to use maximizing value from the result object
         maximum = scipy.optimize.minimize(self.compute_minimizing_evaluate,
                                           initial_guess, args=tuple([args_]),
                                           bounds=bounds,
                                           method=self.optimization_strategy).x
 
-        logging.debug("EI maximum found at %s", str(maximum))
+        logging.debug("Acquisition function maximum found at %s", str(maximum))
 
         return maximum
 
     def compute_minimizing_evaluate(self, x, args_):
+        """
+        One problem is that, as a standard, scipy.optimize only searches
+        minima. This means we have to convert each acquisition function to
+        the minima meaning the best result.
+        This the function to do so. Each compute_max can therefore just call
+        this function, and know that the returned function has the best value
+        as a global minimum.
+
+        Function signature is as evaluate.
+        """
         value = self.evaluate(x, args_)
         return value
 
