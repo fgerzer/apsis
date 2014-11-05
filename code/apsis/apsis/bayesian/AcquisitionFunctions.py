@@ -46,13 +46,18 @@ class AcquisitionFunction(object):
     @abstractmethod
     def evaluate(self, x, args_):
         """
+        Evaluates the function on one point.
 
         Parameters
         ----------
         x : np.array of floats
-        :param x:
-        :param args_:
-        :raise ValueError:
+            The point where the acquisition function should be evaluated.
+        args_: dict of string keys
+            Arguments for the evaluation function.
+
+        Raises
+        ------
+        ValueError: Iff args_ is None.
         """
         if args_ is None:
             raise ValueError("No arguments dict given!")
@@ -61,6 +66,18 @@ class AcquisitionFunction(object):
 
     @abstractmethod
     def compute_max(self, args_):
+        """
+        Computes the point where the acquisition function is maximized.
+
+        Parameters
+        ----------
+        args_: dict of string keys
+            See AcqusitionFunction.evaluate
+
+        Returns
+        -------
+        maximum of the acquisition function.
+        """
         if args_ is None:
             raise ValueError("No arguments dict given!")
 
@@ -68,6 +85,14 @@ class AcquisitionFunction(object):
 
 
 class ExpectedImprovement(AcquisitionFunction):
+    """
+    Implements the Expected Improvement acquisition function.
+    See page 13 of "A Tutorial on Bayesian Optimization of Expensive Cost
+    Functions, with Application to Active User Modeling and Hierarchical
+    Reinforcement Learning", Brochu et. al., 2010.
+
+    Also implements different optimization strategies.
+    """
     SUPPORTED_OPTIMIZATION_STRATEGIES = ["SLSQP", "L-BFGS-B", "TNC",
                                          "grid-simple-1d", "grid-scipy-brute"]
 
@@ -80,7 +105,8 @@ class ExpectedImprovement(AcquisitionFunction):
         super(ExpectedImprovement, self).__init__(params)
 
         if not params is None:
-            self.exploitation_exploration_tradeoff = params.get("exploitation_tradeoff", 0)
+            self.exploitation_exploration_tradeoff = params.get(
+                "exploitation_tradeoff", 0)
 
         if 'optimization_strategy' in self.params:
             if self.params[
@@ -94,7 +120,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
 
     def compute_max(self, args_):
-        #forward to the corresponding method based by optimization strategy
+        # forward to the corresponding method based by optimization strategy
         if self.optimization_strategy == "grid-simple-1d":
             return self.compute_max_grid_search_1d(args_)
 
@@ -119,7 +145,7 @@ class ExpectedImprovement(AcquisitionFunction):
         """
         dimensions = len(args_['param_defs'])
 
-        #prepare for scipy optimize
+        # prepare for scipy optimize
         #TODO these bounds here seem to be ignored. At least for 1d,
         #scipy.optimize does a lot of extra handling for 1d, so we should try 2d.
         #consider replacing bounds by creating a slice object to manually
@@ -129,7 +155,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
         grid_points = 1000
         #bounds = tuple([slice(0.0, 1.0, 0.1)]*dimensions)
-        bounds = tuple([(0., 1.)]*dimensions)
+        bounds = tuple([(0., 1.)] * dimensions)
         #bounds = tuple([(0., 1.)])
         logging.debug("Bounds: %s", str(bounds))
 
@@ -144,9 +170,10 @@ class ExpectedImprovement(AcquisitionFunction):
                       str(type(bounds[0])))
 
         # make sure to use maximizing value from the result object
-        maximum, max_value, grid, joust = scipy.optimize.brute(self.compute_negated_evaluate,
-                                       bounds, Ns=grid_points,
-                                       args=tuple([args_]), full_output=True, disp=True, finish=None)
+        maximum, max_value, grid, joust = scipy.optimize.brute(
+            self.compute_negated_evaluate,
+            bounds, Ns=grid_points,
+            args=tuple([args_]), full_output=True, disp=True, finish=None)
         #a bit hacky, but for 1d check if array, if not make one manually
         if dimensions == 1 and not isinstance(maximum, np.ndarray):
             logging.debug("Converting to array manually.")
@@ -175,7 +202,7 @@ class ExpectedImprovement(AcquisitionFunction):
         min_value = self.evaluate(maximum, args_)[0, 0]
 
         for i in range(1000):
-            #walk in grid and check current objective value
+            # walk in grid and check current objective value
             cur[0, 0] += 1. / 1000
             cur_obj = self.evaluate(cur, args_)
 
@@ -195,7 +222,7 @@ class ExpectedImprovement(AcquisitionFunction):
                       "dimensional problem ", self.optimization_strategy,
                       str(dimensions))
 
-        #prepare for scipy optimize
+        # prepare for scipy optimize
         initial_guess = [0.5] * dimensions
         initial_guess = tuple(initial_guess)
         bounds = tuple([(0, 1) * dimensions])
@@ -231,8 +258,8 @@ class ExpectedImprovement(AcquisitionFunction):
 
         mean, variance, _025pm, _975pm = args_['gp'].predict(x_value)
 
-        std_dev = variance#**0.5
-        #logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s", str(mean),
+        std_dev = variance  # **0.5
+        # logging.debug("Evaluating GP mean %s, var %s, _025 %s, _975 %s", str(mean),
         #              str(variance), str(_025pm), str(_975pm))
 
 
@@ -250,7 +277,8 @@ class ExpectedImprovement(AcquisitionFunction):
         if not args_.get("minimization", True):
             sign = -1
 
-        Z_numerator = sign * (X_best - mean + self.exploitation_exploration_tradeoff)
+        Z_numerator = sign * (
+            X_best - mean + self.exploitation_exploration_tradeoff)
         Z = float(Z_numerator) / std_dev
 
         #cdf_z = \Phi(Z), pdf_z = \phi(Z)
@@ -274,13 +302,13 @@ class ProbabilityOfImprovement(AcquisitionFunction):
                       str(variance), str(_025pm), str(_975pm))
 
         # do not standardize on our own, but use the mean, and covariance
-        #we get from the gp
+        # we get from the gp
         #TODO only one dimensional - don't need multivariate
         pdf = scipy.stats.multivariate_normal.pdf
         cdf_calculate = quad(pdf, 0, x, (mean[0, :], variance))
         result = cdf_calculate[0]
         if not args_.get("minimization", True):
-            result = 1-result
+            result = 1 - result
         return result
 
     def compute_max(self, args_):
