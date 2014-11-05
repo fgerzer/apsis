@@ -278,8 +278,10 @@ class ProbabilityOfImprovement(AcquisitionFunction):
         #TODO only one dimensional - don't need multivariate
         pdf = scipy.stats.multivariate_normal.pdf
         cdf_calculate = quad(pdf, 0, x, (mean[0, :], variance))
-
-        return cdf_calculate[0]
+        result = cdf_calculate[0]
+        if not args_.get("minimization", True):
+            result = 1-result
+        return result
 
     def compute_max(self, args_):
         dimensions = len(args_['param_defs'])
