@@ -50,7 +50,7 @@ class AcquisitionFunction(object):
                     'optimization_strategy']
             else:
                 raise ValueError("You specified the non supported optimization"
-                                 "strategy for Expected Improvement %s",
+                                 "strategy %s for maximizing acquisition.",
                                  self.params['optimization_strategy'])
 
     @abstractmethod
@@ -118,11 +118,9 @@ class AcquisitionFunction(object):
         """
         dimensions = len(args_['param_defs'])
 
-        grid_points = args_.get("grid_points", 1000)
         bounds = tuple([(0., 1.)] * dimensions)
 
-        if 'num_grid_point_per_axis' in self.params:
-            grid_points = self.params['num_grid_point_per_axis']
+        grid_points = self.params.get('num_grid_point_per_axis', 1000)
 
         logging.debug("Computing max with scipy optimize method %s for %s "
                       "dimensional problem using %s points per dimension"
@@ -271,7 +269,7 @@ class ExpectedImprovement(AcquisitionFunction):
         # \gamma equals Z here
 
         #Additionally support for the exploration exploitation trade-off
-        #as suggested by Brochut et al.
+        #as suggested by Brochu et al.
 
         #Z = (f(x_max) - \mu(x)) / (\sigma(x))
         x_best = args_["cur_max"]
