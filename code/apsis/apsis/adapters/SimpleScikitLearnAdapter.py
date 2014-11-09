@@ -155,7 +155,7 @@ class SimpleScikitLearnAdapter(object):
 
         return return_dict
 
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, warm_start=False):
         """
         Method to run the optimizer bound to this adapter. Will optimize
         for self.n_iter steps using the OptimizationCoreInterface instance in
@@ -168,6 +168,9 @@ class SimpleScikitLearnAdapter(object):
 
         y: nd_array
             The corresponding labels of the data set X.
+
+        warm_start: bool
+            If true, uses knowledge of the last run.
 
         Returns
         -------
@@ -183,8 +186,9 @@ class SimpleScikitLearnAdapter(object):
         self.optimizer_arguments['param_defs'] = optimizer_param_defs
 
         #use helper to find optimizer class and instantiate
-        self.optimizer = adapter_utils.check_optimizer(self.optimizer)(
-            self.optimizer_arguments)
+        if not warm_start:
+            self.optimizer = adapter_utils.check_optimizer(self.optimizer)(
+                self.optimizer_arguments)
 
         #now run the optimization for n_iter number of iterations
         for i in range(self.n_iter):
