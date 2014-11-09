@@ -174,14 +174,39 @@ class OptimizationCoreInterface(object):
 
         return True
 
-class ListBasedCore(object):
+class ListBasedCore(OptimizationCoreInterface):
+    """"
+    Defines a list-based core.
+
+    A list-based core is characterized through the possession of three lists:
+    finished_candidates, which stores all finished candidates
+    working_candidates, which stores all candidates currently being worked on
+    pending_candidates, which stores all candidates that have not yet been
+        assigned.
+    Also stores a best_candidate.
+    """
     finished_candidates = None
     working_candidates = None
     pending_candidates = None
 
     best_candidate = None
 
-    def perform_candidate_state_check(self, candidate):
+    def transfer_to_working(self, candidate):
+        """
+        Transfers a candidate to the working list if it isn't there already.
+
+        Parameters
+        ----------
+        candidate: Candidate
+            The candidate that should be checked.
+
+        Returns
+        -------
+        continue: bool
+            Returns True iff the candidate should be continued.
+            Currently, the only way for it to return False is if the candidate
+            has already been finished.
+        """
         if candidate not in self.working_candidates:
             # work on a finished candidate is discarded and should abort
             if candidate in self.finished_candidates:
@@ -197,8 +222,18 @@ class ListBasedCore(object):
 
             #but now it is a working item
             self.working_candidates.append(candidate)
+        return True
 
     def deal_with_finished(self, candidate):
+        """
+        Deals with a finished candidate by checking for best results and doing
+        list updates.
+
+        Parameters
+        ----------
+        candidate: Candidate
+            The candidate that has been finished.
+        """
         self.working_candidates.remove(candidate)
         self.finished_candidates.append(candidate)
 
@@ -206,7 +241,9 @@ class ListBasedCore(object):
         if self.best_candidate is not None:
             if self.is_better_candidate_as(candidate, self.best_candidate):
                 logging.info("Cool - found new best candidate "
-                             + str(candidate) + " with score " + str(candidate.result) + " instead of " + str(self.best_candidate.result))
+                             + str(candidate) + " with score "
+                             + str(candidate.result) + " instead of "
+                             + str(self.best_candidate.result))
                 self.best_candidate = candidate
 
         else:

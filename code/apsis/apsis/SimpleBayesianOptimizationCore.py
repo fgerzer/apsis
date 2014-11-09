@@ -34,8 +34,10 @@ class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
                                                    "in status " + str(status)
                       + "on candidate " + str(candidate))
 
-        # first check if this point is known
-        self.perform_candidate_state_check(candidate)
+        # first check if this point is known. if it is in finished, tell the
+        # worker to kill the computation.
+        if not self.transfer_to_working(candidate):
+            return False
 
         # if finished remove from working and put to finished list.
         if status == "finished":
