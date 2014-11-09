@@ -23,11 +23,12 @@ class OptimizationCoreInterface(object):
         """
         Init method to initialize optimization core.
 
-        :param params: A dictionary of parameters for the optimizer.
-        Should contain at least upper and lower bound.
-        For more arguments (which may be required by the individual optimizers)
-        see their documentation.
-        :return: this object.
+        Parameters
+        ----------
+        params: dict of string keys
+            A dictionary of parameters for the optimizer. Should contain at
+            least param_defs. For more arguments (which may be required by the
+            individual optimizers) see their documentation.
         """
         pass
 
@@ -37,9 +38,16 @@ class OptimizationCoreInterface(object):
         This method is invoked by workers to obtain next candidate points that
         need to be evaluated.
 
-        :param worker_id: A string id for the worker calling this method.
-        :return: An object of type Candidate that contains information related
-        to the point that shall be evaluated.
+        Parameters
+        ----------
+        worker_id: string or None
+            A string id for the worker calling this method
+
+        Returns
+        -------
+        next_candidate: Candidate
+            A Candidate corresponding to the next point that shall be
+            evaluated.
         """
         pass
 
@@ -56,23 +64,30 @@ class OptimizationCoreInterface(object):
         Later, workers may be required by a core to regularly send a working
         message.
 
-        :param candidate: an object of type Candidate that contains information
-        related to the point the worker is
-        currently evaluating
-        :param status: a string containing either of the values ('finished',
-        'working', 'pausing').
-        A worker sending 'finished' indicates that it stops the evaluation.
-        Sending 'working' indicates that the worker
-        wants to go on working on this point. 'pausing' indicates that the
-        worker needed to pause for some external
-        reason and continuing on evaluating this point should be done by
-        another worker.
-        :param worker_id: A string id for the worker calling this method.
-        Unused by default.
-        :param can_be_killed: A boolean stating if the worker can be killed
-        from the core or not.
-        :return: a boolean to tell the worker if it should continue or stop
-        the evaluation
+        Parameters
+        ----------
+        candidate: Candidate
+            Contains the information related to the point the worker is
+            currently evaluating.
+
+        status: {"finished", "working", "pausing"
+            'finished' indicates that it stops the evaluation.
+            'working' indicates that the worker wants to go on working
+                on this point.
+            'pausing' indicates that the worker needed to pause for some
+                external reason and continuing on evaluating this point should
+                be done by another worker.
+
+        worker_id: string or None
+            A string id for the worker calling this method. Unused by default.
+
+        can_be_killed: bool
+            Stating if the worker may be killed by the core.
+
+        Returns
+        -------
+        continue: bool
+            Tells the worker whether it should continue the computation.
         """
         pass
 
@@ -83,9 +98,24 @@ class OptimizationCoreInterface(object):
         This is dependant on whether the problem is one of minimization or
         maximization.
         It is done by comparing their results.
-        :param one: Candidate that should be better.
-        :param two: Candidate that acts as a baseline.
-        :return: True iff one is better than two.
+
+        Parameters
+        ----------
+        one: Candidate
+            Candidate that is tested on being better.
+
+        two: Candidate
+            Candidate that is used as a baseline.
+
+        Returns
+        -------
+        better: bool
+            True iff one is better than two
+
+        Raises
+        ------
+        ValueError:
+            If one or two are not Candidate objects.
         """
         if not isinstance(one, Candidate):
             raise ValueError("Value is not a candidate " + str(one)
@@ -103,9 +133,17 @@ class OptimizationCoreInterface(object):
 
     def _is_supported_param_type(self, param):
         """
-        TODO dok
-        :param param:
-        :return:
+        Tests whether a certain parameter is supported by the optimizer.
+
+        Parameters
+        ----------
+        param:
+            The parameter to be tested
+
+        Result
+        ------
+        is_supported: bool
+            True iff param is supported by this optimizer.
         """
         if isinstance(self.SUPPORTED_PARAM_TYPES, list):
             for sup in self.SUPPORTED_PARAM_TYPES:
@@ -116,9 +154,19 @@ class OptimizationCoreInterface(object):
 
     def _is_all_supported_param_types(self, param_list):
         """
-        TODO dok
-        :param param_list:
-        :return:
+        Tests whether a parameter list is completely supported by this
+        optimizer.
+
+        Parameters
+        ----------
+        param_list: list
+            A list of parameter types.
+
+        Returns
+        -------
+
+        is_supported: bool
+            True iff all params in param_list are supported by this optimizer.
         """
         for param in param_list:
             if not self._is_supported_param_type(param):
