@@ -4,6 +4,7 @@ import scipy.optimize
 import logging
 from scipy.stats import multivariate_normal
 
+
 class AcquisitionFunction(object):
     """
     An acquisition function is used to decide which point to evaluate next.
@@ -161,7 +162,6 @@ class AcquisitionFunction(object):
         min_value = self.evaluate(maximum, args_)[0, 0]
 
         for i in range(1000):
-            # walk in grid and check current objective value
             cur[0, 0] += 1. / 1000
             cur_obj = self.evaluate(cur, args_)
 
@@ -270,7 +270,6 @@ class ExpectedImprovement(AcquisitionFunction):
 
         #Additionally support for the exploration exploitation trade-off
         #as suggested by Brochu et al.
-
         #Z = (f(x_max) - \mu(x)) / (\sigma(x))
         x_best = args_["cur_max"]
 
