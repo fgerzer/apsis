@@ -262,8 +262,8 @@ class ExpectedImprovement(AcquisitionFunction):
 
         mean, variance, _025pm, _975pm = args_['gp'].predict(x_value)
 
-        #See issue #?? on github. using the variance works better than std_dev.
-        std_dev = variance  # **0.5
+        #See issue #32 on github. using the variance works better than std_dev.
+        std_dev = variance ** 0.5
 
         #Formula adopted from the phd thesis of Jasper Snoek page 48 with
         # \gamma equals Z here
