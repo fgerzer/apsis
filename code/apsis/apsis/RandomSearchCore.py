@@ -13,7 +13,7 @@ from apsis.utilities.validation import check_array, \
 from apsis.models.ParamInformation import ParamDef, NominalParamDef, NumericParamDef
 
 
-class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
+class RandomSearchCore(ListBasedCore):
     """
     Implements a random searcher for parameter optimization.
     """
@@ -25,10 +25,20 @@ class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
         """
         Initializes the random search.
 
+        Parameters
+        ----------
 
-        :raise ValueError: If params does not contain lower_bound or
-        upper_bound, or attributes are assigned bad values.
+        params: dict with string keys
+            The parameters this optimizer requires. Must not be None and must
+            contain param_defs.
+
+        Raises
+        ------
+        ValueError:
+            If params is incorrectly given.
         """
+        super(RandomSearchCore, self).__init__(params)
+
         if params is None:
             raise ValueError("No params dict given!")
 
@@ -49,33 +59,25 @@ class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
             params.get("random_state", None))
         self.minimization = params.get("minimization_problem", True)
 
-        self.finished_candidates = []
-        self.working_candidates = []
-        self.pending_candidates = []
-
-        super(RandomSearchCore, self).__init__(params)
-
-    # TODO deal with the case that candidate point is the same but
-    # objects do not equal
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
         """
         Right now, RandomSearchCore works like this:
         It ensures candidate is in the working_candidates list. If it is in
-        the finished_candidates list,
-         the worker is told to terminate execution.
+        the finished_candidates list, the worker is told to terminate
+        execution.
         If the status is 'working', the worker may continue.
         If the status is 'pausing', candidate is returned to the
-        pending_candidates list.
+            pending_candidates list.
         If the status is 'finished', candidate is appended to the
-        finished_candidates list, and possibly the best
-         result updated. Of course, the worker is then told to stop.
+            finished_candidates list, and possibly the best
+            result updated. Of course, the worker is then told to stop.
         """
         logging.debug("Worker " + str(worker_id) + " informed me about work "
                                                    "in status " + str(status)
                       + "on candidate " + str(candidate))
 
         # first check if this point is known
-        self.perform_candidate_state_check(candidate)
+        self.transfer_to_working(candidate)
 
         # if finished remove from working and put to finished list.
         if status == "finished":
@@ -106,16 +108,21 @@ class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
 
         The new Candidate object is return following these rules:
         If there are pending candidates, they are returned first. Otherwise
-        a new random candidate is generated
-        from a uniform distribution. It is made sure that this point has not
-        been marked as finished yet.
+        a new random candidate is generated from a uniform distribution. It is
+        made sure that this point has not been marked as finished yet.
         On return of a new candidate it is appended to the working_candidates
         list in this core.
 
-        :param worker_id: not used here, but needed to satisfy interface of
-        OptimizationCoreInterface.
-        :return: an instance of a Candidate object that should be evaluated
-        next.
+        Parameters
+        ----------
+        worker_id: String
+            Not used here, but needed to satisfy interface of
+            OptimizationCoreInterface.
+
+        Returns
+        -------
+        next_candidate: Candidate
+            The candidate that should be evaluated next.
         """
         # either we have pending candidates
         if len(self.pending_candidates) > 0:
@@ -139,7 +146,8 @@ class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
                     total_possible_param_comb = float("inf")
 
             if (len(self.finished_candidates) + len(self.working_candidates)
-                    + len(self.pending_candidates) < total_possible_param_comb):
+                    + len(self.pending_candidates)
+                    < total_possible_param_comb):
                 while ((new_candidate in self.finished_candidates)
                        or (new_candidate in self.working_candidates)
                     or (new_candidate in self.pending_candidates)):
@@ -160,6 +168,11 @@ class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
     def _generate_new_random_vector(self):
         """
         Generates a new random vector. Hast to take care of parameter type
+        Returns
+        -------
+
+        new_candidate_point: vector
+            List of new values for each attribute.
         """
         # initialize empty list of correct length
         new_candidate_point = [None] * len(self.param_defs)
@@ -172,7 +185,8 @@ class RandomSearchCore(OptimizationCoreInterface, ListBasedCore):
                     self.random_state.uniform(0, 1))
 
             elif isinstance(param_information, NominalParamDef):
-                new_candidate_point[i] = random.choice(param_information.values)
+                new_candidate_point[i] = \
+                    random.choice(param_information.values)
 
         return new_candidate_point
 
