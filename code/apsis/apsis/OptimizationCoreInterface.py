@@ -191,6 +191,27 @@ class ListBasedCore(OptimizationCoreInterface):
 
     best_candidate = None
 
+    def __init__(self, params):
+        """
+        Init method to initialize the lists of ListBasedCore.
+
+        Parameters
+        ----------
+        params: dict of string keys
+            A dictionary of parameters for the optimizer. Should contain at
+            least param_defs. For more arguments (which may be required by the
+            individual optimizers) see their documentation. are ignored by
+            this interface.
+        """
+
+        super(ListBasedCore, self).__init__(params)
+
+        self.finished_candidates = []
+        self.working_candidates = []
+        self.pending_candidates = []
+
+
+
     def transfer_to_working(self, candidate):
         """
         Transfers a candidate to the working list if it isn't there already.

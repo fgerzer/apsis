@@ -9,7 +9,7 @@ import GPy
 import logging
 
 
-class SimpleBayesianOptimizationCore(OptimizationCoreInterface, ListBasedCore):
+class SimpleBayesianOptimizationCore(ListBasedCore):
     """
     This implements a simple bayesian optimizer.
 
