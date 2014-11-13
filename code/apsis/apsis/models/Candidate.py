@@ -54,8 +54,16 @@ class Candidate(object):
             A dictionary representing information for the workers.
             Keys should be strings. Can be used to, for example, store file
             paths where information necessary for continuation is stored.
+
+        Raises
+        ------
+        ValueError:
+            If no params vector is given.
+
         """
-        #TODO add parameter validity check.
+        if params is None:
+           raise ValueError("No param vector given!")
+
         self.params = params
 
         if params_used is None:
