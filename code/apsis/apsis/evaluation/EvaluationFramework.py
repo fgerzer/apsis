@@ -73,10 +73,12 @@ class EvaluationFramework(object):
         steps: int
             The number of steps to run the evaluation for.
         """
-        self.evaluate_precomputed_grid(optimizers, evaluation_descriptions, grid, steps)
+        self.evaluate_precomputed_grid(optimizers, evaluation_descriptions,
+                                       grid, steps)
         self.plot_evaluations()
 
-    def evaluate_precomputed_grid(self, optimizers, evaluation_descriptions, grid, steps):
+    def evaluate_precomputed_grid(self, optimizers, evaluation_descriptions,
+                                  grid, steps):
         """
         Evaluates all optimizers on the given precomputed grid. You will be
         able to investigate results in the local evaluations attribute.
@@ -100,7 +102,8 @@ class EvaluationFramework(object):
         steps: int
             The number of steps to run the evaluation for.
         """
-        self.evaluate_optimizers(optimizers, evaluation_descriptions, grid.evaluate_candidate, steps)
+        self.evaluate_optimizers(optimizers, evaluation_descriptions,
+                                 grid.evaluate_candidate, steps)
 
 
 
@@ -108,6 +111,7 @@ class EvaluationFramework(object):
                             objective_function, steps):
         """
         Unconstrained evaluation of all optimizers on the given objective func.
+        In each step evaluates all optimizers given for exactly one step.
 
         Please read carefully about the semantics of the objective function
         below.
@@ -132,9 +136,11 @@ class EvaluationFramework(object):
         steps: int
             The number of steps to run the evaluation for.
         """
+        #create a new evaluation hash for every optimizer.
         optimizer_idxs = self._add_new_optimizer_evaluation(optimizers,
                                                     evaluation_descriptions)
 
+        #then in each step optimize with each optimizer just for one step.
         for i in range(steps):
             for optimizer_idx in optimizer_idxs:
                 self.evaluation_step(optimizer_idx, objective_function)
@@ -160,16 +166,20 @@ class EvaluationFramework(object):
             candidate object with the result value set.
 
         """
+        #retrieve the optimizer according to its index
         optimizer = self.evaluations[core_index]['optimizer']
 
+        #let the optimizer offer a new candidate to us
         #compute next candidate - track cost
         start_time = time.time()
         next_candidate = optimizer.next_candidate()
         cost_core = time.time() - start_time
 
-        #evaluate in objective function. It has to update result and other
-        #properties in next_candidate.
+        #evaluate this candidate in objective function.
+        # It has to update result and other properties in next_candidate.
         next_candidate = objective_func(next_candidate)
+
+        #Now we report back the evaluation result.
         #also the cost for the working method is accounted to the optimizer
         start_time = time.time()
         optimizer.working(next_candidate, "finished")
@@ -177,6 +187,7 @@ class EvaluationFramework(object):
 
         best_result = optimizer.best_candidate.result
 
+        #storing this evaluation step.
         self._add_evaluation_step(core_index, next_candidate.result,
                                   best_result, next_candidate.cost, cost_core)
 
@@ -197,14 +208,22 @@ class EvaluationFramework(object):
         if idxs is None:
             idxs = range(len(self.evaluations))
 
+        #start a new plot
         plt.figure()
+
+        #labeling the axis
+        plt.xlabel('Number of Evaluations of Objective Function')
+        plt.ylabel('Best Objective Function Result')
+
+        #plot for all given optimizers
         for idx in idxs:
             results = self.evaluations[idx]['best_result_per_step']
             desc = self.evaluations[idx]['description']
             num_steps = len(results)
             x = np.linspace(0, num_steps, num_steps, endpoint=False)
             logging.debug("Plotting %s (optimizer %s), with results %s"
-                          %(desc, str(self.evaluations[idx]["optimizer"]), str(results)))
+                          %(desc, str(self.evaluations[idx]["optimizer"]),
+                            str(results)))
             plt.plot(x, results, label=desc)
 
         plt.legend(loc='upper right')
@@ -229,7 +248,13 @@ class EvaluationFramework(object):
 
         #plot costs
         plt.figure()
+
+        #labeling the axis
+        plt.xlabel('Cost of Total Optimization')
+        plt.ylabel('Best Objective Function Result')
+
         for idx in idxs:
+            #compute the total cost as totel_csot = eval_cost + core_cost
             total_costs = []
             cost_before = 0
             for step in range(len(self.evaluations[idx]['best_result_per_step'])):
@@ -238,8 +263,6 @@ class EvaluationFramework(object):
 
             results = self.evaluations[idx]['best_result_per_step']
             desc = self.evaluations[idx]['description']
-
-
 
             x = total_costs
             logging.debug("Plotting %s (optimizer %s), results %s, with cost %s"
