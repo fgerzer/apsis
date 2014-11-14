@@ -139,35 +139,6 @@ class Candidate(object):
         string += "result: " + str(self.result) + "\n"
         return string
 
-    def __lt__(self, other):
-        """
-        Compares two Candidate instances. Compares their result fields.
-
-        Parameters
-        ----------
-        other: Candidate
-            A candidate that shall be used for comparison with this object.
-
-        Returns
-        ----------
-            lt: bool
-                True if the result of this candidate is smaller than
-                the other candidate's result.
-
-        Raises
-        ------
-        ValueError:
-            If other is not a Candidate object.
-        """
-        #TODO Candidate lt is not consistent with candidate equals! Comparison
-        #of results with < is not such a good idea!
-        if not isinstance(other, Candidate):
-            raise ValueError("Is not compared with a Candidate, but with "
-                             + str(other) + ".")
-        if self.result < other.result:
-            return True
-        return False
-
     def as_vector(self):
         """
         Convert this Candidate's parameter vector to a numpy array.
