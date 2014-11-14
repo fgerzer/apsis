@@ -9,6 +9,9 @@ import logging
 class OptimizationCoreInterface(object):
     """
     The interface definition all optimizers have to fulfill.
+
+    Also stores a best_candidate.
+
     """
     __metaclass__ = ABCMeta
 
@@ -17,6 +20,7 @@ class OptimizationCoreInterface(object):
     minimization = True
     param_defs = None
 
+    best_candidate = None
 
     @abstractmethod
     def __init__(self, params):
@@ -51,7 +55,6 @@ class OptimizationCoreInterface(object):
         """
         pass
 
-    @abstractmethod
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
         """
         Method that is used by used by workers to announce their currently
@@ -89,7 +92,17 @@ class OptimizationCoreInterface(object):
         continue: bool
             Tells the worker whether it should continue the computation.
         """
-        pass
+        #check for the new best result
+        if self.best_candidate is not None:
+            if self.is_better_candidate_as(candidate, self.best_candidate):
+                logging.info("Cool - found new best candidate "
+                             + str(candidate) + " with score "
+                             + str(candidate.result) + " instead of "
+                             + str(self.best_candidate.result))
+                self.best_candidate = candidate
+
+        else:
+            self.best_candidate = candidate
 
     def is_better_candidate_as(self, one, two):
         """
@@ -183,13 +196,11 @@ class ListBasedCore(OptimizationCoreInterface):
     working_candidates, which stores all candidates currently being worked on
     pending_candidates, which stores all candidates that have not yet been
         assigned.
-    Also stores a best_candidate.
     """
     finished_candidates = None
     working_candidates = None
     pending_candidates = None
 
-    best_candidate = None
 
     def __init__(self, params):
         """
@@ -257,17 +268,4 @@ class ListBasedCore(OptimizationCoreInterface):
         """
         self.working_candidates.remove(candidate)
         self.finished_candidates.append(candidate)
-
-        #check for the new best result
-        if self.best_candidate is not None:
-            if self.is_better_candidate_as(candidate, self.best_candidate):
-                logging.info("Cool - found new best candidate "
-                             + str(candidate) + " with score "
-                             + str(candidate.result) + " instead of "
-                             + str(self.best_candidate.result))
-                self.best_candidate = candidate
-
-        else:
-            self.best_candidate = candidate
-
 

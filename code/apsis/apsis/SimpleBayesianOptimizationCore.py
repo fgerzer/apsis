@@ -30,6 +30,8 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
     num_gp_restarts = 10
 
     def working(self, candidate, status, worker_id=None, can_be_killed=False):
+        super(SimpleBayesianOptimizationCore, self).working(
+            candidate, status, worker_id, can_be_killed)
         logging.debug("Worker " + str(worker_id) + " informed me about work "
                                                    "in status " + str(status)
                       + "on candidate " + str(candidate))

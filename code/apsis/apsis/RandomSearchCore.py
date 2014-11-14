@@ -72,6 +72,8 @@ class RandomSearchCore(ListBasedCore):
             finished_candidates list, and possibly the best
             result updated. Of course, the worker is then told to stop.
         """
+        super(RandomSearchCore, self).working(
+            candidate, status, worker_id, can_be_killed)
         logging.debug("Worker " + str(worker_id) + " informed me about work "
                                                    "in status " + str(status)
                       + "on candidate " + str(candidate))
