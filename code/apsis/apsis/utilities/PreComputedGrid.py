@@ -2,6 +2,7 @@ from apsis.models.ParamInformation import NominalParamDef, NumericParamDef
 from apsis.models.Candidate import Candidate
 import numpy as np
 import pickle
+import time
 
 class PreComputedGrid(object):
     grid_points = None
@@ -59,7 +60,11 @@ class PreComputedGrid(object):
 
     def precompute_results(self, objective_func):
         for i in range(len(self.grid_points)):
+            start_time = time.time()
             self.grid_points[i].result = objective_func(self.grid_points[i])
+            end_time = time.time()
+            duration = end_time - start_time
+            self.grid_points[i].cost = duration
 
     def load_from_disk(self, filename):
         self.grid_points, self.param_defs = pickle.load(open(filename, "rb"))
