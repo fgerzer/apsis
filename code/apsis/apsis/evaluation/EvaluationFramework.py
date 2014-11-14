@@ -73,8 +73,8 @@ class EvaluationFramework(object):
         if idxs is None:
             idxs = range(len(self.evaluations))
 
+        plt.figure()
         for idx in idxs:
-
             results = self.evaluations[idx]['best_result_per_step']
             desc = self.evaluations[idx]['description']
             num_steps = len(results)
@@ -86,6 +86,27 @@ class EvaluationFramework(object):
         plt.legend(loc='upper right')
         plt.show(True)
 
+
+        #plot costs
+        plt.figure()
+        for idx in idxs:
+            total_costs = []
+            cost_before = 0
+            for step in range(len(self.evaluations[idx]['best_result_per_step'])):
+                total_costs.append(self.evaluations[idx]['cost_eval_per_step'][step]+ self.evaluations[idx]['cost_core_per_step'][step] + cost_before)
+                cost_before = total_costs[step]
+
+            results = self.evaluations[idx]['best_result_per_step']
+            desc = self.evaluations[idx]['description']
+
+
+
+            x = total_costs
+            logging.debug("Plotting %s (optimizer %s), results %s, with cost %s"
+                          %(desc, str(self.evaluations[idx]["optimizer"]), str(results), str(total_costs)))
+            plt.plot(x, results, label=desc)
+
+        plt.show(True)
 
 
     def _add_evaluation_step(self, core_index, result, best_result, cost_eval, cost_core):
