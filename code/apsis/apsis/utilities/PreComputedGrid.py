@@ -124,12 +124,32 @@ class PreComputedGrid(object):
 
 
     def evaluate_candidate(self, candidate_in):
+        """
+        ATTENTION: This method will change the Candidate object given in
+        candidate_in!!
+
+        Evaluate any given Candidate object against the nearest Candidate
+        stored in this grid. The closest grid point to candidate_in is
+        determined, then the param vector in candidate_in is updated and the
+        result is added to candidate_in. This all happends in the very
+        same object!
+
+        Parameters
+        ----------
+        candidate_in: Candidate
+            The candidate object that shall be evaluated using the pre-computed
+            values in this PreComputedGrid.
+
+            Attention: Again, this method will change the Candidate object
+            given in candidate_in!!
+        """
         closest_grid_candidate = self.get_closest_grid_candidate(candidate_in)
         candidate_in.result = closest_grid_candidate.result
         for i in range(len(candidate_in.params)):
             candidate_in.params[i] = closest_grid_candidate.params[i]
         logging.debug("In grid: " + str(closest_grid_candidate.result))
         logging.debug("In grid: " + str(closest_grid_candidate))
+
         return candidate_in
 
     def cand_distance(self, candidateA, candidateB):
