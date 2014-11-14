@@ -142,6 +142,11 @@ class PreComputedGrid(object):
 
             Attention: Again, this method will change the Candidate object
             given in candidate_in!!
+
+        Returns
+        -------
+        candidate_in: Candidate
+            The same object as given, but with possibly changed param vector.
         """
         closest_grid_candidate = self.get_closest_grid_candidate(candidate_in)
         candidate_in.result = closest_grid_candidate.result
