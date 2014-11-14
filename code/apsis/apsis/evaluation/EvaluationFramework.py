@@ -44,12 +44,16 @@ class EvaluationFramework(object):
 
     def __init__(self):
         """
-        Constructor of EvaluationFramework - not doing anything here.
+        Constructor of EvaluationFramework. Only instantiation evaluations
+        list here.
         """
         self.evaluations = []
 
     def evaluate_and_plot_precomputed_grid(self, optimizers, evaluation_descriptions, grid, steps):
         """
+        Evaluates all optimizers on the given precomputed grid and plots
+        the results for all of them.
+
         Parameters
         ----------
         optimizers: OptimizationCoreInterface
@@ -60,24 +64,74 @@ class EvaluationFramework(object):
             this evaluation e.g. "SimpleBayesian_EI_scipy_brute". Will be
             used in plotting
         grid: PreComputedGrid
-            Method to evaluate and plot all optimizers given on the grid given in
-            grid.
+            Method to evaluate and plot all optimizers given on the grid given
+            in grid.
             Hence you have to instantiate the grid and run build_grid_points
             and precompute_results. Exmaple:
-                grid.build_grid_points(param_defs=param_defs, dimensionality=10)
-                grid.precompute_results(func)
+               grid.build_grid_points(param_defs=param_defs, dimensionality=10)
+               grid.precompute_results(func)
         steps: int
             The number of steps to run the evaluation for.
         """
-        self.evaluate_optimizers_precomputed_grid(optimizers, evaluation_descriptions, grid, steps)
+        self.evaluate_precomputed_grid(optimizers, evaluation_descriptions, grid, steps)
         self.plot_evaluations()
 
-    def evaluate_optimizers_precomputed_grid(self, optimizers, evaluation_descriptions, grid, steps):
+    def evaluate_precomputed_grid(self, optimizers, evaluation_descriptions, grid, steps):
+        """
+        Evaluates all optimizers on the given precomputed grid. You will be
+        able to investigate results in the local evaluations attribute.
+
+        Parameters
+        ----------
+        optimizers: OptimizationCoreInterface
+            The optimizers used for evaluation. The optimizers need to be
+            instantiated before.
+        evaluation_descriptions: list of strings
+            Contains a string fro each evaluation of an optimizer to describe
+            this evaluation e.g. "SimpleBayesian_EI_scipy_brute". Will be
+            used in plotting
+        grid: PreComputedGrid
+            Method to evaluate and plot all optimizers given on the grid given
+            in grid.
+            Hence you have to instantiate the grid and run build_grid_points
+            and precompute_results. Exmaple:
+               grid.build_grid_points(param_defs=param_defs, dimensionality=10)
+               grid.precompute_results(func)
+        steps: int
+            The number of steps to run the evaluation for.
+        """
         self.evaluate_optimizers(optimizers, evaluation_descriptions, grid.evaluate_candidate, steps)
+
+
 
     def evaluate_optimizers(self, optimizers, evaluation_descriptions,
                             objective_function, steps):
+        """
+        Unconstrained evaluation of all optimizers on the given objective func.
 
+        Please read carefully about the semantics of the objective function
+        below.
+
+        You will be able to investigate results in the local
+        evaluations attribute.
+
+        Parameters
+        ----------
+        optimizers: OptimizationCoreInterface
+            The optimizers used for evaluation. The optimizers need to be
+            instantiated before.
+        evaluation_descriptions: list of strings
+            Contains a string fro each evaluation of an optimizer to describe
+            this evaluation e.g. "SimpleBayesian_EI_scipy_brute". Will be
+            used in plotting
+        objective_function: function
+            A function with the following signature
+                objective(candidate): Candidate
+            taking a Candidate object as only argument and returning a
+            candidate object with the result value set.
+        steps: int
+            The number of steps to run the evaluation for.
+        """
         optimizer_idxs = self._add_new_optimizer_evaluation(optimizers,
                                                     evaluation_descriptions)
 
@@ -87,6 +141,25 @@ class EvaluationFramework(object):
 
 
     def evaluation_step(self, core_index, objective_func):
+        """
+        Performs one evaluation step with the optimizer identified by the
+        index of the specific evaluation run in the list of evaluations held
+        by this class.
+
+        Parameters
+        ----------
+
+        core_index: int
+            The index of the optimizer according to its index in the
+            list of evaluations held in evaluations.
+
+        objective_function: function
+            A function with the following signature
+                objective(candidate): Candidate
+            taking a Candidate object as only argument and returning a
+            candidate object with the result value set.
+
+        """
         optimizer = self.evaluations[core_index]['optimizer']
 
         #compute next candidate - track cost
@@ -108,8 +181,19 @@ class EvaluationFramework(object):
                                   best_result, next_candidate.cost, cost_core)
 
 
-    def plot_evaluations(self, idxs=None):
+    def plot_evaluations_best_result_by_num_steps(self, idxs=None):
+        """
+        Create a 2D plot with the following setting
+            X-Axis: Number of evaluations of objective functions (= num steps)
+            Y-Axis: Best objective function value achieved so far.
 
+        Parameters
+        ----------
+
+        idxs: list of int
+            A list of indexes corresponding to the indexes of evaluations
+            for which evaluations a plot shall be created.
+        """
         if idxs is None:
             idxs = range(len(self.evaluations))
 
@@ -126,6 +210,22 @@ class EvaluationFramework(object):
         plt.legend(loc='upper right')
         plt.show(True)
 
+    def plot_evaluations_best_result_by_cost(self, idxs=None):
+        """
+        Create a 2D plot with the following setting
+            X-Axis: Total cost of parameter optimization
+                total cost = cost of evaluation + cost of optimization logic.
+            Y-Axis: Best objective function value achieved so far.
+
+        Parameters
+        ----------
+
+        idxs: list of int
+            A list of indexes corresponding to the indexes of evaluations
+            for which evaluations a plot shall be created.
+        """
+        if idxs is None:
+            idxs = range(len(self.evaluations))
 
         #plot costs
         plt.figure()
@@ -148,8 +248,27 @@ class EvaluationFramework(object):
 
         plt.show(True)
 
+    def plot_evaluations(self, idxs=None):
+        """
+        Creates the plots that is given by the following two functions in this
+        order.
+            1. plot_evaluations_best_result_by_num_steps
+            2. plot_evaluations_best_result_by_cost
 
-    def _add_evaluation_step(self, core_index, result, best_result, cost_eval, cost_core):
+        Parameters
+        ----------
+
+        idxs: list of int
+            A list of indexes corresponding to the indexes of evaluations
+            for which evaluations a plot shall be created.
+
+        """
+        self.plot_evaluations_best_result_by_num_steps(idxs)
+        self.plot_evaluations_best_result_by_cost(idxs)
+
+
+    def _add_evaluation_step(self, core_index, result, best_result, cost_eval,
+                             cost_core):
         dict_to_update = self.evaluations[core_index]
 
         dict_to_update['result_per_step'].append(result)

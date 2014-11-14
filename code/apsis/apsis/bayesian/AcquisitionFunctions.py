@@ -90,7 +90,7 @@ class AcquisitionFunction(object):
 
         Returns
         -------
-        result np.ndarray of floats
+        result: np.ndarray of floats
             The maximum point for the acquisition function.
         """
         if args_ is None:
