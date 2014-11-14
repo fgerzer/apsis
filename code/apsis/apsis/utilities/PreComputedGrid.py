@@ -4,10 +4,12 @@ from apsis.models.Candidate import Candidate
 import numpy as np
 import pickle
 import time
+import math
 
 class PreComputedGrid(object):
     grid_points = None
     param_defs = None
+    dimensionality_per_param = None
 
     def __init__(self):
         self.grid_points = []
@@ -26,9 +28,8 @@ class PreComputedGrid(object):
                 dimensionality_per_param[i] = len(param_defs[i].values)
 
             num_grid_points *= dimensionality_per_param[i]
-
+        self.dimensionality_per_param = dimensionality_per_param
         self.grid_points = self.grid_points_calculator(param_defs, dimensionality_per_param)
-
         for i in range(len(self.grid_points)):
             self.grid_points[i] = Candidate(self.grid_points[i])
 
@@ -55,7 +56,8 @@ class PreComputedGrid(object):
 
         for i in range(len(sub_grid)):
             for j in range(len(possible_values)):
-                return_grid.append([possible_values[j]].extend(sub_grid[i]))
+                return_grid.append([possible_values[j]])
+                return_grid[-1].extend(sub_grid[i])
 
         return return_grid
 
@@ -76,13 +78,50 @@ class PreComputedGrid(object):
     def get_closest_grid_candidate(self, candidate_in):
         closest_grid_candidate = self.grid_points[0]
         closest_distance = self.cand_distance(candidate_in, self.grid_points[0])
-        for i in range(len(self.grid_points)):
+
+        possible_idx = self._get_possible_candidate_indices(candidate_in.params, 0)
+        logging.debug("Possible IDs:" + str(possible_idx))
+        for i in possible_idx:
             dist = self.cand_distance(candidate_in, self.grid_points[i])
             if dist < closest_distance:
                 closest_grid_candidate = self.grid_points[i]
                 closest_distance = dist
         #we found the closest grid candidate.
         return closest_grid_candidate
+
+    def _get_possible_candidate_indices(self, param_vals, idx):
+        possible_idx = []
+
+        if isinstance(self.param_defs[idx], NominalParamDef):
+            possible_idx = [self.param_defs.values.index(param_vals[0])]
+        elif isinstance(self.param_defs[idx], NumericParamDef):
+            val_warped = self.param_defs[idx].warp_in(param_vals[0])
+            lower_bound = int(val_warped * (self.dimensionality_per_param[idx]-1))
+            upper_bound = lower_bound + 1
+            if upper_bound >= self.dimensionality_per_param[idx]:
+                possible_idx = [lower_bound]
+            else:
+                possible_idx = [lower_bound, upper_bound]
+            logging.debug("orig: %s, warped: %s, dim %s, lowerBnd %s" %(param_vals[0], val_warped, self.dimensionality_per_param[idx], lower_bound))
+
+        #lowest level, one dimensional grid
+        if len(param_vals) == 1:
+            return possible_idx
+
+        #revursive level, link dimensions
+        sub_grid = self._get_possible_candidate_indices(param_vals[1:], idx+1)
+
+        return_idx = []
+        logging.debug("Adding idx %s to idx %s" %(possible_idx, sub_grid))
+        for i in range(len(sub_grid)):
+            for j in range(len(possible_idx)):
+
+                cur_value = possible_idx[j] + sub_grid[i] * self.dimensionality_per_param[idx]
+                return_idx.append(cur_value)
+
+        return return_idx
+
+
 
     def evaluate_candidate(self, candidate_in):
         closest_grid_candidate = self.get_closest_grid_candidate(candidate_in)
