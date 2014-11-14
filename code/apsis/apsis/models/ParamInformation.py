@@ -30,6 +30,11 @@ class ParamDef(object):
         """
         pass
 
+    def distance(self, valueA, valueB):
+        if valueA == valueB:
+            return 0
+        return 1
+
 
 class ComparableParameterDef(object):
     """
@@ -67,6 +72,7 @@ class ComparableParameterDef(object):
             comp > 0 iff one > two.
         """
         pass
+
 
 
 class NominalParamDef(ParamDef):
@@ -148,6 +154,16 @@ class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
             return 1
 
         return 0
+
+    def distance(self, valueA, valueB):
+        if valueA not in self.values or valueB not in self.values:
+            raise ValueError(
+                "Values not comparable! Either one or the other is not in the "
+                "values domain")
+        indexA = self.values.index(valueA)
+        indexB = self.values.index(valueB)
+        diff = abs(indexA - indexB)
+        return float(diff)/len(self.values)
 
 
 class NumericParamDef(ParamDef, ComparableParameterDef):
@@ -233,6 +249,15 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
             return 1
         else:
             return 0
+
+    def distance(self, valueA, valueB):
+        if not self.is_in_parameter_domain(valueA):
+            raise ValueError("Parameter one = " + str(valueA) + " not in "
+                "value domain.")
+        if not self.is_in_parameter_domain(valueB):
+            raise ValueError("Parameter two = " + str(valueB) + " not in "
+                "value domain.")
+        return abs(self.warp_in(valueA) - self.warp_in(valueB))
 
 
 class LowerUpperNumericParamDef(NumericParamDef):
