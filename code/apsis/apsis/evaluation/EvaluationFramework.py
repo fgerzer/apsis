@@ -6,12 +6,30 @@ import logging
 
 class EvaluationFramework(object):
     """
-    Documentation TBD
+    Evaluation Framework for evaluation one or a number of optimizers.
+
+    Needs a list of instantiated optimizers as a basis and evaluates a defined
+    number of points with these optimizers. In each step it continues
+    each optimizer for one step in order to be able to investigate the progress
+    of all optimizers simultaneously.
+
+    It keeps track of all performed evaluations in its list of evaluation
+    hashes (see Attributes section).
 
     Attributes
     ----------
     evaluations
-        Store list of evaluation dicts. An evaluation dict contains
+        Store list of evaluation dicts. An evaluation dict is a dictionary that
+        contains information about the performance evaluation of a particular
+        instantiated optimizer. It maintains lists of achieved results on the
+        objective function as well as the series of best_results and costs
+        occurred on optimization. Cost is being tracked in milliseconds and is
+        made up by the costs occurring on evaluation of objective and by
+        the summed costs for execution of the two methods next_candidate and
+        working in the optimizer.
+        The description string is used to describe each evaluation run within
+        the plots and printouts
+
         Evaluation dict looks as follows
             {
                 description: String
@@ -22,13 +40,35 @@ class EvaluationFramework(object):
                 cost_core_per_step: [cost_core0, cost_core1]
             }
     """
-
     evaluations = None
 
     def __init__(self):
+        """
+        Constructor of EvaluationFramework - not doing anything here.
+        """
         self.evaluations = []
 
-    def plot_precomputed_grid(self, optimizers, evaluation_descriptions, grid, steps):
+    def evaluate_and_plot_precomputed_grid(self, optimizers, evaluation_descriptions, grid, steps):
+        """
+        Parameters
+        ----------
+        optimizers: OptimizationCoreInterface
+            The optimizers used for evaluation. The optimizers need to be
+            instantiated before.
+        evaluation_descriptions: list of strings
+            Contains a string fro each evaluation of an optimizer to describe
+            this evaluation e.g. "SimpleBayesian_EI_scipy_brute". Will be
+            used in plotting
+        grid: PreComputedGrid
+            Method to evaluate and plot all optimizers given on the grid given in
+            grid.
+            Hence you have to instantiate the grid and run build_grid_points
+            and precompute_results. Exmaple:
+                grid.build_grid_points(param_defs=param_defs, dimensionality=10)
+                grid.precompute_results(func)
+        steps: int
+            The number of steps to run the evaluation for.
+        """
         self.evaluate_optimizers_precomputed_grid(optimizers, evaluation_descriptions, grid, steps)
         self.plot_evaluations()
 
