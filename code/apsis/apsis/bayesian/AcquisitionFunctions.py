@@ -239,7 +239,8 @@ class ExpectedImprovement(AcquisitionFunction):
             Also see AcquisitionFunction for other parameters.
         """
         super(ExpectedImprovement, self).__init__(params)
-
+        if params is None:
+            params = {}
         self.exploitation_exploration_tradeoff = params.get(
             "exploitation_tradeoff", 0)
 
