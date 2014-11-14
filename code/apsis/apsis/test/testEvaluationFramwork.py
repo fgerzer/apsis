@@ -7,7 +7,8 @@ import math
 import logging
 
 def obj_func(candidate):
-    return math.sin(candidate.params[0])
+    x = candidate.params[0]
+    return math.sin(x) * x**2
 
 logging.basicConfig(level=logging.DEBUG)
 func = obj_func
@@ -19,8 +20,9 @@ grid.precompute_results(func)
 ev = EvaluationFramework()
 
 optimizers = [RandomSearchCore({"param_defs": param_defs}),
-              SimpleBayesianOptimizationCore({"param_defs": param_defs})]
-steps = 50
+              SimpleBayesianOptimizationCore({"param_defs": param_defs,
+                                              "initial_random_runs": 5})]
+steps = 20
 ev.plot_precomputed_grid(optimizers, ["random", "bayes"], grid, steps)
 
 raw_input("FINISHED")
