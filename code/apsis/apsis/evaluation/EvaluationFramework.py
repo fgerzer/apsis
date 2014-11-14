@@ -2,6 +2,7 @@ import time
 import matplotlib.pylab as plt
 from matplotlib.lines import Line2D
 import numpy as np
+import logging
 
 class EvaluationFramework(object):
     """
@@ -56,34 +57,35 @@ class EvaluationFramework(object):
         #evaluate in objective function. It has to update result and other
         #properties in next_candidate.
         next_candidate = objective_func(next_candidate)
-
         #also the cost for the working method is accounted to the optimizer
         start_time = time.time()
         optimizer.working(next_candidate, "finished")
         cost_core += time.time() - start_time
 
-        best_result = optimizer.best_result
+        best_result = optimizer.best_candidate.result
 
         self._add_evaluation_step(core_index, next_candidate.result,
                                   best_result, next_candidate.cost, cost_core)
 
 
     def plot_evaluations(self, idxs=None):
-        plt.hold()
 
         if idxs is None:
             idxs = range(len(self.evaluations))
 
         for idx in idxs:
-            results = self.evaluations[idx]['result_per_step']
+
+            results = self.evaluations[idx]['best_result_per_step']
             desc = self.evaluations[idx]['description']
             num_steps = len(results)
             x = np.linspace(0, num_steps, num_steps, endpoint=False)
-
+            logging.debug("Plotting %s (optimizer %s), with results %s"
+                          %(desc, str(self.evaluations[idx]["optimizer"]), str(results)))
             plt.plot(x, results, label=desc)
 
         plt.legend(loc='upper right')
-        plt.show()
+        plt.show(True)
+
 
 
     def _add_evaluation_step(self, core_index, result, best_result, cost_eval, cost_core):

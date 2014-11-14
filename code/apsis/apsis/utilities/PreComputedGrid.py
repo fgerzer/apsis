@@ -1,3 +1,4 @@
+import logging
 from apsis.models.ParamInformation import NominalParamDef, NumericParamDef
 from apsis.models.Candidate import Candidate
 import numpy as np
@@ -88,6 +89,8 @@ class PreComputedGrid(object):
         candidate_in.result = closest_grid_candidate.result
         for i in range(len(candidate_in.params)):
             candidate_in.params[i] = closest_grid_candidate.params[i]
+        logging.debug("In grid: " + str(closest_grid_candidate.result))
+        logging.debug("In grid: " + str(closest_grid_candidate))
         return candidate_in
 
     def cand_distance(self, candidateA, candidateB):

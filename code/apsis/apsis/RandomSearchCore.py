@@ -74,6 +74,8 @@ class RandomSearchCore(ListBasedCore):
         """
         super(RandomSearchCore, self).working(
             candidate, status, worker_id, can_be_killed)
+        print(str(candidate.params))
+        print(str(candidate.result))
         logging.debug("Worker " + str(worker_id) + " informed me about work "
                                                    "in status " + str(status)
                       + "on candidate " + str(candidate))
