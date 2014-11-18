@@ -23,6 +23,7 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
     acquisition_hyperparams = None
 
     random_state = None
+    random_searcher = None
 
     gp = None
 
@@ -98,10 +99,11 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
                                  GPy.kern.rbf)(dimensions, ARD=True)
         logging.debug("Kernel input dim " + str(self.kernel.input_dim))
         logging.debug("Kernel %s", str(self.kernel))
-        random_searcher = RandomSearchCore({'param_defs': self.param_defs,
+        self.random_searcher = RandomSearchCore({'param_defs': self.param_defs,
                                             "random_state": self.random_state})
         for i in range(self.initial_random_runs):
-            self.pending_candidates.append(random_searcher.next_candidate())
+            self.pending_candidates.append(self.random_searcher.
+                                           next_candidate())
 
     def next_candidate(self, worker_id=None):
         # either we have pending candidates
@@ -111,7 +113,11 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
             logging.debug("Core providing pending candidate "
                           + str(new_candidate))
 
-        # or we need to generate new ones
+        # or we need to generate new ones, which either includes random points
+        elif len(self.finished_candidates) <= self.initial_random_runs:
+            new_candidate = self.random_searcher.next_candidate()
+            logging.debug("Core providing new randomly generated candidate " +
+                            str(new_candidate))
         else:
             acquisition_params = {'param_defs': self.param_defs,
                                   'gp': self.gp,

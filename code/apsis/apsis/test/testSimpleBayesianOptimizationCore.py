@@ -50,10 +50,10 @@ class testSimpleBayesianOptimizationCore(object):
     def test_convergence_one_worker(self):
         min_val = -1
         max_val = 5
-        random_runs = 7
-        gauss_runs = 15
+        random_runs = 5
+        gauss_runs = 10
         resolution = 1000
-        minimization=False
+        minimization = True
 
         logging.basicConfig(level=logging.DEBUG)
         self.bay_search = SimpleBayesianOptimizationCore(
