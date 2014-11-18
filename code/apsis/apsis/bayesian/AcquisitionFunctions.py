@@ -3,6 +3,8 @@ import numpy as np
 import scipy.optimize
 import logging
 from scipy.stats import multivariate_normal
+from apsis.models.ParamInformation import NumericParamDef, NominalParamDef
+import random
 
 
 class AcquisitionFunction(object):
@@ -18,9 +20,10 @@ class AcquisitionFunction(object):
     __metaclass__ = ABCMeta
 
     SUPPORTED_OPTIMIZATION_STRATEGIES = ["SLSQP", "L-BFGS-B", "TNC",
-                                         "grid-simple-1d", "grid-scipy-brute"]
+                                         "grid-simple-1d", "grid-scipy-brute",
+                                         "random_search"]
 
-    optimization_strategy = "grid-scipy-brute"
+    optimization_strategy = "random_search"
 
     params = None
 
@@ -98,6 +101,9 @@ class AcquisitionFunction(object):
 
         if self.optimization_strategy == "grid-simple-1d":
             return self.compute_max_grid_search_1d(args_)
+
+        elif self.optimization_strategy == "random_search":
+            return self.compute_max_random_search(args_)
 
         elif self.optimization_strategy == "SLSQP" \
                 or self.optimization_strategy == "L-BFGS-B" \
@@ -217,6 +223,31 @@ class AcquisitionFunction(object):
         value = self.evaluate(x, args_)
         return value
 
+    def compute_max_random_search(self, args_):
+        best_parameters = []
+        best_score = float("inf")
+        param_defs = args_['param_defs']
+        random_steps = args_.get("random_search_steps", 1000)
+        for i in range(random_steps):
+            param_eval = []
+            for p in param_defs:
+                if isinstance(p, NumericParamDef):
+                    param_eval.append(random.random())
+                elif isinstance(p, NominalParamDef):
+                    param_eval.append(random.choice(p.values))
+                else:
+                    raise TypeError("Tried using an acquisition function on "
+                                    "%s, which is an object of type %s."
+                                    "Only NominalParamDef and "
+                                    "NumericParamDef are supported."
+                                    %(str(p), str(type(p))))
+            param_eval = np.array(param_eval)
+            score = self.compute_minimizing_evaluate(param_eval, args_)
+            if score < best_score:
+                best_parameters = param_eval
+                best_score = score
+        return best_parameters
+
 
 class ExpectedImprovement(AcquisitionFunction):
     """
@@ -257,7 +288,7 @@ class ExpectedImprovement(AcquisitionFunction):
         """
         dimensions = len(args_['param_defs'])
         x_value = x
-        if dimensions == 1:
+        if dimensions == 1 and not isinstance(x, list):
             x_value = np.zeros((1, 1))
             x_value[0, 0] = x
 
