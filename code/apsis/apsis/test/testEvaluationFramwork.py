@@ -26,9 +26,8 @@ def test_plotting():
     optimizers = [RandomSearchCore({"param_defs": param_defs}),
                   SimpleBayesianOptimizationCore({"param_defs": param_defs,
                                                   "initial_random_runs": 5})]
-    steps = 10
+    steps = 30
     ev.evaluate_and_plot_precomputed_grid(optimizers, ["random", "bayes"], grid, steps)
-    raw_input("Press Enter to end.")
 
 def grid_closeness():
     logging.basicConfig(level=logging.DEBUG)

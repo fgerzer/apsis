@@ -3,6 +3,7 @@ import matplotlib.pylab as plt
 from matplotlib.lines import Line2D
 import numpy as np
 import logging
+import random
 
 class EvaluationFramework(object):
     """
@@ -41,6 +42,8 @@ class EvaluationFramework(object):
             }
     """
     evaluations = None
+
+    COLORS = ["g", "b", "r", "c", "m", "y"]
 
     def __init__(self):
         """
@@ -198,7 +201,8 @@ class EvaluationFramework(object):
         """
         Create a 2D plot with the following setting
             X-Axis: Number of evaluations of objective functions (= num steps)
-            Y-Axis: Best objective function value achieved so far.
+            Y-Axis: Line: Best objective function value achieved so far.
+                    Dots: Result for that evaluation
 
         Parameters
         ----------
@@ -210,26 +214,64 @@ class EvaluationFramework(object):
         if idxs is None:
             idxs = range(len(self.evaluations))
 
-        #start a new plot
-        plt.figure()
-
-        #labeling the axis
-        plt.xlabel('Number of Evaluations of Objective Function')
-        plt.ylabel('Best Objective Function Result')
-
-        #plot for all given optimizers
-        for idx in idxs:
-            results = self.evaluations[idx]['best_result_per_step']
+        x_list = []
+        y_list = []
+        y_format = []
+        x_label = "Number of Evaluations of Objective Function"
+        y_label = "Best Objective Function Result"
+        for i, idx in enumerate(idxs):
+            color = self.COLORS[i%len(self.COLORS)]#float(i)/len(idxs)
             desc = self.evaluations[idx]['description']
+            y_format.append({
+                "type": "line",
+                "label": desc,
+                "color": color
+            })
+            results = self.evaluations[idx]['best_result_per_step']
+            y_list.append(results)
             num_steps = len(results)
-            x = np.linspace(0, num_steps, num_steps, endpoint=False)
-            logging.debug("Plotting %s (optimizer %s), with results %s"
-                          %(desc, str(self.evaluations[idx]["optimizer"]),
-                            str(results)))
-            plt.plot(x, results, label=desc)
 
+            x_list.append(np.linspace(0, num_steps, num_steps, endpoint=False))
+
+            desc = self.evaluations[idx]['description']
+            y_format.append({
+                "type": "scatter",
+                "label": desc,
+                "color": color
+            })
+            results = self.evaluations[idx]['result_per_step']
+            y_list.append(results)
+            num_steps = len(results)
+
+            x_list.append(np.linspace(0, num_steps, num_steps, endpoint=False))
+        self._plot_lists(x_list, y_list, y_format, x_label, y_label)
+
+
+    def _plot_lists(self, x_list, y_list, y_format=None, x_label=None,
+                    y_label=None):
+        plt.figure()
+        if y_format is None:
+            y_format = []
+            for i in range(len(y_list)):
+                y_format.append({})
+
+        if x_label is not None:
+            plt.xlabel(x_label)
+
+        for i, y in enumerate(y_list):
+            type = y_format[i].get("type", "line")
+            label = y_format[i].get("label", "")
+            color = y_format[i].get("color", random.random())
+            logging.debug("Color: %s" %str(color))
+            if type == "line":
+                plt.plot(x_list[i], y, label=label, color=color)
+            elif type == "scatter":
+                plt.scatter(x_list[i], y, label=label, color=color)
         plt.legend(loc='upper right')
-        plt.show()
+        plt.show(True)
+
+
+
 
     def plot_evaluations_best_result_by_cost(self, idxs=None):
         """
@@ -248,15 +290,13 @@ class EvaluationFramework(object):
         if idxs is None:
             idxs = range(len(self.evaluations))
 
-        #plot costs
-        plt.figure()
-
-        #labeling the axis
-        plt.xlabel('Cost of Total Optimization')
-        plt.ylabel('Best Objective Function Result')
-
+        x_list = []
+        y_list = []
+        y_format = []
+        x_label = "Cost of Total Optimization"
+        y_label = "Best Objective Function Result"
         for idx in idxs:
-            #compute the total cost as totel_csot = eval_cost + core_cost
+            #compute the total cost as total_cost = eval_cost + core_cost
             total_costs = []
             cost_before = 0
             for step in range(len(self.evaluations[idx]['best_result_per_step'])):
@@ -266,17 +306,17 @@ class EvaluationFramework(object):
                                    + cost_before)
                 cost_before = total_costs[step]
 
-            results = self.evaluations[idx]['best_result_per_step']
             desc = self.evaluations[idx]['description']
+            y_format.append({
+                "type": "line",
+                "label": desc
+            })
+            results = self.evaluations[idx]['best_result_per_step']
+            y_list.append(results)
+            num_steps = len(results)
 
-            x = total_costs
-            logging.debug("Plotting %s (optimizer %s), results %s, with "
-                          "cost %s"
-                          %(desc, str(self.evaluations[idx]["optimizer"]),
-                            str(results), str(total_costs)))
-            plt.plot(x, results, label=desc)
-
-        plt.show()
+            x_list.append(total_costs)
+        self._plot_lists(x_list, y_list, y_format, x_label, y_label)
 
     def plot_evaluations(self, idxs=None, to_plot=None):
         """
