@@ -229,7 +229,7 @@ class EvaluationFramework(object):
             plt.plot(x, results, label=desc)
 
         plt.legend(loc='upper right')
-        plt.show(True)
+        plt.show()
 
     def plot_evaluations_best_result_by_cost(self, idxs=None):
         """
@@ -276,7 +276,7 @@ class EvaluationFramework(object):
                             str(results), str(total_costs)))
             plt.plot(x, results, label=desc)
 
-        plt.show(True)
+        plt.show()
 
     def plot_evaluations(self, idxs=None, to_plot=None):
         """
