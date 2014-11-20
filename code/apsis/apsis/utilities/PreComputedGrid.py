@@ -7,6 +7,28 @@ import time
 import math
 
 class PreComputedGrid(object):
+    """
+    The PreComputedGrid class represents a precomputed grid of a
+    multidimensional function. It stores - using the Candidate object - results
+    and costs for each of the points. Additionally, it supports loading and
+    storing its grid.
+    This class can be used for precomputing expensive functions and quickly
+    evaluating optimizers on there.
+
+    Attributes
+    ----------
+    grid_points: list of Candidate
+        This is a list of candidate objects representing grid points that have
+        been evaluated. Since each candidate stores parameters, results and
+        costs, it is very suitable for this.
+    param_defs: list of ParamDef
+        A list of the parameter definitions for this grid.
+    dimensionality_per_param: list of int
+        represents how many samples per parameter should be used. Note that
+        the number of grid_points increases with
+        dimensionality_per_param**params.
+    """
+
     grid_points = None
     param_defs = None
     dimensionality_per_param = None
