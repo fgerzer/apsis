@@ -49,7 +49,9 @@ class EvaluationFramework(object):
         """
         self.evaluations = []
 
-    def evaluate_and_plot_precomputed_grid(self, optimizers, evaluation_descriptions, grid, steps):
+    def evaluate_and_plot_precomputed_grid(self, optimizers,
+                                           evaluation_descriptions, grid,
+                                           steps, to_plot=None):
         """
         Evaluates all optimizers on the given precomputed grid and plots
         the results for all of them.
@@ -75,7 +77,7 @@ class EvaluationFramework(object):
         """
         self.evaluate_precomputed_grid(optimizers, evaluation_descriptions,
                                        grid, steps)
-        self.plot_evaluations()
+        self.plot_evaluations(to_plot=to_plot)
 
     def evaluate_precomputed_grid(self, optimizers, evaluation_descriptions,
                                   grid, steps):
@@ -258,25 +260,27 @@ class EvaluationFramework(object):
             total_costs = []
             cost_before = 0
             for step in range(len(self.evaluations[idx]['best_result_per_step'])):
-                total_costs.append(self.evaluations[idx]['cost_eval_per_step'][step]+ self.evaluations[idx]['cost_core_per_step'][step] + cost_before)
+                total_costs.append(self.evaluations[idx]['cost_eval_per_step']
+                                   [step] + self.evaluations[idx]
+                                   ['cost_core_per_step'][step]
+                                   + cost_before)
                 cost_before = total_costs[step]
 
             results = self.evaluations[idx]['best_result_per_step']
             desc = self.evaluations[idx]['description']
 
             x = total_costs
-            logging.debug("Plotting %s (optimizer %s), results %s, with cost %s"
-                          %(desc, str(self.evaluations[idx]["optimizer"]), str(results), str(total_costs)))
+            logging.debug("Plotting %s (optimizer %s), results %s, with "
+                          "cost %s"
+                          %(desc, str(self.evaluations[idx]["optimizer"]),
+                            str(results), str(total_costs)))
             plt.plot(x, results, label=desc)
 
         plt.show(True)
 
-    def plot_evaluations(self, idxs=None):
+    def plot_evaluations(self, idxs=None, to_plot=None):
         """
-        Creates the plots that is given by the following two functions in this
-        order.
-            1. plot_evaluations_best_result_by_num_steps
-            2. plot_evaluations_best_result_by_cost
+        Creates the plots defined in to_plot.
 
         Parameters
         ----------
@@ -285,9 +289,25 @@ class EvaluationFramework(object):
             A list of indexes corresponding to the indexes of evaluations
             for which evaluations a plot shall be created.
 
+        to_plot: list of string or string
+            Possible plot options. Plots all plots corresponding to the strings
+             in the list. They can be in any order, and invalid values will be
+             ignored.
+            Default option is best_result_per_step.
+            Possible values:
+                best_result_per_step
+                best_result_per_cost
+
         """
-        self.plot_evaluations_best_result_by_num_steps(idxs)
-        self.plot_evaluations_best_result_by_cost(idxs)
+        if to_plot is None:
+            to_plot = ["best_result_per_step"]
+        elif not isinstance(to_plot, list):
+            to_plot = [to_plot]
+
+        if "best_result_per_step" in to_plot:
+            self.plot_evaluations_best_result_by_num_steps(idxs)
+        if "best_result_per_cost" in to_plot:
+            self.plot_evaluations_best_result_by_cost(idxs)
 
 
     def _add_evaluation_step(self, core_index, result, best_result, cost_eval,
@@ -299,7 +319,8 @@ class EvaluationFramework(object):
         dict_to_update['cost_eval_per_step'].append(cost_eval)
         dict_to_update['cost_core_per_step'].append(cost_core)
 
-    def _add_new_optimizer_evaluation(self, optimizers, evaluation_descriptions):
+    def _add_new_optimizer_evaluation(self, optimizers,
+                                      evaluation_descriptions):
         optimizer_idxs = []
         for i in range(len(optimizers)):
             optimizer_dict = {
