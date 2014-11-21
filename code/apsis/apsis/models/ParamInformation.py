@@ -252,12 +252,17 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
 
     def distance(self, valueA, valueB):
         if not self.is_in_parameter_domain(valueA):
-            raise ValueError("Parameter one = " + str(valueA) + " not in "
-                "value domain.")
+            raise ValueError("Parameter one = " + str(valueA) + " not in value "
+                "domain.")
         if not self.is_in_parameter_domain(valueB):
-            raise ValueError("Parameter two = " + str(valueB) + " not in "
-                "value domain.")
-        return abs(self.warp_in(valueA) - self.warp_in(valueB))
+            raise ValueError("Parameter two = " + str(valueB) + " not in value "
+                "domain.")
+        if valueA < valueB:
+            return -1
+        elif valueA > valueB:
+            return 1
+        else:
+            return 0
 
 
 class LowerUpperNumericParamDef(NumericParamDef):
