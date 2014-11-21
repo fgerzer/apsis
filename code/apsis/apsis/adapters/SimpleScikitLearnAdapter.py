@@ -31,7 +31,7 @@ class SimpleScikitLearnAdapter(object):
     best_params = None
     best_result = None
 
-    def __init__(self, estimator, param_defs, n_iter=10, scoring=None,
+    def __init__(self, estimator, param_defs, parameter_names, n_iter=10, scoring=None,
                  fit_params=None, n_jobs=1, refit=True, cv=3,
                  random_state=None, optimizer="RandomSearchCore",
                  optimizer_arguments=None):
@@ -82,6 +82,7 @@ class SimpleScikitLearnAdapter(object):
         self.estimator = estimator
         self.param_defs = param_defs
         self.n_iter = n_iter
+        self.parameter_names = parameter_names
         self.scoring = scoring
         self.fit_params = fit_params if fit_params is not None else {}
         self.refit = refit
@@ -111,10 +112,6 @@ class SimpleScikitLearnAdapter(object):
 
         #If we do not yet know which parameter names exist, we fill our
         #self.parameter_names list here.
-        if self.parameter_names is None:
-            self.parameter_names = []
-            for k in sklearn_params.keys:
-                self.parameter_names.append(k)
 
         converted_list = [None] * len(self.parameter_names)
 
@@ -149,7 +146,6 @@ class SimpleScikitLearnAdapter(object):
 
         logging.debug("optimizer params %s, param names %s",
                       str(optimizer_params), str(self.parameter_names))
-
         for i, name in enumerate(self.parameter_names):
             return_dict[name] = optimizer_params[i]
 
