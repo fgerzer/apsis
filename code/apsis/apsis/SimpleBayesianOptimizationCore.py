@@ -7,7 +7,7 @@ from apsis.bayesian.AcquisitionFunctions import ExpectedImprovement
 import numpy as np
 import GPy
 import logging
-
+from apsis.utilities.randomization import check_random_state
 
 class SimpleBayesianOptimizationCore(ListBasedCore):
     """
@@ -70,7 +70,6 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
 
     def __init__(self, params):
         super(SimpleBayesianOptimizationCore, self).__init__(params)
-
         if params.get('param_defs', None) is None:
             raise ValueError("Parameter definition list is missing!")
         if not self._is_all_supported_param_types(params["param_defs"]):
@@ -82,10 +81,7 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
         self.minimization = params.get('minimization', True)
         self.initial_random_runs = params.get('initial_random_runs',
                                               self.initial_random_runs)
-        self.random_state = params.get('random_state', None)
-        self.finished_candidates = []
-        self.working_candidates = []
-        self.pending_candidates = []
+        self.random_state = check_random_state(params.get('random_state', None))
         self.acquisition_hyperparams = params.get('acquisition_hyperparams',
                                                   None)
         self.acquisition_function = params.get('acquisition',

@@ -2,7 +2,7 @@
 
 import logging
 
-from sklearn.utils import check_random_state
+from apsis.utilities.randomization import check_random_state
 import numpy as np
 import random
 
@@ -74,8 +74,6 @@ class RandomSearchCore(ListBasedCore):
         """
         super(RandomSearchCore, self).working(
             candidate, status, worker_id, can_be_killed)
-        print(str(candidate.params))
-        print(str(candidate.result))
         logging.debug("Worker " + str(worker_id) + " informed me about work "
                                                    "in status " + str(status)
                       + "on candidate " + str(candidate))
