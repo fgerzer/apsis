@@ -196,6 +196,34 @@ class EvaluationFramework(object):
         self._add_evaluation_step(core_index, next_candidate.result,
                                   best_result, next_candidate.cost, cost_core)
 
+    def plot_evaluation_step_ranking(self, idxs=None):
+        if idxs is None:
+            idxs = range(len(self.evaluations))
+
+        x_list = []
+        y_list = []
+        y_format = []
+        x_label = "Number of Evaluations of Objective Function"
+        y_label = "Ranking of result"
+        for i, idx in enumerate(idxs):
+            color = self.COLORS[i%len(self.COLORS)]#float(i)/len(idxs)
+            desc = self.evaluations[idx]['description']
+            y_format.append({
+                "type": "scatter",
+                "label": desc,
+                "color": color
+            })
+            result_list_sort = self.evaluations[idx]['result_per_step'][:]
+            result = []
+            result_list_sort.sort()
+            for r in self.evaluations[idx]['result_per_step']:
+                result.append(result_list_sort.index(r))
+            y_list.append(result)
+            num_steps = len(result)
+
+            x_list.append(np.linspace(0, num_steps, num_steps, endpoint=False))
+        self._plot_lists(x_list, y_list, y_format, x_label, y_label)
+
 
     def plot_evaluations_best_result_by_num_steps(self, idxs=None):
         """
@@ -262,7 +290,6 @@ class EvaluationFramework(object):
             type = y_format[i].get("type", "line")
             label = y_format[i].get("label", "")
             color = y_format[i].get("color", random.random())
-            logging.debug("Color: %s" %str(color))
             if type == "line":
                 plt.plot(x_list[i], y, label=label, color=color)
             elif type == "scatter":
@@ -348,7 +375,8 @@ class EvaluationFramework(object):
             self.plot_evaluations_best_result_by_num_steps(idxs)
         if "best_result_per_cost" in to_plot:
             self.plot_evaluations_best_result_by_cost(idxs)
-
+        if "plot_evaluation_step_ranking" in to_plot:
+            self.plot_evaluation_step_ranking(idxs)
 
     def _add_evaluation_step(self, core_index, result, best_result, cost_eval,
                              cost_core):
