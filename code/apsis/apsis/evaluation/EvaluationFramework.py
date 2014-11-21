@@ -43,7 +43,7 @@ class EvaluationFramework(object):
     """
     evaluations = None
 
-    COLORS = ["g", "b", "r", "c", "m", "y"]
+    COLORS = ["g", "r", "c", "b", "m", "y"]
 
     def __init__(self):
         """
@@ -285,6 +285,8 @@ class EvaluationFramework(object):
 
         if x_label is not None:
             plt.xlabel(x_label)
+        if y_label is not None:
+            plt.ylabel(y_label)
 
         for i, y in enumerate(y_list):
             type = y_format[i].get("type", "line")
@@ -322,7 +324,7 @@ class EvaluationFramework(object):
         y_format = []
         x_label = "Cost of Total Optimization"
         y_label = "Best Objective Function Result"
-        for idx in idxs:
+        for i, idx in enumerate(idxs):
             #compute the total cost as total_cost = eval_cost + core_cost
             total_costs = []
             cost_before = 0
@@ -333,15 +335,26 @@ class EvaluationFramework(object):
                                    + cost_before)
                 cost_before = total_costs[step]
 
+            color = self.COLORS[i%len(self.COLORS)]#float(i)/len(idxs)
             desc = self.evaluations[idx]['description']
             y_format.append({
                 "type": "line",
-                "label": desc
+                "label": desc,
+                "color": color
             })
             results = self.evaluations[idx]['best_result_per_step']
             y_list.append(results)
-            num_steps = len(results)
 
+            x_list.append(total_costs)
+
+            desc = self.evaluations[idx]['description']
+            y_format.append({
+                "type": "scatter",
+                "label": desc,
+                "color": color
+            })
+            results = self.evaluations[idx]['result_per_step']
+            y_list.append(results)
             x_list.append(total_costs)
         self._plot_lists(x_list, y_list, y_format, x_label, y_label)
 
