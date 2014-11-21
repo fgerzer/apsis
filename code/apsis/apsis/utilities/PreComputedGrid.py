@@ -83,23 +83,25 @@ class PreComputedGrid(object):
 
         return return_grid
 
-    def precompute_results(self, objective_func):
+    def precompute_results(self, objective_func, obj_func_args=None):
+        if obj_func_args is None:
+            obj_func_args = {}
         for i in range(len(self.grid_points)):
             start_time = time.time()
-            self.grid_points[i].result = objective_func(self.grid_points[i])
+            self.grid_points[i].result = objective_func(self.grid_points[i], **obj_func_args)
             end_time = time.time()
             duration = end_time - start_time
             self.grid_points[i].cost = duration
 
     def load_from_disk(self, filename):
-        self.grid_points, self.param_defs = pickle.load(open(filename, "rb"))
+        self.grid_points, self.param_defs, self.dimensionality_per_param = pickle.load(open(filename, "rb"))
 
     def save_to_disk(self, filename):
-        pickle.dump((self.grid_points, self.param_defs), open(filename, "wb"))
+        pickle.dump((self.grid_points, self.param_defs, self.dimensionality_per_param), open(filename, "wb"))
 
     def get_closest_grid_candidate(self, candidate_in):
         closest_grid_candidate = self.grid_points[0]
-        closest_distance = self.cand_distance(candidate_in, self.grid_points[0])
+        closest_distance = float("inf")
 
         possible_idx = self._get_possible_candidate_indices(candidate_in.params, 0)
         logging.debug("Possible IDs:" + str(possible_idx))
@@ -109,6 +111,7 @@ class PreComputedGrid(object):
                 closest_grid_candidate = self.grid_points[i]
                 closest_distance = dist
         #we found the closest grid candidate.
+        logging.debug("Possible candidate params: %s" %str(closest_grid_candidate))
         return closest_grid_candidate
 
     def _get_possible_candidate_indices(self, param_vals, idx):
