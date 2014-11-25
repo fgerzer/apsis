@@ -295,3 +295,14 @@ class LowerUpperNumericParamDef(NumericParamDef):
 
     def is_in_parameter_domain(self, value):
         return self.x_min <= value <= self.x_max
+
+class DistanceParamDef(OrdinalParamDef):
+    positions = None
+
+    def __init__(self, values, positions):
+        assert len(values) == len(positions)
+        super(DistanceParamDef, self).__init__(values)
+        self.positions = positions
+
+    def warp_in(self, value_in):
+        return self.positions(self.values.index(value_in))
