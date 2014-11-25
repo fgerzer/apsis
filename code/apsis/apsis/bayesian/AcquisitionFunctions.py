@@ -19,12 +19,6 @@ class AcquisitionFunction(object):
     """
     __metaclass__ = ABCMeta
 
-    SUPPORTED_OPTIMIZATION_STRATEGIES = ["SLSQP", "L-BFGS-B", "TNC",
-                                         "grid-simple-1d", "grid-scipy-brute",
-                                         "random_search"]
-
-    optimization_strategy = "random_search"
-
     params = None
 
     def __init__(self, params=None):
@@ -47,16 +41,6 @@ class AcquisitionFunction(object):
         if self.params is None:
             self.params = {}
 
-        if 'optimization_strategy' in self.params:
-            if self.params['optimization_strategy'] in \
-                    self.SUPPORTED_OPTIMIZATION_STRATEGIES:
-                self.optimization_strategy = self.params[
-                    'optimization_strategy']
-            else:
-                raise ValueError("You specified the non supported optimization"
-                                 "strategy %s for maximizing acquisition.",
-                                 self.params['optimization_strategy'])
-
     @abstractmethod
     def evaluate(self, x, args_):
         """
@@ -78,135 +62,6 @@ class AcquisitionFunction(object):
 
         pass
 
-    def compute_max(self, args_):
-        """
-        Computes the point where the acquisition function is maximized.
-
-        This can be toggled via the optimization_strategy keyword in the
-        __init__ function's params dict. Supported strategies are in
-        SUPPORTED_OPTIMIZATION_STRATEGIES.
-
-        Parameters
-        ----------
-        args_: dict of string keys
-            See AcqusitionFunction.evaluate
-
-        Returns
-        -------
-        result: np.ndarray of floats
-            The maximum point for the acquisition function.
-        """
-        if args_ is None:
-            raise ValueError("No arguments dict given!")
-
-        if self.optimization_strategy == "grid-simple-1d":
-            return self.compute_max_grid_search_1d(args_)
-
-        elif self.optimization_strategy == "random_search":
-            return self.compute_max_random_search(args_)
-
-        elif self.optimization_strategy == "SLSQP" \
-                or self.optimization_strategy == "L-BFGS-B" \
-                or self.optimization_strategy == "TNC":
-            return self.compute_max_scipy_optimize(args_)
-
-        elif self.optimization_strategy == "grid-scipy-brute":
-            return self.compute_max_scipy_grid_search(args_)
-
-    def compute_max_scipy_grid_search(self, args_):
-        """
-        Grid search implementation falling back to scipy.optimize.brute.
-
-        It relies on the following arguments in the classes' params hash:
-
-            'num_grid_point_per_axis': to say how coarse the grid will be.
-
-        Otherwise, method signatures are identical to compute_max.
-        """
-        dimensions = len(args_['param_defs'])
-
-        bounds = tuple([(0., 1.)] * dimensions)
-
-        grid_points = self.params.get('num_grid_point_per_axis', 1000)
-
-        logging.debug("Computing max with scipy optimize method %s for %s "
-                      "dimensional problem using %s points per dimension"
-                      " and bounds %s bounds type %s.",
-                      self.optimization_strategy,
-                      str(dimensions), str(grid_points), str(bounds),
-                      str(type(bounds[0])))
-
-        # make sure to use maximizing value from the result object
-        maximum, max_value, grid, joust = scipy.optimize.brute(
-            self.compute_minimizing_evaluate,
-            bounds, Ns=grid_points,
-            args=tuple([args_]), full_output=True, disp=True, finish=None)
-
-        if dimensions == 1 and not isinstance(maximum, np.ndarray):
-            logging.debug("Converting to array manually.")
-            maximum = np.asarray([maximum])
-
-        logging.debug("EI maximum found at %s, data type %s", str(maximum),
-                      str(type(maximum)))
-
-        return maximum
-
-    def compute_max_grid_search_1d(self, args_):
-        """
-        Very simple 1 dimensional grid search implementation. Optimization
-        relies on that input is 1d and in value range between 0 and 1.
-
-        Otherwise, method signatures are identical to compute_max.
-        """
-        dimensions = len(args_['param_defs'])
-
-        logging.debug("Computing max with grid search method %s for %s "
-                      "dimensional problem ", str(dimensions))
-
-        cur = np.zeros((1, 1))
-        maximum = np.zeros((1, 1))
-        min_value = self.evaluate(maximum, args_)[0, 0]
-
-        for i in range(1000):
-            cur[0, 0] += 1. / 1000
-            cur_obj = self.evaluate(cur, args_)
-
-            if cur_obj[0, 0] > min_value:
-                maximum[0, 0] = cur[0, 0]
-                min_value = cur_obj
-
-        logging.debug("EI maximum found at %s", str(maximum))
-
-        return maximum
-
-    def compute_max_scipy_optimize(self, args_):
-        """
-        Computes the maximum of the acquisition function using the scipy
-        optimizer.
-
-        Method signatures are identical to compute_max.
-        """
-        dimensions = len(args_['param_defs'])
-
-        logging.debug("Computing max with scipy optimize method %s for %s "
-                      "dimensional problem ", self.optimization_strategy,
-                      str(dimensions))
-
-        # prepare for scipy optimize
-        initial_guess = [0.5] * dimensions
-        initial_guess = tuple(initial_guess)
-        bounds = tuple([(0, 1) * dimensions])
-
-        # make sure to use maximizing value from the result object
-        maximum = scipy.optimize.minimize(self.compute_minimizing_evaluate,
-                                          initial_guess, args=tuple([args_]),
-                                          bounds=bounds,
-                                          method=self.optimization_strategy).x
-
-        logging.debug("Acquisition function maximum found at %s", str(maximum))
-
-        return maximum
-
     def compute_minimizing_evaluate(self, x, args_):
         """
         One problem is that, as a standard, scipy.optimize only searches
@@ -222,31 +77,6 @@ class AcquisitionFunction(object):
         """
         value = self.evaluate(x, args_)
         return value
-
-    def compute_max_random_search(self, args_):
-        best_parameters = []
-        best_score = float("inf")
-        param_defs = args_['param_defs']
-        random_steps = args_.get("random_search_steps", 1000)
-        for i in range(random_steps):
-            param_eval = []
-            for p in param_defs:
-                if isinstance(p, NumericParamDef):
-                    param_eval.append(random.random())
-                elif isinstance(p, NominalParamDef):
-                    param_eval.append(random.choice(p.values))
-                else:
-                    raise TypeError("Tried using an acquisition function on "
-                                    "%s, which is an object of type %s."
-                                    "Only NominalParamDef and "
-                                    "NumericParamDef are supported."
-                                    %(str(p), str(type(p))))
-            param_eval = np.array(param_eval)
-            score = self.compute_minimizing_evaluate(param_eval, args_)
-            if score < best_score:
-                best_parameters = param_eval
-                best_score = score
-        return best_parameters
 
     def compute_proposal(self, args_, refitted=True, number_proposals=1):
         evaluated_params = []
