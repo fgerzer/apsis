@@ -25,6 +25,11 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
     random_state = None
     random_searcher = None
 
+    num_precomputed = None
+    just_refitted = True
+    refit_necessary = False
+    refit_running = False
+
     gp = None
 
     initial_random_runs = 10
@@ -48,7 +53,8 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
 
             # invoke the refitting
             if len(self.finished_candidates) >= self.initial_random_runs:
-                self._refit_gp()
+                self.refit_necessary = True
+                self._check_refit_gp()
             return False
 
         elif status == "working":
@@ -101,6 +107,8 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
             self.pending_candidates.append(self.random_searcher.
                                            next_candidate())
 
+        self.num_precomputed = params.get('num_precomputed', 0)
+
     def next_candidate(self, worker_id=None):
         # either we have pending candidates
         if len(self.pending_candidates) > 0:
@@ -123,22 +131,43 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
 
             logging.debug("Running acquisition with args %s",
                           str(acquisition_params))
-            new_candidate_point = self.acquisition_function.compute_proposal(
-                acquisition_params)[0]
 
-            for i in range(len(new_candidate_point)):
-                new_candidate_point[i] = self.param_defs[i].warp_out(
-                    new_candidate_point[i]
-                )
+            new_candidate_points = self.acquisition_function.compute_proposal(
+                acquisition_params, refitted=self.just_refitted,
+                number_proposals=self.num_precomputed+1)
 
-            new_candidate = Candidate(new_candidate_point)
+            for point in new_candidate_points:
+                for i in range(len(point)):
+                    point[i] = self.param_defs[i].warp_out(
+                        point[i]
+                    )
+                point_candidate = Candidate(point)
+
+                self.pending_candidates.append(point_candidate)
+
+            new_candidate = self.pending_candidates.pop(0)
+            self.just_refitted = False
 
         # add candidate to working list
         self.working_candidates.append(new_candidate)
 
         return new_candidate
 
+    def _check_refit_gp(self):
+        if self.refit_necessary and not self.refit_running:
+            # replace by python mutex
+            self.refit_running = True
+            # TODO start new thread for refitting
+            self._refit_gp()
+            self.refit_running = False
+
     def _refit_gp(self):
+        self.refit_necessary = False
+
+        #empty the pendings because they differ after refitting
+        self.pending_candidates = []
+        self.just_refitted = True
+
         candidate_matrix = np.zeros((len(self.finished_candidates),
                                      len(self.param_defs)))
         results_vector = np.zeros((len(self.finished_candidates), 1))
