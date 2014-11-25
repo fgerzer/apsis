@@ -123,8 +123,8 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
 
             logging.debug("Running acquisition with args %s",
                           str(acquisition_params))
-            new_candidate_point = self.acquisition_function.compute_max(
-                acquisition_params)
+            new_candidate_point = self.acquisition_function.compute_proposal(
+                acquisition_params)[0]
 
             for i in range(len(new_candidate_point)):
                 new_candidate_point[i] = self.param_defs[i].warp_out(
