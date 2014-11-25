@@ -31,7 +31,7 @@ class SimpleScikitLearnAdapter(object):
     best_params = None
     best_result = None
 
-    def __init__(self, estimator, param_defs, parameter_names, n_iter=10, scoring=None,
+    def __init__(self, estimator, param_defs, n_iter=10, scoring=None,
                  fit_params=None, n_jobs=1, refit=True, cv=3,
                  random_state=None, optimizer="RandomSearchCore",
                  optimizer_arguments=None):
@@ -82,7 +82,7 @@ class SimpleScikitLearnAdapter(object):
         self.estimator = estimator
         self.param_defs = param_defs
         self.n_iter = n_iter
-        self.parameter_names = parameter_names
+        self.parameter_names = self.param_defs.keys()
         self.scoring = scoring
         self.fit_params = fit_params if fit_params is not None else {}
         self.refit = refit
