@@ -21,7 +21,7 @@ def test_plotting():
     grid = PreComputedGrid()
     param_defs = [LowerUpperNumericParamDef(-5., 5.),
                   LowerUpperNumericParamDef(-5., 5.)]
-    grid.build_grid_points(param_defs=param_defs, dimensionality=1000)
+    grid.build_grid_points(param_defs=param_defs, num_pts=1000)
     grid.precompute_results(func)
     ev = EvaluationFramework()
 
@@ -45,8 +45,8 @@ def grid_closeness():
     grid = PreComputedGrid()
     param_defs = [LowerUpperNumericParamDef(0., 1.),
                   LowerUpperNumericParamDef(0., 1.)]
-    grid.build_grid_points(param_defs=param_defs, dimensionality=6)
+    grid.build_grid_points(param_defs=param_defs, num_pts=6)
     grid.precompute_results(func)
     for i in range(len(grid.grid_points)):
         logging.debug("%i: %s" %(i, grid.grid_points[i].params))
-    logging.debug("Possible candidates: " + str(grid._get_possible_candidate_indices([0.1, 0.7], 0)))
+    logging.debug("Possible candidates: " + str(grid._get_close_candidate_indices([0.1, 0.7], 0)))
