@@ -119,7 +119,7 @@ def build_and_save_grid(filename, objective_function, param_defs, dimensionality
     if obj_func_args is None:
         obj_func_args = {}
     grid = PreComputedGrid()
-    grid.build_grid_points(param_defs=param_defs, dimensionality=dimensionality)
+    grid.build_grid_points(param_defs=param_defs, num_pts=dimensionality)
     grid.precompute_results(objective_function, obj_func_args)
     grid.save_to_disk(filename)
 
