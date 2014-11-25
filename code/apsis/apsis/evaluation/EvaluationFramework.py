@@ -3,6 +3,7 @@ import matplotlib.pylab as plt
 from matplotlib.lines import Line2D
 import numpy as np
 import logging
+from apsis.utilities.CSVWriter import CSVWriter
 import random
 
 class EvaluationFramework(object):
@@ -42,8 +43,8 @@ class EvaluationFramework(object):
             }
     """
     evaluations = None
-
     COLORS = ["g", "r", "c", "b", "m", "y"]
+    csv_writer = None
 
     def __init__(self):
         """
@@ -51,6 +52,10 @@ class EvaluationFramework(object):
         list here.
         """
         self.evaluations = []
+
+        #create csv writer
+        eval_framework = self
+        self.csv_writer = CSVWriter(eval_framework)
 
     def evaluate_and_plot_precomputed_grid(self, optimizers,
                                            evaluation_descriptions, grid,
@@ -113,7 +118,7 @@ class EvaluationFramework(object):
 
 
     def evaluate_optimizers(self, optimizers, evaluation_descriptions,
-                            objective_function, steps):
+                            objective_function, steps, write_csv=True):
         """
         Unconstrained evaluation of all optimizers on the given objective func.
         In each step evaluates all optimizers given for exactly one step.
@@ -149,6 +154,20 @@ class EvaluationFramework(object):
         for i in range(steps):
             for optimizer_idx in optimizer_idxs:
                 self.evaluation_step(optimizer_idx, objective_function)
+
+            #for testing plot results every XX rounds
+            if i % 10 == 0:
+                print self.csv_writer._generate_evaluation_global_csv_entries()
+
+        #automatically save this run to globalcsv
+        if write_csv:
+            try:
+                self.csv_writer.write_evaluations_to_global_csv()
+            except ValueError:
+                logging.error("Error writing result to global CSV file after "
+                              "finishing evaluations.")
+
+
 
 
     def evaluation_step(self, core_index, objective_func):
@@ -417,5 +436,17 @@ class EvaluationFramework(object):
             self.evaluations.append(optimizer_dict)
 
         return optimizer_idxs
+
+
+
+
+
+
+
+
+
+
+
+
 
 
