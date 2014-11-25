@@ -248,6 +248,53 @@ class AcquisitionFunction(object):
                 best_score = score
         return best_parameters
 
+    def compute_proposal(self, args_, refitted=True, number_proposals=1):
+        evaluated_params = []
+        evaluated_acq = []
+        sum_acq = []
+        best_param_idx = 0
+        best_score = float("inf")
+        param_defs = args_['param_defs']
+
+        random_steps = args_.get("random_search_steps", max(1000, number_proposals))
+
+        for i in range(random_steps):
+            param_eval = []
+            for p in param_defs:
+                if isinstance(p, NumericParamDef):
+                    param_eval.append(random.random())
+                elif isinstance(p, NominalParamDef):
+                    param_eval.append(random.choice(p.values))
+                else:
+                    raise TypeError("Tried using an acquisition function on "
+                                    "%s, which is an object of type %s."
+                                    "Only NominalParamDef and "
+                                    "NumericParamDef are supported."
+                                    %(str(p), str(type(p))))
+            param_eval = np.array(param_eval)
+            score = self.compute_minimizing_evaluate(param_eval, args_)
+            if score < best_score:
+                best_param_idx = i
+                best_score = score
+            evaluated_params.append(param_eval)
+            evaluated_acq.append(score)
+            if len(sum_acq) > 0:
+                sum_acq.append(score + sum_acq[-1])
+            else:
+                sum_acq.append(score)
+
+        proposals = []
+        if refitted:
+            proposals.append(evaluated_params[best_param_idx])
+        while len(proposals) < number_proposals:
+            next_prop_idx = 0
+            sum_rand = random.uniform(0, sum_acq[-1])
+            while sum_rand < sum_acq[next_prop_idx]:
+                next_prop_idx += 1
+            proposals.append(evaluated_params[next_prop_idx])
+
+        return proposals
+
 
 class ExpectedImprovement(AcquisitionFunction):
     """
