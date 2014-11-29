@@ -66,7 +66,6 @@ class EvaluationFramework(object):
         }
     """
     evaluations = None
-
     plots = None
 
     COLORS = ["g", "r", "c", "b", "m", "y"]
@@ -149,7 +148,8 @@ class EvaluationFramework(object):
     def evaluate_optimizers(self, optimizers, evaluation_descriptions,
                             objective_function, obj_func_name=None, steps=20,
                             write_csv=True,  write_detailed_results=True,
-                            csv_write_frequency=10, plot_write_frequency=10):
+                            csv_write_frequency=10, plot_write_frequency=10,
+                            show_plots_at_end=False):
         """
         Unconstrained evaluation of all optimizers on the given objective func.
         In each step evaluates all optimizers given for exactly one step.
@@ -199,6 +199,19 @@ class EvaluationFramework(object):
 
             Default: 10
         """
+        #say where, what and when we will output to
+        if write_csv:
+            logging.info("Results will be published to the global CSV file in "
+                         + str(self.evaluation_writer.global_target_path) +
+                         " after all evaluations are finished.")
+
+        if write_detailed_results:
+            csv_freq_str = '[at the end only]' if csv_write_frequency is None else str(csv_write_frequency)
+            plt_freq_str = '[at the end only]' if plot_write_frequency is None else str(plot_write_frequency)
+            logging.info("Detailed results and plots will be published every "
+                         + str(csv_write_frequency) + " and at the end to " +
+                         self.evaluation_writer.detailed_target_path)
+
         #create a new evaluation hash for every optimizer.
         optimizer_idxs = self._add_new_optimizer_evaluation(optimizers,
                                                     evaluation_descriptions,
@@ -210,11 +223,12 @@ class EvaluationFramework(object):
 
             #write out the detailed reseults in a certain frequency if whished
             if write_detailed_results:
-                if csv_write_frequency is not None and i % csv_write_frequency == 0:
+                if csv_write_frequency is not None and i % csv_write_frequency == 0 and i != 0:
                     self.evaluation_writer.append_evaluations_to_detailed_csv()
 
-                if plot_write_frequency is not None and i % plot_write_frequency == 0:
-                    self.evaluation_writer.append_evaluations_to_detailed_csv()
+                if plot_write_frequency is not None and i % plot_write_frequency == 0 and i != 0:
+                    self.plot_evaluations()
+                    self.evaluation_writer.write_out_plots_all_evaluations()
 
         #insert end date to all experiments
         for ev in self.evaluations:
@@ -234,7 +248,9 @@ class EvaluationFramework(object):
             logging.info("Wrote detailed CSV output - Finished.")
             #write detailed csv
             self.evaluation_writer.append_evaluations_to_detailed_csv()
+
             #write plots
+            self.plot_evaluations(show_after_creation=show_plots_at_end)
             self.evaluation_writer.write_out_plots_all_evaluations()
 
             logging.info("Wrote detailed CSV output and plots - Finished.")
@@ -330,6 +346,9 @@ class EvaluationFramework(object):
         idxs: list of int
             A list of indexes corresponding to the indexes of evaluations
             for which evaluations a plot shall be created.
+
+            If idx is none it will plot all steps available.
+
         """
         if idxs is None:
             idxs = range(len(self.evaluations))
@@ -415,6 +434,8 @@ class EvaluationFramework(object):
             A list of indexes corresponding to the indexes of evaluations
             for which evaluations a plot shall be created.
 
+            If idx is none it will plot all steps available.
+
         Returns
         -----------
 
@@ -476,6 +497,8 @@ class EvaluationFramework(object):
             A list of indexes corresponding to the indexes of evaluations
             for which evaluations a plot shall be created.
 
+            If idx is none it will plot all steps available.
+
         to_plot: list of string or string
             Possible plot options. Plots all plots corresponding to the strings
              in the list. They can be in any order, and invalid values will be
@@ -489,6 +512,7 @@ class EvaluationFramework(object):
         """
         plot_all = False
         if to_plot is None:
+            to_plot = []
             plot_all = True
         elif not isinstance(to_plot, list):
             to_plot = [to_plot]
