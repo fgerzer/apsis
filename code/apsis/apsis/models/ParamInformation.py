@@ -306,7 +306,7 @@ class DistanceParamDef(OrdinalParamDef):
         self.positions = positions
 
     def warp_in(self, value_in):
-        pos = self.positions(self.values.index(value_in))
+        pos = self.positions[self.values.index(value_in)]
         value_out = (pos - self.positions[0])/(self.positions[-1]-self.positions[0])
         return value_out
 

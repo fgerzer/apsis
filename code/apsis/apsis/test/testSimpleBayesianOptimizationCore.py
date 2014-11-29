@@ -4,7 +4,7 @@ from apsis.adapters.SimpleScikitLearnAdapter import SimpleScikitLearnAdapter
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from apsis.bayesian.AcquisitionFunctions import ExpectedImprovement
 from apsis.models.ParamInformation import NumericParamDef, NominalParamDef, \
-    LowerUpperNumericParamDef
+    LowerUpperNumericParamDef, DistanceParamDef, PointParamDef
 from apsis.SimpleBayesianOptimizationCore import SimpleBayesianOptimizationCore
 import math
 import nose.tools as nt
@@ -209,8 +209,67 @@ class testSimpleBayesianOptimizationCore(object):
         plt.legend(loc='upper left')
         plt.show()
 
+    def test_distance_param(self):
+        min_val = -1
+        max_val = 5
+        vals = 1000
+        values = [0]
+        for i in range(vals):
+            values.append(values[-1] + (max_val - min_val)/float(vals))
+
+
+        random_runs = 5
+        gauss_runs = 10
+        resolution = 1000
+        minimization = True
+
+        logging.basicConfig(level=logging.DEBUG)
+        self.bay_search = SimpleBayesianOptimizationCore(
+            {"param_defs":
+                [PointParamDef(values)],
+            "initial_random_runs": random_runs,
+            'num_gp_restarts': 10,
+            "minimization": minimization,
+            "acquision": ExpectedImprovement,
+            "acquisition_hyperparams": {"exploitation_tradeoff": 0}
+             #suggested by Brochu
+            })
+        strings = []
+        f = function
+        best_result = None
+
+
+
+        for i in range(gauss_runs):
+            cand = self.bay_search.next_candidate()
+
+            point = cand.params
+            value = f(point[0])
+            #if (i >= random_runs):
+            #    self.plot_nicely(min_val, max_val, resolution, point[0], minimization)
+            #    print(self.bay_search.gp)
+            #    raw_input()
+
+            strings.append(("%i: %f at %f" % (i, value, point[0])))
+            if best_result is None or value < best_result:
+                best_result = value
+
+            cand.result = value
+            assert not self.bay_search.working(cand, "finished")
+
+        nt.eq_(self.bay_search.best_candidate.result, best_result,
+                       str(self.bay_search.best_candidate.result)
+                       + " != " + str(best_result))
+        #self.bay_search.gp.plot()
+        #self.plot_nicely(min_val, max_val, resolution, minimization)
+        for s in strings:
+            print(s)
+        #raw_input()
+
 def function(x):
     return x**3 - 5 * x**2#math.sin(x) * x**2
 
 def function_2D(x, y):
     return math.sin(x) * x**2 *math.sin(y) * y**2
+
+
