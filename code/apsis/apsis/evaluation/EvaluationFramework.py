@@ -19,7 +19,7 @@ class EvaluationFramework(object):
 
     Attributes
     ----------
-    evaluations
+    evaluations: list of dicts
         Store list of evaluation dicts. An evaluation dict is a dictionary that
         contains information about the performance evaluation of a particular
         instantiated optimizer. It maintains lists of achieved results on the
@@ -51,8 +51,23 @@ class EvaluationFramework(object):
                 _output_folder: string with directory absolute path
                 _steps_written: int
             }
+
+    plots: list of dicts
+        A list containing dicts to store the plots created in memery. They
+        will be store here until they are written by EvaluationWriter which
+        will after writing remove them from this list.
+
+        {
+            'step': int - the step at which this plot was created
+            'plots': {
+                'plot_name': plt.figure obj,
+                'other_plot_name': plt.figure obj,
+            }
+        }
     """
     evaluations = None
+
+    plots = None
 
     COLORS = ["g", "r", "c", "b", "m", "y"]
     evaluation_writer = None
@@ -60,9 +75,10 @@ class EvaluationFramework(object):
     def __init__(self):
         """
         Constructor of EvaluationFramework. Only instantiation evaluations
-        list here.
+        and plot storage list here.
         """
         self.evaluations = []
+        self.plots = []
 
         #create csv writer
         eval_framework = self
@@ -96,7 +112,8 @@ class EvaluationFramework(object):
         """
         self.evaluate_precomputed_grid(optimizers, evaluation_descriptions,
                                        grid, steps)
-        self.plot_evaluations(to_plot=to_plot)
+        self.plot_evaluations(to_plot=to_plot, store=False,
+                              show_after_creation=True)
 
     def evaluate_precomputed_grid(self, optimizers, evaluation_descriptions,
                                   grid, steps):
@@ -191,7 +208,7 @@ class EvaluationFramework(object):
             for optimizer_idx in optimizer_idxs:
                 self.evaluation_step(optimizer_idx, objective_function)
 
-            #for testing write_out_results results every XX rounds
+            #write out the detailed reseults in a certain frequency if whished
             if write_detailed_results:
                 if csv_write_frequency is not None and i % csv_write_frequency == 0:
                     self.evaluation_writer.append_evaluations_to_detailed_csv()
@@ -269,7 +286,7 @@ class EvaluationFramework(object):
         self._add_evaluation_step(core_index, next_candidate.result,
                                   best_result, next_candidate.cost, cost_core)
 
-    def plot_evaluation_step_ranking(self, idxs=None):
+    def plot_evaluation_step_ranking(self, idxs=None, show_after_creation=False):
         if idxs is None:
             idxs = range(len(self.evaluations))
 
@@ -295,10 +312,12 @@ class EvaluationFramework(object):
             num_steps = len(result)
 
             x_list.append(np.linspace(0, num_steps, num_steps, endpoint=False))
-        self._plot_lists(x_list, y_list, y_format, x_label, y_label)
+        return self._plot_lists(x_list, y_list, y_format, x_label, y_label,
+                                show_after_creation=show_after_creation)
 
 
-    def plot_evaluations_best_result_by_num_steps(self, idxs=None):
+    def plot_evaluations_best_result_by_num_steps(self, idxs=None,
+                                                  show_after_creation=False):
         """
         Create a 2D plot with the following setting
             X-Axis: Number of evaluations of objective functions (= num steps)
@@ -345,12 +364,14 @@ class EvaluationFramework(object):
             num_steps = len(results)
 
             x_list.append(np.linspace(0, num_steps, num_steps, endpoint=False))
-        self._plot_lists(x_list, y_list, y_format, x_label, y_label)
+        return self._plot_lists(x_list, y_list, y_format,
+                                x_label, y_label,
+                                show_after_creation=show_after_creation)
 
 
     def _plot_lists(self, x_list, y_list, y_format=None, x_label=None,
-                    y_label=None):
-        plt.figure()
+                    y_label=None, show_after_creation=False):
+        this_plot = plt.figure()
         if y_format is None:
             y_format = []
             for i in range(len(y_list)):
@@ -370,12 +391,17 @@ class EvaluationFramework(object):
             elif type == "scatter":
                 plt.scatter(x_list[i], y, label=label, color=color)
         plt.legend(loc='upper right')
-        plt.show(True)
+
+        if(show_after_creation):
+            plt.show(True)
+
+        return this_plot
 
 
 
 
-    def plot_evaluations_best_result_by_cost(self, idxs=None):
+    def plot_evaluations_best_result_by_cost(self, idxs=None,
+                                             show_after_creation=False):
         """
         Create a 2D plot with the following setting
             X-Axis: Total cost of parameter optimization
@@ -388,6 +414,12 @@ class EvaluationFramework(object):
         idxs: list of int
             A list of indexes corresponding to the indexes of evaluations
             for which evaluations a plot shall be created.
+
+        Returns
+        -----------
+
+        matplotlib.figure
+            The figure object representing this plot.
         """
         if idxs is None:
             idxs = range(len(self.evaluations))
@@ -429,9 +461,11 @@ class EvaluationFramework(object):
             results = self.evaluations[idx]['result_per_step']
             y_list.append(results)
             x_list.append(total_costs)
-        self._plot_lists(x_list, y_list, y_format, x_label, y_label)
+        return self._plot_lists(x_list, y_list, y_format, x_label, y_label,
+                                show_after_creation=show_after_creation)
 
-    def plot_evaluations(self, idxs=None, to_plot=None):
+    def plot_evaluations(self, idxs=None, to_plot=None,
+                         show_after_creation=False, store=True):
         """
         Creates the plots defined in to_plot.
 
@@ -446,23 +480,82 @@ class EvaluationFramework(object):
             Possible plot options. Plots all plots corresponding to the strings
              in the list. They can be in any order, and invalid values will be
              ignored.
-            Default option is best_result_per_step.
+
             Possible values:
                 best_result_per_step
                 best_result_per_cost
 
+            Default option is all.
         """
+        plot_all = False
         if to_plot is None:
-            to_plot = ["best_result_per_step"]
+            plot_all = True
         elif not isinstance(to_plot, list):
             to_plot = [to_plot]
 
-        if "best_result_per_step" in to_plot:
-            self.plot_evaluations_best_result_by_num_steps(idxs)
-        if "best_result_per_cost" in to_plot:
-            self.plot_evaluations_best_result_by_cost(idxs)
-        if "plot_evaluation_step_ranking" in to_plot:
-            self.plot_evaluation_step_ranking(idxs)
+        plots_to_store = {}
+
+        #if we have a new plot we need to add it here
+        if "best_result_per_step" in to_plot or plot_all:
+            best_result_per_step_plt = \
+                self.plot_evaluations_best_result_by_num_steps(idxs,
+                                    show_after_creation=show_after_creation)
+
+            #either store plot or close to free memory
+            if store:
+                plots_to_store['best_result_per_step'] = best_result_per_step_plt
+            else:
+                plt.close(best_result_per_step_plt)
+
+        if "best_result_per_cost" in to_plot or plot_all:
+            best_result_per_cost_plt = \
+                self.plot_evaluations_best_result_by_cost(idxs,
+                                    show_after_creation=show_after_creation)
+            if store:
+                plots_to_store['best_result_per_cost'] = best_result_per_cost_plt
+            else:
+                plt.close(best_result_per_cost_plt)
+
+        if "plot_evaluation_step_ranking" in to_plot or plot_all:
+            plot_evaluation_step_ranking_plt = \
+                self.plot_evaluation_step_ranking(idxs,
+                                    show_after_creation=show_after_creation)
+
+            if store:
+                plots_to_store["plot_evaluation_step_ranking"] = \
+                    plot_evaluation_step_ranking_plt
+            else:
+                plt.close(plot_evaluation_step_ranking_plt)
+
+        if store:
+            self._store_plots(plots_to_store)
+
+
+    def _store_plots(self, plot_dict):
+        """
+        Convenience methods to store all plots in the current step. Using this
+        method only makes sense if you use the EvaluationFramework to either
+        evaluate only one OptimizationCore, or evaluate several cores
+        simultaneously using the EvaluationFramework.evaluate_optimizers()
+        function.
+
+        Warning: The step that is stored with the plots is calculated naively as the
+        current step of an arbitrary optimizer evaluation has in the
+        evaluations list.
+
+        Parameters
+        ----------
+            plot_dict: dict
+                A dict containing the plot name as keys and the
+                matplotlib.figure object as values.
+
+        """
+        step_to_store = len(self.evaluations[0]['result_per_step'])
+
+        self.plots.append({
+            'step': step_to_store,
+            'plots': plot_dict
+        })
 
     def _add_evaluation_step(self, core_index, result, best_result, cost_eval,
                              cost_core):
