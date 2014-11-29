@@ -53,6 +53,7 @@ class EvaluationFramework(object):
             }
     """
     evaluations = None
+
     COLORS = ["g", "r", "c", "b", "m", "y"]
     evaluation_writer = None
 
@@ -130,7 +131,8 @@ class EvaluationFramework(object):
 
     def evaluate_optimizers(self, optimizers, evaluation_descriptions,
                             objective_function, obj_func_name=None, steps=20,
-                            write_csv=True,  write_detailed_results=True):
+                            write_csv=True,  write_detailed_results=True,
+                            csv_write_frequency=10, plot_write_frequency=10):
         """
         Unconstrained evaluation of all optimizers on the given objective func.
         In each step evaluates all optimizers given for exactly one step.
@@ -158,30 +160,44 @@ class EvaluationFramework(object):
         steps: int
             The number of steps to run the evaluation for.
 
-        write_csv: bolean
+        write_csv: boolean
             If this evaluation run shall be appended to the global reporting,
             CSV. See utilities.EvaluationWriter for details.
 
         write_detailed_results: boolean
             If this evaluation run shall report all results including plots to
             the output folder declared in EvaluationWriter.
+
+        csv_write_frequency: int or None
+            How often the detailed output to csv will be written during
+            evaluation. Argument gives number of steps.
+            To make it write only at the end assign None here.
+
+            Default: 10
+
+        plot_write_frequency: int or None
+            How often the plot output will be written during
+            evaluation. Argument gives number of steps.
+            To make it write only at the end assign None here.
+
+            Default: 10
         """
         #create a new evaluation hash for every optimizer.
         optimizer_idxs = self._add_new_optimizer_evaluation(optimizers,
                                                     evaluation_descriptions,
                                                     obj_func_name)
-
         #then in each step optimize with each optimizer just for one step.
         for i in range(steps):
             for optimizer_idx in optimizer_idxs:
                 self.evaluation_step(optimizer_idx, objective_function)
 
-            #for testing plot results every XX rounds
-            if i % 10 == 0:
-                if write_detailed_results:
+            #for testing write_out_results results every XX rounds
+            if write_detailed_results:
+                if csv_write_frequency is not None and i % csv_write_frequency == 0:
                     self.evaluation_writer.append_evaluations_to_detailed_csv()
-                    logging.error("write detailed results not implemented yet. Skipping")
-                    #TODO to be implemented.
+
+                if plot_write_frequency is not None and i % plot_write_frequency == 0:
+                    self.evaluation_writer.append_evaluations_to_detailed_csv()
 
         #insert end date to all experiments
         for ev in self.evaluations:
@@ -192,14 +208,21 @@ class EvaluationFramework(object):
         if write_csv:
             try:
                 self.evaluation_writer.write_evaluations_to_global_csv()
+                logging.info("Wrote summary CSV output - Finished.")
             except ValueError:
                 logging.error("Error writing result to global CSV file after "
                               "finishing evaluations.")
 
         if write_detailed_results:
+            logging.info("Wrote detailed CSV output - Finished.")
+            #write detailed csv
             self.evaluation_writer.append_evaluations_to_detailed_csv()
-            logging.error("write detailed results not implemented yet. Skipping")
-            #TODO to be implemented.
+            #write plots
+            self.evaluation_writer.write_out_plots_all_evaluations()
+
+            logging.info("Wrote detailed CSV output and plots - Finished.")
+
+
 
     def evaluation_step(self, core_index, objective_func):
         """
