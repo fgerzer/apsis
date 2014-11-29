@@ -174,7 +174,10 @@ class EvaluationFramework(object):
 
             #for testing plot results every XX rounds
             if i % 10 == 0:
-                print self.evaluation_writer._generate_evaluation_global_csv_entries()
+                if write_detailed_results:
+
+                    logging.error("write detailed results not implemented yet. Skipping")
+                    #TODO to be implemented.
 
         #insert end date to all experiments
         for ev in self.evaluations:
