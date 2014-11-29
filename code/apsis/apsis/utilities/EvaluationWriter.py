@@ -1,22 +1,60 @@
 import os
 import datetime
+import time
+import matplotlib.pylab as plt
+import logging
 
 class EvaluationWriter(object):
     """
     Evaluation Writer
     ------------------
 
-    TODO Description to be done.
+    Object to store the results obtained in EvaluationFramework to files.
 
+
+    Results will be store to a folder that needs to be set in environment
+    variable $APSIS_CSV_TARGET_FOLDER.
+
+    Two type of results are written:
+
+    Global CSV Writing is done in a file named experiments.csv,
+    where the file name can be customized by $APSIS_CSV_GLOBAL_FILENAME
+
+    Detailed result writing can also be done. In case this is done
+    there will be
+    * folders will be sorted according to the instantiation date of
+    this class
+    * in there we will have a folder named plots for all plots
+    * also we will have a folder per Evaluation object in the
+    EvaluationFramework.evaluations list
+
+
+    Attributes
+    ----------
+
+    global_target_path: String
+        The parent folder for all results writing. Will be read from
+        env variable $APSIS_CSV_TARGET_FOLDER.
+
+    detailed_target_path: String
+        The parent folder for all the detailed output, e.g. plots and detailed
+        csv output. This folder will automatically be named by the date
+        of instantiation of this class (in UTC) and will be created on
+        construction.
+
+    evaluation_framework: EvaluationFramework
+        Reference to the EvaluationFramework instance from which we
+        want to store results.
     """
-    target_path = None
+    global_target_path = None
+    detailed_target_path = None
     evaluation_framework = None
 
     ###########
     # Global CSV Constants
     ###########
-    global_csv_name = "experiments.csv"
-    global_csv_header = "Optimizer,Description,ObjFunction,StartDate (UTC)," \
+    GLOBAL_CSV_FILENAME = "experiments.csv"
+    GLOBAL_CSV_HEADER = "Optimizer,Description,ObjFunction,StartDate (UTC)," \
                         "EndDate (UTC),NumSteps,BestResult,TotalCost," \
                         "TotalCostEval,TotalCostCore,AvgCost,AvgCostEval," \
                         "AvgCostCore\n"
@@ -24,21 +62,43 @@ class EvaluationWriter(object):
     ###########
     # Detailed CSV Constants
     ###########
-    detailed_csv_results_filename = "results.csv"
+    DETAILED_CSV_RESULTS_FILENAME = "results.csv"
 
+    ###########
+    # Plot Constans
+    ###########
+    PLOT_DIR_NAME = "plots"
+
+    #internal property to be used for creating the result writing folder
+    global_start_date = None
+
+    ############
+    # Constructor
+    ############
     def __init__(self, evaluation_framework, target_path=None):
         self.evaluation_framework = evaluation_framework
 
-        self.target_path = target_path
-        if self.target_path is None:
+        self.global_target_path = target_path
+        if self.global_target_path is None:
             #look up target path from environment variable
-            self.target_path = os.environ.get('APSIS_CSV_TARGET_FOLDER', None)
-            if self.target_path is None:
+            self.global_target_path = os.environ.get('APSIS_CSV_TARGET_FOLDER', None)
+            if self.global_target_path is None:
                 raise ValueError("CSVWriter needs either to be given the"
                                  "target directory to write to or the "
                                  "environment variable APSIS_CSV_TARGET_FOLDER"
                                  "must be set.")
 
+        #if somebody wants to write to somewhere else
+        csv_global_env = os.environ.get('APSIS_CSV_GLOBAL_FILENAME', None)
+        if csv_global_env is not None:
+            self.GLOBAL_CSV_FILENAME = csv_global_env
+
+        #set the global start date to the current date, will be used for the folder
+        self.global_start_date = time.time()
+
+        #compute parent folder name
+        date_name = datetime.datetime.utcfromtimestamp(self.global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
+        self.detailed_target_path = os.path.join(self.global_target_path, date_name)
 
 
     ##############
@@ -51,13 +111,13 @@ class EvaluationWriter(object):
         csv_file.write(csv_entries)
         csv_file.close()
 
-    def open_global_csv(self, create_path_if_not_exists=True):
-        csv_filepath = os.path.join(self.target_path, self.global_csv_name)
+    def open_global_csv(self, create_parent_path_if_not_exists=True):
+        csv_filepath = os.path.join(self.global_target_path, self.GLOBAL_CSV_FILENAME)
 
         #check if path exists, if not create
-        if create_path_if_not_exists:
-            if not os.path.exists(self.target_path):
-                os.makedirs(self.target_path)
+        if create_parent_path_if_not_exists:
+            if not os.path.exists(self.global_target_path):
+                os.makedirs(self.global_target_path)
             else:
                 #TODO raise error
                 pass
@@ -69,7 +129,7 @@ class EvaluationWriter(object):
 
         #only add header if not existed
         if not file_existed:
-            csv_filehandle.write(self.global_csv_header)
+            csv_filehandle.write(self.GLOBAL_CSV_HEADER)
 
         return csv_filehandle
 
@@ -258,16 +318,16 @@ class EvaluationWriter(object):
 
         return self._list_to_csv_line_string(to_write, delimiter=delimiter)
 
-    def _open_detailed_csv(self, evaluation, create_path_if_not_exists=True):
+    def _open_detailed_csv(self, evaluation, create_parent_path_if_not_exists=True):
         ev_specific_target_path = self._create_experiment_folder(evaluation)
 
         csv_filepath = os.path.join(ev_specific_target_path,
-                                    self.detailed_csv_results_filename)
+                                    self.DETAILED_CSV_RESULTS_FILENAME)
 
         #check if path exists, if not create
-        if create_path_if_not_exists:
-            if not os.path.exists(self.target_path):
-                os.makedirs(self.target_path)
+        if create_parent_path_if_not_exists:
+            if not os.path.exists(self.detailed_target_path):
+                os.makedirs(self.detailed_target_path)
             else:
                 #TODO raise error
                 pass
@@ -314,7 +374,7 @@ class EvaluationWriter(object):
 
         #read up experiment data and write it - for now use start time
         write_date = datetime.datetime.utcfromtimestamp(single_evaluation['start_date']).strftime("%Y-%m-%d_%H:%M:%S")
-        folder_name = os.path.join(self.target_path, optimizer_name + "_" +
+        folder_name = os.path.join(self.detailed_target_path, optimizer_name + "_" +
                                    single_evaluation.get('description', "")
                                    + "_" + single_evaluation.get('objective_function', "")
                                    + "_" + write_date)
@@ -330,16 +390,43 @@ class EvaluationWriter(object):
     ##################
 
     def write_out_plots_all_evaluations(self):
-        #take all plots from evaluation framework and write them for all evaluations
-        pass
+        plt_target_dir = self._get_plot_path()
 
-    def write_out_plots_single_evaluation(self, single_evaluation):
-        #take all plots from evaluation framework and write them for all evaluations
-        pass
+        #go through the plots hash one by one, plot all the plots in
+        #there and empty
+        while len(self.evaluation_framework.plots) > 0:
+            plt_hash = self.evaluation_framework.plots.pop()
+            step = plt_hash['step']
+            plt_step_dir = os.path.join(plt_target_dir, str(step))
 
-    def _write_out_plot(self, filename, plot):
-        pass
+            if not os.path.exists(plt_step_dir):
+                os.makedirs(plt_step_dir)
 
+            for plt_name, plt_fig in plt_hash['plots'].iteritems():
+                file_format = "png"
+                plot_file_name_img = os.path.join(plt_step_dir, plt_name
+                                              + "_step" + str(step) + "." + file_format)
+                plot_file_name_pickle = os.path.join(plt_step_dir, plt_name
+                                              + "_step" + str(step) + ".pickle")
+
+                #save as image
+                plt_fig.savefig(plot_file_name_img, format=file_format, transparent=False)
+
+                #close figure to free memory
+                plt.close(plt_fig)
+
+    def _get_plot_path(self, create_parent_path_if_not_exists=True):
+        plot_path = os.path.join(self.detailed_target_path, self.PLOT_DIR_NAME)
+
+        #check if path exists, if not create
+        if create_parent_path_if_not_exists:
+            if not os.path.exists(self.detailed_target_path):
+                os.makedirs(self.detailed_target_path)
+            else:
+                #TODO raise error
+                pass
+
+        return plot_path
 
     ################
     # General Helpers
