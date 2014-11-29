@@ -46,6 +46,10 @@ class EvaluationFramework(object):
                 objective_function: String
                 start_date: timestamp
                 end_date: timestamp
+
+                #internal attributes, used and set by EvaluationWriter
+                _output_folder: string with directory absolute path
+                _steps_written: int
             }
     """
     evaluations = None
@@ -175,7 +179,7 @@ class EvaluationFramework(object):
             #for testing plot results every XX rounds
             if i % 10 == 0:
                 if write_detailed_results:
-
+                    self.evaluation_writer.append_evaluations_to_detailed_csv()
                     logging.error("write detailed results not implemented yet. Skipping")
                     #TODO to be implemented.
 
@@ -193,6 +197,7 @@ class EvaluationFramework(object):
                               "finishing evaluations.")
 
         if write_detailed_results:
+            self.evaluation_writer.append_evaluations_to_detailed_csv()
             logging.error("write detailed results not implemented yet. Skipping")
             #TODO to be implemented.
 
