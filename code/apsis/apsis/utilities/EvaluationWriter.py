@@ -1,7 +1,7 @@
 import os
 import datetime
 
-class CSVWriter(object):
+class EvaluationWriter(object):
     target_path = None
     evaluation_framework = None
     global_csv_name = "experiments.csv"

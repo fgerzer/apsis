@@ -1,9 +1,8 @@
 import time
 import matplotlib.pylab as plt
-from matplotlib.lines import Line2D
 import numpy as np
 import logging
-from apsis.utilities.CSVWriter import CSVWriter
+from apsis.utilities.EvaluationWriter import EvaluationWriter
 import random
 
 class EvaluationFramework(object):
@@ -35,16 +34,23 @@ class EvaluationFramework(object):
         Evaluation dict looks as follows
             {
                 description: String
-                optimizer: OptimizationCoreInterface,
+
+                #result tracking
                 result_per_step: [result_0, result_1,...],
                 best_result_per_step: [best_0, best_1,...],
                 cost_eval_per_step: [cost_0, cost_1,...],
-                cost_core_per_step: [cost_core0, cost_core1]
+                cost_core_per_step: [cost_core0, cost_core1],
+
+                #experiment description
+                optimizer: OptimizationCoreInterface,
+                objective_function: String
+                start_date: timestamp
+                end_date: timestamp
             }
     """
     evaluations = None
     COLORS = ["g", "r", "c", "b", "m", "y"]
-    csv_writer = None
+    evaluation_writer = None
 
     def __init__(self):
         """
@@ -55,7 +61,7 @@ class EvaluationFramework(object):
 
         #create csv writer
         eval_framework = self
-        self.csv_writer = CSVWriter(eval_framework)
+        self.evaluation_writer = EvaluationWriter(eval_framework)
 
     def evaluate_and_plot_precomputed_grid(self, optimizers,
                                            evaluation_descriptions, grid,
@@ -113,12 +119,14 @@ class EvaluationFramework(object):
             The number of steps to run the evaluation for.
         """
         self.evaluate_optimizers(optimizers, evaluation_descriptions,
-                                 grid.evaluate_candidate, steps)
+                                 grid.evaluate_candidate,
+                                 obj_func_name="precomputed_grid", steps=steps)
 
 
 
     def evaluate_optimizers(self, optimizers, evaluation_descriptions,
-                            objective_function, steps, write_csv=True):
+                            objective_function, obj_func_name=None, steps=20,
+                            write_csv=True,  write_detailed_results=True):
         """
         Unconstrained evaluation of all optimizers on the given objective func.
         In each step evaluates all optimizers given for exactly one step.
@@ -145,10 +153,19 @@ class EvaluationFramework(object):
             candidate object with the result value set.
         steps: int
             The number of steps to run the evaluation for.
+
+        write_csv: bolean
+            If this evaluation run shall be appended to the global reporting,
+            CSV. See utilities.EvaluationWriter for details.
+
+        write_detailed_results: boolean
+            If this evaluation run shall report all results including plots to
+            the output folder declared in EvaluationWriter.
         """
         #create a new evaluation hash for every optimizer.
         optimizer_idxs = self._add_new_optimizer_evaluation(optimizers,
-                                                    evaluation_descriptions)
+                                                    evaluation_descriptions,
+                                                    obj_func_name)
 
         #then in each step optimize with each optimizer just for one step.
         for i in range(steps):
@@ -157,18 +174,24 @@ class EvaluationFramework(object):
 
             #for testing plot results every XX rounds
             if i % 10 == 0:
-                print self.csv_writer._generate_evaluation_global_csv_entries()
+                print self.evaluation_writer._generate_evaluation_global_csv_entries()
 
-        #automatically save this run to globalcsv
+        #insert end date to all experiments
+        for ev in self.evaluations:
+            ev['end_date'] = time.time()
+
+
+        #automatically save this run to global csv
         if write_csv:
             try:
-                self.csv_writer.write_evaluations_to_global_csv()
+                self.evaluation_writer.write_evaluations_to_global_csv()
             except ValueError:
                 logging.error("Error writing result to global CSV file after "
                               "finishing evaluations.")
 
-
-
+        if write_detailed_results:
+            logging.error("write detailed results not implemented yet. Skipping")
+            #TODO to be implemented.
 
     def evaluation_step(self, core_index, objective_func):
         """
@@ -420,7 +443,7 @@ class EvaluationFramework(object):
         dict_to_update['cost_core_per_step'].append(cost_core)
 
     def _add_new_optimizer_evaluation(self, optimizers,
-                                      evaluation_descriptions):
+                                      evaluation_descriptions, objective_func_name):
         optimizer_idxs = []
         for i in range(len(optimizers)):
             optimizer_dict = {
@@ -429,7 +452,10 @@ class EvaluationFramework(object):
                 'result_per_step': [],
                 'best_result_per_step': [],
                 'cost_eval_per_step': [],
-                'cost_core_per_step': []
+                'cost_core_per_step': [],
+                'objective_function': objective_func_name,
+                'start_date': time.time(),
+                'end_date':None
             }
 
             optimizer_idxs.append(len(self.evaluations))
