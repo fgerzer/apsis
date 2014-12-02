@@ -58,7 +58,8 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
             return False
 
         elif status == "working":
-            # for now just continue working
+            self.working_candidates.remove(candidate)
+            self.working_candidates.append(candidate)
             return True
 
         elif status == "pausing":
