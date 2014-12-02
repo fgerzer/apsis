@@ -297,12 +297,12 @@ class LowerUpperNumericParamDef(NumericParamDef):
         return self.x_min <= value <= self.x_max
 
 
-class DistanceParamDef(OrdinalParamDef):
+class PositionParamDef(OrdinalParamDef):
     positions = None
 
     def __init__(self, values, positions):
         assert len(values) == len(positions)
-        super(DistanceParamDef, self).__init__(values)
+        super(PositionParamDef, self).__init__(values)
         self.positions = positions
 
     def warp_in(self, value_in):
@@ -329,11 +329,11 @@ class DistanceParamDef(OrdinalParamDef):
         diff = abs(pos_a - pos_b)
         return float(diff)
 
-class PointParamDef(DistanceParamDef):
+class FixedValueParamDef(PositionParamDef):
     def __init__(self, values):
         positions = []
         pos = 0
         for v in values:
             pos += v
             positions.append(pos)
-        super(PointParamDef, self).__init__(values, positions)
+        super(FixedValueParamDef, self).__init__(values, positions)

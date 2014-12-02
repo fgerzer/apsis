@@ -4,7 +4,7 @@ from apsis.adapters.SimpleScikitLearnAdapter import SimpleScikitLearnAdapter
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from apsis.bayesian.AcquisitionFunctions import ExpectedImprovement
 from apsis.models.ParamInformation import NumericParamDef, NominalParamDef, \
-    LowerUpperNumericParamDef, DistanceParamDef, PointParamDef
+    LowerUpperNumericParamDef, PositionParamDef, FixedValueParamDef
 from apsis.SimpleBayesianOptimizationCore import SimpleBayesianOptimizationCore
 import math
 import nose.tools as nt
@@ -226,7 +226,7 @@ class testSimpleBayesianOptimizationCore(object):
         logging.basicConfig(level=logging.DEBUG)
         self.bay_search = SimpleBayesianOptimizationCore(
             {"param_defs":
-                [PointParamDef(values)],
+                [FixedValueParamDef(values)],
             "initial_random_runs": random_runs,
             'num_gp_restarts': 10,
             "minimization": minimization,
