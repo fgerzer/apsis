@@ -2,7 +2,7 @@ from apsis.OptimizationCoreInterface import OptimizationCoreInterface, \
     ListBasedCore
 from apsis.RandomSearchCore import RandomSearchCore
 from apsis.models.Candidate import Candidate
-from apsis.models.ParamInformation import NumericParamDef, DistanceParamDef
+from apsis.models.ParamInformation import NumericParamDef, PositionParamDef
 from apsis.bayesian.AcquisitionFunctions import ExpectedImprovement
 import numpy as np
 import GPy
@@ -16,7 +16,7 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
     It is simple because it only implements the simplest form - no freeze-thaw,
     (currently) now multiple workers, only numeric parameters.
     """
-    SUPPORTED_PARAM_TYPES = [NumericParamDef, DistanceParamDef]
+    SUPPORTED_PARAM_TYPES = [NumericParamDef, PositionParamDef]
 
     kernel = None
     acquisition_function = None
