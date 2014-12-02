@@ -295,3 +295,45 @@ class LowerUpperNumericParamDef(NumericParamDef):
 
     def is_in_parameter_domain(self, value):
         return self.x_min <= value <= self.x_max
+
+
+class PositionParamDef(OrdinalParamDef):
+    positions = None
+
+    def __init__(self, values, positions):
+        assert len(values) == len(positions)
+        super(PositionParamDef, self).__init__(values)
+        self.positions = positions
+
+    def warp_in(self, value_in):
+        pos = self.positions[self.values.index(value_in)]
+        value_out = (pos - self.positions[0])/(self.positions[-1]-self.positions[0])
+        return value_out
+
+    def warp_out(self, value_out):
+        if value_out > self.positions[-1]:
+            return self.values[-1]
+        if value_out < self.positions[0]:
+            return self.values[0]
+        for i, p in enumerate(self.positions):
+            if p >= value_out:
+                return self.values[i]
+
+    def distance(self, valueA, valueB):
+        if valueA not in self.values or valueB not in self.values:
+            raise ValueError(
+                "Values not comparable! Either one or the other is not in the "
+                "values domain")
+        pos_a = self.positions[self.values.index(valueA)]
+        pos_b = self.positions[self.values.index(valueB)]
+        diff = abs(pos_a - pos_b)
+        return float(diff)
+
+class FixedValueParamDef(PositionParamDef):
+    def __init__(self, values):
+        positions = []
+        pos = 0
+        for v in values:
+            pos += v
+            positions.append(pos)
+        super(FixedValueParamDef, self).__init__(values, positions)
