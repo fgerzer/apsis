@@ -228,7 +228,7 @@ class ProbabilityOfImprovement(AcquisitionFunction):
             result = 1 - cdf
         return result
 
-    def compute_negated_evaluate(self, x, args_):
+    def compute_minimizing_evaluate(self, x, args_):
         """
         Changes the sign of the evaluate function.
         """
