@@ -1,7 +1,7 @@
 from sklearn.datasets import fetch_mldata
 from sklearn.cross_validation import train_test_split
 from sklearn.cross_validation import cross_val_score
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.svm import NuSVC, SVC
 
 from apsis.adapters.SimpleScikitLearnAdapter import SimpleScikitLearnAdapter
@@ -22,20 +22,31 @@ def objective_func_from_sklearn(candidate, estimator, param_defs, X, y, paramete
     for i in range(len(parameter_names)):
         param_defs_sklearn[parameter_names[i]] = param_defs[i]
 
-    print(str(param_defs_sklearn))
+    print("Param defs: " + str(param_defs_sklearn))
 
     sk_ad = SimpleScikitLearnAdapter(estimator, param_defs_sklearn)
     sk_learn_format = sk_ad.translate_vector_dict(candidate.params)
-    print(str(sk_learn_format))
+    print("sk_learn_format: " + str(sk_learn_format))
 
     estimator.set_params(**sk_learn_format)
-    print(str(estimator.get_params()))
-    scores = cross_val_score(estimator, X, y, scoring=scoring, cv=cv)
-    print(str(scores))
-    candidate.result = 1 - scores.mean()
+    print("set params: " + str(estimator.get_params()))
+    #scores = cross_val_score(estimator, X, y, scoring=scoring, cv=cv)
+    #print("scores: " + str(scores))
+    #candidate.result = 1 - scores.mean()
+
+    train_data, test_data, train_target, test_target = train_test_split(X, y)
+
+    estimator.fit(train_data, train_target)
+    pred = estimator.predict(test_data)
+    score = accuracy_score(test_target, pred)
+    print(score)
+    candidate.result = score
     cost = time.time() - start_time
     candidate.cost = cost
+    print("cost: " + str(cost))
+    print("")
     return candidate
+
 
 #load mnist dataset
 mnist = fetch_mldata('MNIST original',
@@ -69,8 +80,8 @@ optimizer_args = {'minimization': True,
 
 obj_func_args = {"estimator": regressor,
                  "param_defs": param_defs,
-                 "X": mnist_data_train,
-                 "y": mnist_target_train,
+                 "X": mnist_data_train[:],
+                 "y": mnist_target_train[:],
                  "parameter_names": parameter_names}
 
 ev = EvaluationFramework()
@@ -87,7 +98,3 @@ print("----------------------------------\nTest EVALUATION FOLLOWS\n------------
 scores = cross_val_score(regressor, mnist_data_test, mnist_target_test, scoring="accuracy", cv=3)
 print(scores)
 print("----------------------------------\n----------------------------------")
-
-
-
-
