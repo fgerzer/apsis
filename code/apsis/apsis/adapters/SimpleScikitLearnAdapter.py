@@ -82,7 +82,6 @@ class SimpleScikitLearnAdapter(object):
         self.estimator = estimator
         self.param_defs = param_defs
         self.n_iter = n_iter
-        self.parameter_names = self.param_defs.keys()
         self.scoring = scoring
         self.fit_params = fit_params if fit_params is not None else {}
         self.refit = refit
@@ -91,6 +90,12 @@ class SimpleScikitLearnAdapter(object):
         self.optimizer_arguments = optimizer_arguments
         self.optimizer = optimizer
         self.worker_id = "SimpleScikitLearnAdapter-Worker"
+
+        #Ensure parameter names are set
+        self.parameter_names = []
+        for name in self.param_defs:
+            self.parameter_names.append(name)
+
 
     def translate_dict_vector(self, sklearn_params):
         """
@@ -138,10 +143,6 @@ class SimpleScikitLearnAdapter(object):
             A dictionary compatible to the one used in
             self.estimator.get_params
         """
-
-        # make sure to have the parameter names
-        self.translate_dict_vector(self.estimator.get_params())
-
         return_dict = {}
 
         logging.debug("optimizer params %s, param names %s",
@@ -251,9 +252,6 @@ class SimpleScikitLearnAdapter(object):
             else:
                 raise ValueError("Parameter " + str(param_list[k])
                                  + " is not supported.")
-            param_names.append(k)
-
-        self.parameter_names = param_names
         return param_list
 
     def get_params(self):
