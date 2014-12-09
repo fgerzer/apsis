@@ -146,7 +146,8 @@ class EvaluationFramework(object):
 
 
     def evaluate_optimizers(self, optimizers, evaluation_descriptions,
-                            objective_function, obj_func_name=None, steps=20,
+                            objective_function, objective_func_args={},
+                            obj_func_name=None, steps=20,
                             write_csv=True,  write_detailed_results=True,
                             csv_write_frequency=10, plot_write_frequency=10,
                             show_plots_at_end=False):
@@ -219,7 +220,7 @@ class EvaluationFramework(object):
         #then in each step optimize with each optimizer just for one step.
         for i in range(steps):
             for optimizer_idx in optimizer_idxs:
-                self.evaluation_step(optimizer_idx, objective_function)
+                self.evaluation_step(optimizer_idx, objective_function, objective_func_args)
 
             #write out the detailed reseults in a certain frequency if whished
             if write_detailed_results:
@@ -257,7 +258,7 @@ class EvaluationFramework(object):
 
 
 
-    def evaluation_step(self, core_index, objective_func):
+    def evaluation_step(self, core_index, objective_func, objective_func_args=None):
         """
         Performs one evaluation step with the optimizer identified by the
         index of the specific evaluation run in the list of evaluations held
@@ -288,7 +289,7 @@ class EvaluationFramework(object):
 
         #evaluate this candidate in objective function.
         # It has to update result and other properties in next_candidate.
-        next_candidate = objective_func(next_candidate)
+        next_candidate = objective_func(next_candidate, **objective_func_args)
 
         #Now we report back the evaluation result.
         #also the cost for the working method is accounted to the optimizer
