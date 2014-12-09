@@ -76,34 +76,17 @@ obj_func_args = {"estimator": regressor,
 ev = EvaluationFramework()
 optimizers = [SimpleBayesianOptimizationCore({"param_defs": param_defs,
                                               "initial_random_runs": 10})]
-steps = 20
+steps = 25
 ev.evaluate_optimizers(optimizers, ["BayOpt_MNIST_EI"],
                        objective_func_from_sklearn, objective_func_args=obj_func_args, obj_func_name="MNIST SVC",
                        steps=steps, show_plots_at_end=True)
 
-
-"""
-
-
-
-#scores = cross_val_score(regressor, mnist_data_train[:10], mnist_target_train[:10], scoring="mean_squared_error", cv=3)
-#print(scores)
-
-print(len(mnist_data_train))
-print(len(mnist_target_train))
-
-print(mnist_data_train[0])
-print(mnist_target_train[0])
-fitted = sk_adapter.fit(mnist_data_train[:10], mnist_target_train[:10])
-
-print("----------------------------------\nTRAINING EVALUATION FOLLOWS\n----------------------------------")
-print(mean_squared_error(mnist_target_train,
-                                 fitted.predict(mnist_data_train)))
+#finally do an evaluation
+print("----------------------------------\nHyperparameter Optimization Finished\n----------------------------------")
 print("----------------------------------\nTest EVALUATION FOLLOWS\n----------------------------------")
-print(mean_squared_error(mnist_target_test,
-                                 fitted.predict(mnist_data_test)))
-"""
-
+scores = cross_val_score(regressor, mnist_data_test, mnist_target_test, scoring="accuracy", cv=3)
+print(scores)
+print("----------------------------------\n----------------------------------")
 
 
 

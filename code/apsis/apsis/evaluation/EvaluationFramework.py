@@ -224,10 +224,11 @@ class EvaluationFramework(object):
 
             #write out the detailed reseults in a certain frequency if whished
             if write_detailed_results:
-                if csv_write_frequency is not None and i % csv_write_frequency == 0 and i != 0:
+                if csv_write_frequency is not None and (i+1) % csv_write_frequency == 0 and i != 0:
                     self.evaluation_writer.append_evaluations_to_detailed_csv()
+                    self.evaluation_writer.write_best_params_to_csv()
 
-                if plot_write_frequency is not None and i % plot_write_frequency == 0 and i != 0:
+                if plot_write_frequency is not None and (i+1) % plot_write_frequency == 0 and i != 0:
                     self.plot_evaluations()
                     self.evaluation_writer.write_out_plots_all_evaluations()
 

@@ -63,6 +63,7 @@ class EvaluationWriter(object):
     # Detailed CSV Constants
     ###########
     DETAILED_CSV_RESULTS_FILENAME = "results.csv"
+    DETAILED_CSV_PARAMS_FILENAME = "parameters.csv"
 
     ###########
     # Plot Constans
@@ -246,6 +247,18 @@ class EvaluationWriter(object):
     # Methods for detailed csvs
     ##############
 
+    def write_best_params_to_csv(self):
+        """
+        Writing best parameter vector to csv.
+        """
+        #go through all evaluation objects and do it for each separately
+        for ev in self.evaluation_framework.evaluations:
+            entry = self._generate_params_as_csv_entry(ev)
+
+            detailed_file = self._open_param_csv(ev)
+            detailed_file.write(entry)
+            detailed_file.close()
+
     def append_evaluations_to_detailed_csv(self):
         #go through all evaluation objects and do it for each separately
         for ev in self.evaluation_framework.evaluations:
@@ -264,6 +277,22 @@ class EvaluationWriter(object):
 
             #store that we have written
             ev['_steps_written'] = steps_written + new_steps
+
+    def _generate_params_as_csv_entry(self, evaluation,
+                                        delimiter=";", line_delimiter="\n"):
+
+        best_candidate = evaluation['optimizer'].best_candidate
+        return self._candidate_param_vector_to_csv(best_candidate, delimiter=delimiter) + line_delimiter
+
+
+    def _candidate_param_vector_to_csv(self, candidate, delimiter=";"):
+        result = ""
+        for i in range(len(candidate.params) - 1):
+            result += str(candidate.params[i]) + delimiter
+
+        result += str(candidate.params[i])
+
+        return result
 
 
     def _generate_evaluation_detailed_csv_entries(self, evaluation,
@@ -318,11 +347,10 @@ class EvaluationWriter(object):
 
         return self._list_to_csv_line_string(to_write, delimiter=delimiter)
 
-    def _open_detailed_csv(self, evaluation, create_parent_path_if_not_exists=True):
+    def _open_detailed_file_generic(self, evaluation, filenmame, header=None,create_parent_path_if_not_exists=True):
         ev_specific_target_path = self._create_experiment_folder(evaluation)
 
-        csv_filepath = os.path.join(ev_specific_target_path,
-                                    self.DETAILED_CSV_RESULTS_FILENAME)
+        csv_filepath = os.path.join(ev_specific_target_path, filenmame)
 
         #check if path exists, if not create
         if create_parent_path_if_not_exists:
@@ -342,10 +370,19 @@ class EvaluationWriter(object):
         csv_filehandle = open(csv_filepath, 'a+')
 
         #only add header if not existed
-        if not file_existed:
-            csv_filehandle.write(self._created_detailed_csv_header(evaluation))
+        if not file_existed and header is not None:
+            csv_filehandle.write(str(header))
 
         return csv_filehandle
+
+    def _open_detailed_csv(self, evaluation, create_parent_path_if_not_exists=True):
+        header = self._created_detailed_csv_header(evaluation)
+        return self._open_detailed_file_generic(evaluation, self.DETAILED_CSV_RESULTS_FILENAME, header=header,
+                                         create_parent_path_if_not_exists=create_parent_path_if_not_exists)
+
+    def _open_param_csv(self, evaluation, create_parent_path_if_not_exists=True):
+        return self._open_detailed_file_generic(evaluation, self.DETAILED_CSV_PARAMS_FILENAME, header=None,
+                                         create_parent_path_if_not_exists=create_parent_path_if_not_exists)
 
     def _created_detailed_csv_header(self, single_evaluation, delimiter=";", line_delimiter="\n"):
         return "STEP" + delimiter + "RESULT" + delimiter + "BEST_RESULT_SO_FAR" \
