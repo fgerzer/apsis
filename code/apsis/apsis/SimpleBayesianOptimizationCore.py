@@ -119,7 +119,7 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
                           + str(new_candidate))
 
         # or we need to generate new ones, which either includes random points
-        elif len(self.finished_candidates) <= self.initial_random_runs:
+        elif len(self.finished_candidates) < self.initial_random_runs:
             new_candidate = self.random_searcher.next_candidate()
             logging.debug("Core providing new randomly generated candidate " +
                             str(new_candidate))
