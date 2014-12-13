@@ -48,53 +48,55 @@ def objective_func_from_sklearn(candidate, estimator, param_defs, X, y, paramete
     return candidate
 
 
-#load mnist dataset
-mnist = fetch_mldata('MNIST original',
-                     data_home=os.environ.get('MNIST_DATA_CACHE', '~/.mnist-cache'))
 
-print("Mnist Data Size " + str(mnist.data.shape))
-print("Mnist Labels Size" + str(mnist.target.shape))
+if __name__ == '__main__':
+    #load mnist dataset
+    mnist = fetch_mldata('MNIST original',
+                         data_home=os.environ.get('MNIST_DATA_CACHE', '~/.mnist-cache'))
 
-#train test split
-mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test = \
-    train_test_split(mnist.data, mnist.target, test_size=0.1, random_state=42)
+    print("Mnist Data Size " + str(mnist.data.shape))
+    print("Mnist Labels Size" + str(mnist.target.shape))
 
-regressor = SVC(kernel="poly")
-parameter_names = ["C", "degree", "gamma", "coef0"]
-param_defs = [
-    LowerUpperNumericParamDef(0,1),
-    FixedValueParamDef([1,2,3]),
-    LowerUpperNumericParamDef(0, 1),
-    LowerUpperNumericParamDef(0,1)
-]
+    #train test split
+    mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test = \
+        train_test_split(mnist.data, mnist.target, test_size=0.1, random_state=42)
 
-optimizer_args = {'minimization': True,
-                  'initial_random_runs': 10}
+    regressor = SVC(kernel="poly")
+    parameter_names = ["C", "degree", "gamma", "coef0"]
+    param_defs = [
+        LowerUpperNumericParamDef(0,1),
+        FixedValueParamDef([1,2,3]),
+        LowerUpperNumericParamDef(0, 1),
+        LowerUpperNumericParamDef(0,1)
+    ]
 
-"""sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
-                                              scoring="mean_squared_error",
-                                              optimizer="SimpleBayesianOptimizationCore",
-                                              optimizer_arguments=optimizer_args,n_iter=1)"""
+    optimizer_args = {'minimization': True,
+                      'initial_random_runs': 10}
+
+    """sk_adapter = SimpleScikitLearnAdapter(regressor, param_defs,
+                                                  scoring="mean_squared_error",
+                                                  optimizer="SimpleBayesianOptimizationCore",
+                                                  optimizer_arguments=optimizer_args,n_iter=1)"""
 
 
 
-obj_func_args = {"estimator": regressor,
-                 "param_defs": param_defs,
-                 "X": mnist_data_train[:],
-                 "y": mnist_target_train[:],
-                 "parameter_names": parameter_names}
+    obj_func_args = {"estimator": regressor,
+                     "param_defs": param_defs,
+                     "X": mnist_data_train[:],
+                     "y": mnist_target_train[:],
+                     "parameter_names": parameter_names}
 
-ev = EvaluationFramework()
-optimizers = [SimpleBayesianOptimizationCore({"param_defs": param_defs,
-                                              "initial_random_runs": 10})]
-steps = 25
-ev.evaluate_optimizers(optimizers, ["BayOpt_MNIST_EI"],
-                       objective_func_from_sklearn, objective_func_args=obj_func_args, obj_func_name="MNIST SVC",
-                       steps=steps, show_plots_at_end=True)
+    ev = EvaluationFramework()
+    optimizers = [SimpleBayesianOptimizationCore({"param_defs": param_defs,
+                                                  "initial_random_runs": 10})]
+    steps = 25
+    ev.evaluate_optimizers(optimizers, ["BayOpt_MNIST_EI"],
+                           objective_func_from_sklearn, objective_func_args=obj_func_args, obj_func_name="MNIST SVC",
+                           steps=steps, show_plots_at_end=True)
 
-#finally do an evaluation
-print("----------------------------------\nHyperparameter Optimization Finished\n----------------------------------")
-print("----------------------------------\nTest EVALUATION FOLLOWS\n----------------------------------")
-scores = cross_val_score(regressor, mnist_data_test, mnist_target_test, scoring="accuracy", cv=3)
-print(scores)
-print("----------------------------------\n----------------------------------")
+    #finally do an evaluation
+    print("----------------------------------\nHyperparameter Optimization Finished\n----------------------------------")
+    print("----------------------------------\nTest EVALUATION FOLLOWS\n----------------------------------")
+    scores = cross_val_score(regressor, mnist_data_test, mnist_target_test, scoring="accuracy", cv=3)
+    print(scores)
+    print("----------------------------------\n----------------------------------")

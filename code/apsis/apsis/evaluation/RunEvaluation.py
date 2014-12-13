@@ -133,4 +133,6 @@ def objective_func_from_sklearn(candidate, estimator, param_defs, X, y, paramete
     return score
 
 
-test_sklearn_svm("test.pickle", dim=100)
+
+if __name__ == '__main__':
+    test_sklearn_svm("test.pickle", dim=100)
