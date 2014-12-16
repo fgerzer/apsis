@@ -255,9 +255,8 @@ class EvaluationWriter(object):
         for ev in self.evaluation_framework.evaluations:
             entry = self._generate_params_as_csv_entry(ev)
 
-            detailed_file = self._open_param_csv(ev)
-            detailed_file.write(entry)
-            detailed_file.close()
+            with open(self._open_param_csv(ev), 'a+') as detailed_file:
+                detailed_file.write(entry)
 
     def append_evaluations_to_detailed_csv(self):
         #go through all evaluation objects and do it for each separately
@@ -271,9 +270,8 @@ class EvaluationWriter(object):
             new_entries, new_steps = self._generate_evaluation_detailed_csv_entries(ev)
 
             #write
-            detailed_file = self._open_detailed_csv(ev)
-            detailed_file.write(new_entries)
-            detailed_file.close()
+            with open(self._open_detailed_csv(ev), 'a+') as detailed_file:
+                detailed_file.write(new_entries)
 
             #store that we have written
             ev['_steps_written'] = steps_written + new_steps
@@ -367,13 +365,12 @@ class EvaluationWriter(object):
         file_existed = os.path.isfile(csv_filepath)
 
         #open for appending, create if not exists, add header
-        csv_filehandle = open(csv_filepath, 'a+')
+        with open(csv_filepath, 'a+') as csv_filehandle:
+            #only add header if not existed
+            if not file_existed and header is not None:
+                csv_filehandle.write(str(header))
 
-        #only add header if not existed
-        if not file_existed and header is not None:
-            csv_filehandle.write(str(header))
-
-        return csv_filehandle
+        return csv_filepath
 
     def _open_detailed_csv(self, evaluation, create_parent_path_if_not_exists=True):
         header = self._created_detailed_csv_header(evaluation)
