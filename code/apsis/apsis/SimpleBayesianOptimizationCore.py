@@ -8,6 +8,7 @@ import numpy as np
 import GPy
 import logging
 from apsis.utilities.randomization import check_random_state
+import time
 
 class SimpleBayesianOptimizationCore(ListBasedCore):
     """
@@ -127,16 +128,20 @@ class SimpleBayesianOptimizationCore(ListBasedCore):
             acquisition_params = {'param_defs': self.param_defs,
                                   'gp': self.gp,
                                   'cur_max': self.best_candidate.result,
-                                  "minimization": self.minimization
+                                  "minimization": self.minimization,
+                                  'random_search_steps': 100
             }
 
             logging.debug("Running acquisition with args %s",
                           str(acquisition_params))
 
+            start = time.time()
             new_candidate_points = self.acquisition_function.compute_proposal(
                 acquisition_params, refitted=self.just_refitted,
                 number_proposals=self.num_precomputed+1)
-
+            print("==================================================")
+            print(time.time()-start)
+            print("==================================================")
             for point in new_candidate_points:
                 for i in range(len(point)):
                     point[i] = self.param_defs[i].warp_out(

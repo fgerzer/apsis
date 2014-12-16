@@ -13,7 +13,7 @@ import os
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 def objective_func_from_sklearn(candidate, estimator, param_defs, X, y, parameter_names, scoring="accuracy", cv=3): #gets candidate, returns candidate.
     start_time = time.time()
@@ -82,8 +82,8 @@ if __name__ == '__main__':
 
     obj_func_args = {"estimator": regressor,
                      "param_defs": param_defs,
-                     "X": mnist_data_train[:],
-                     "y": mnist_target_train[:],
+                     "X": mnist_data_train[:100],
+                     "y": mnist_target_train[:100],
                      "parameter_names": parameter_names}
 
     ev = EvaluationFramework()
