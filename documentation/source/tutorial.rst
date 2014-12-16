@@ -1,0 +1,58 @@
+Tutorial
+********
+ 
+
+The interface used is comparatively simple.
+
+In general, there are three important classes: Candidates, Cores and ParameterDefinitions.
+
+Candidate
+=========
+
+The Candidate class represents a hypothesis of parameters, and their result. It is used to communicate with the workers on which parameters to try next.
+
+Core
+====
+
+There are currently two Cores: The SimpleBayesianOptimizationCore, and the RandomSearchCore. Each core has two important functions: working(), which allows you to update the core on your current state, and next_candidate, which returns the next parameter set to try out.
+
+ParameterDefinition
+===================
+
+Parameter Definitions tell the Optimizer which type of a parameter you have to optimize: Numerical, Categorical, and any special variants on them. More details can be found in the module or, later, here.
+
+
+Using apsis
+===========
+
+Let's assume we have some machine learning algorithm 'ml', which takes X, y and the hyperparameters as arguments, and returns an error rate.
+
+The first step is to define the parameter definitions. Let's assume that we have four parameters - the first one and the last two are between 0 and 1, and the second one can assume values in [0, 1, 2]. ::
+
+    param_defs = [
+        LowerUpperNumericParamDef(0,1),
+        FixedValueParamDef([1,2,3]),
+        LowerUpperNumericParamDef(0, 1),
+        LowerUpperNumericParamDef(0,1)
+    ]
+    
+This defines the parameter definitions we need. Then, we define the arguments for the optimizer: ::
+
+    optimizer_args = {'minimization': True,
+                      'initial_random_runs': 10,
+                      'param_defs': param_defs}
+                      
+This means we want our optimizer to run for 10 initial random runs, we want to reduce our metric (since it's an error rating) and we use our parameter definitions. ::
+
+    optimizer = SimpleBayesianOptimizationCore(optimizer_args)
+    
+And we initialize with our optimizer.
+Then, the following becomes fairly easy: While we're not finished (what is finished can depend on you, for example a certain number of runs, or a good result), we're just refitting and refitting: ::
+
+    while not finished:
+        next_candidate = optimizer.next_candidate()
+        next_candidate.result = ml(X, y, next_candidate.params)
+        optimizer.working(next_candidate, 'finished')
+    best_candidate = optimizer.best_candidate
+    print(best_candidate)
+    print(best_candidate.result)
