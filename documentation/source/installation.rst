@@ -1,11 +1,10 @@
 Installing Apsis
 ****************
 
-This guide provides instructions for how to get apsis running on your system. The guide is manily targetted for Ubuntu/Debian users, however as a user of another linux based OS you should easily to be able to follow this guide with the methods used in your distro.
+This guide provides instructions for how to get apsis running on your system. The guide is manily targetted at Ubuntu/Debian users, however as a user of another linux based OS you should easily to be able to follow this guide with the methods used in your distro.
 
 
-
-Prerequesites
+Prerequisites
 =============
 
 Apsis requires the following **python frameworks** and their dependencies to be installed.
@@ -22,7 +21,7 @@ Apsis requires the following **python frameworks** and their dependencies to be 
     
     .. note:: 
 
-        The newest gpY verisons will not worky any more. It has been developed tested to work with gpY version 0.4.9. Adoption to the new gpY interface is on the todo list.
+        The newest gpY verisons will not work any more. It has been developed tested to work with gpY version 0.4.9. Adoption to the new gpY interface is on the todo list.
 
 
 **Operating Systems**
@@ -31,32 +30,36 @@ Apsis requires the following **python frameworks** and their dependencies to be 
     
     * no support for non-unix systems right now.
     
-Installing Non-Python Prerequesites on Debian/Ubuntu
+Installing Non-Python Prerequisites on Debian/Ubuntu
 ====================================================
 
 The compilation of matplotlib and scipy have several non-python dependencies such as C and fortran compilers or linear algebra libraries. Also you should install ``pip`` to install the newest versions of the python dependencies.
 
 Tested on Ubuntu 14.04 the following command should give you what you need. If you run on another OS please check out the documentation of the listed prerequesites above for how to install them. ::
 
-    $ apt-get install git python-pip gfortran libopenblas-dev liblapack-dev libfreetype6-dev libpng12-dev
+    $ sudo apt-get install git build-essential python-pip gfortran libopenblas-dev liblapack-dev libfreetype6-dev libpng12-dev python-dev
 
     
-Installing Python Prerequesites with PIP
+Installing Python Prerequisites with PIP
 ====================================
 
-    1. Make sure you have ``pip`` and the non-python prequesites for the libraries listed above installed on your system
+1. Make sure you have ``pip`` and the non-python prerequisites for the libraries listed above installed on your system
 
-    2. Install scikit learn. It will also install numpy and scipy for you. ::
+2. Install numpy. ::
 
-        $ pip install scikit-learn
+    $ sudo pip install numpy
+
+2. Install scikit learn. ::
+
+    $ sudo pip install scikit-learn
+
+3. Install matplotlib. ::
     
-    3. Install matplotlib. ::
-        
-        $ pip install matplotlib
-    
-    4. Install gpY. **Attention** Newer versions of gpY do not work at the moment. ::
-    
-        $ pip install gpy==0.4.9
+    $ sudo pip install matplotlib
+
+4. Install gpY. It will also install the required scipy version for you. **Attention**: Newer versions of gpY do not work at the moment. ::
+
+    $ sudo pip install gpy==0.4.9
         
 
 Installing and Running Apsis
@@ -64,31 +67,31 @@ Installing and Running Apsis
 
 Apsis doesn't have an installation routine yet. To be ready to use you need to
 
-    1. Pull the code repository ::
-    
-        $ git clone https://github.com/FrederikDiehl/apsis.git
-        
-    2. Set the PYTHONPATH environment variable to include th apsis folder ::
+1. Pull the code repository ::
 
-        $ export PYTHONPATH=[WHEREVER]/BayOpt/code/apsis
-
-    3. Set the CSV writing target folder to tell apsis where to store results when using EvaluationFramework. E.g. something like::
+    $ git clone https://github.com/FrederikDiehl/apsis.git
     
-        $ export APSIS_CSV_TARGET_FOLDER=/tmp/apsiswriting
-    
-Finally run the test suite to see if everything works alright.::
+2. Set the PYTHONPATH environment variable to include th apsis folder ::
 
-        $ cd BayOpt/code/apsis
-        $ nosetests
+    $ export PYTHONPATH=[WHEREVER]/BayOpt/code/apsis
+
+3. Set the CSV writing target folder to tell apsis where to store results when using EvaluationFramework. E.g. something like::
+
+    $ export APSIS_CSV_TARGET_FOLDER=/tmp/apsiswriting
+
+Finally run the test suite to see if everything works alright::
+
+    $ cd BayOpt/code/apsis
+    $ nosetests
 
 Which should print something like ::
 
-        $ nosetests
-        .
-        ----------------------------------------------------------------------
-        Ran 25 tests in 80.655s
-        
-        OK
+    $ nosetests
+    .
+    ----------------------------------------------------------------------
+    Ran 25 tests in 80.655s
+    
+    OK
     
 
 
