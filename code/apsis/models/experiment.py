@@ -95,7 +95,8 @@ class Experiment(object):
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
         self.candidates_finished.append(candidate)
-        if candidate.result > self.best_candidate.result:
+        if (self.best_candidate is None or
+                    candidate.result > self.best_candidate.result):
             self.best_candidate = candidate
 
     def add_pending(self, candidate):
