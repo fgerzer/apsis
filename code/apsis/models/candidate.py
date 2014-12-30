@@ -85,7 +85,6 @@ class Candidate(object):
             return False
 
         if self.params == other.params:
-            #TODO check equal operation on dictionary.
             return True
         return False
 
