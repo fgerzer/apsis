@@ -41,7 +41,7 @@ class RandomSearch(Optimizer):
         value_dict = {}
         for key, param_def in enumerate(experiment.parameter_definitions):
             value_dict[key] = self._gen_param_val(param_def)
-        return Candidate(value_dict)
+        return [Candidate(value_dict)]
 
     def _gen_param_val(self, param_def):
         """
@@ -62,5 +62,5 @@ class RandomSearch(Optimizer):
         """
         if isinstance(param_def, NumericParamDef):
             return param_def.warp_out(self.random_state.uniform(0, 1))
-        elif isinstance((param_def, NominalParamDef)):
+        elif isinstance(param_def, NominalParamDef):
             return self.random_state.choice(param_def.values)
