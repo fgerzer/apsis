@@ -11,10 +11,12 @@ class Optimizer(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_next_candidate(self, experiment):
+    def get_next_candidates(self, experiment):
         """
-        Returns a Candidate object given an experiment.
+        Returns several Candidate objects given an experiment.
 
+        It is the free choice of the optimizer how many Candidates to provide,
+        but it will provide at least one.
         Parameters
         ----------
         experiment: Experiment
@@ -22,7 +24,7 @@ class Optimizer(object):
 
         Returns
         -------
-        next_candidate: Candidate
+        next_candidate: list of Candidate
             The Candidate to next evaluate.
         """
-        return None
+        pass
