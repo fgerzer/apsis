@@ -11,6 +11,19 @@ class Optimizer(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def __init__(self, optimizer_params):
+        """
+        Initializes the optimizer with the arguments under optimizer_params.
+
+        Parameters
+        ----------
+        optimizer_arguments: dict
+            The parameters for the optimization. Depending on the optimizer,
+            different arguments are needed.
+        """
+        pass
+
+    @abstractmethod
     def get_next_candidates(self, experiment):
         """
         Returns several Candidate objects given an experiment.
