@@ -18,6 +18,9 @@ class BasicExperimentAssistant(object):
         This is an optimizer implementing the corresponding functions: It
         gets an experiment instance, and returns one or multiple candidates
         which should be evaluated next.
+    optimizer_arguments: dict
+        These are arguments for the optimizer. Refer to their documentation
+        as to which are available.
 
     experiment: Experiment
         The experiment this assistant assists with.
@@ -26,9 +29,11 @@ class BasicExperimentAssistant(object):
     AVAILABLE_STATUS = ["finished", "pausing", "working"]
 
     optimizer = None
+    optimizer_arguments = None
     experiment = None
 
-    def __init__(self, optimizer, param_defs, minimization=True):
+    def __init__(self, optimizer, param_defs, optimizer_arguments=None,
+                 minimization=True):
         """
         Initializes the BasicExperimentAssistant.
 
@@ -43,11 +48,14 @@ class BasicExperimentAssistant(object):
             as defined by apsis.utilities.optimizer_utils.
         param_defs: dict of ParamDef.
             This is the parameter space defining the experiment.
-
+        optimizer_arguments=None: dict
+            These are arguments for the optimizer. Refer to their documentation
+            as to which are available.
         minimization=True: bool
             Whether the problem is one of minimization or maximization.
         """
         self.optimizer = optimizer
+        self.optimizer_arguments = optimizer_arguments
         self.experiment = Experiment(param_defs, minimization)
 
     def get_next_candidate(self):
