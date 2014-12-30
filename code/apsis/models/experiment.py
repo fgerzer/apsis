@@ -96,7 +96,7 @@ class Experiment(object):
             self.candidates_working.remove(candidate)
         self.candidates_finished.append(candidate)
         if (self.best_candidate is None or
-                    candidate.result > self.best_candidate.result):
+                    self.better(candidate, self.best_candidate)):
             self.best_candidate = candidate
 
     def add_pending(self, candidate):
@@ -166,3 +166,51 @@ class Experiment(object):
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
         self.candidates_pending.append(candidate)
+
+    def better(self, candidateA, candidateB):
+        """
+        Determines whether CandidateA is better than candidateB in the context
+        of this experiment.
+        This is done as follows:
+        If candidateA's result is None, it is not better.
+        If candidateB's result is None, it is better.
+        If it is a minimization problem and the result is smaller than B's, it
+        is better. Corresponding for being a maximization problem.
+
+
+        Parameters
+        ----------
+        candidateA: Candidate
+            The candidate which should be better.
+        candidateB: Candidate
+            The baseline candidate.
+
+        Returns
+        -------
+        result: bool
+            True iff A is better than B.
+
+        Raises
+        ------
+        ValueError:
+            If candidateA or candidateB are no Candidates.
+        """
+        if not isinstance(candidateA, Candidate):
+            raise ValueError("candidateA is %s, but no Candidate instance."
+                             %str(candidateA))
+        if not isinstance(candidateB, Candidate):
+            raise ValueError("candidateB is %s, but no Candidate instance."
+                             %str(candidateB))
+        aResult = candidateA.result
+        bResult = candidateB.result
+
+        if aResult is None:
+            return False
+        if bResult is None:
+            return True
+        if self.minimization_problem:
+            if aResult < bResult:
+                return True
+        else:
+            if aResult > bResult:
+                return True
