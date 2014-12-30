@@ -39,7 +39,7 @@ class RandomSearch(Optimizer):
     def get_next_candidates(self, experiment):
         self.random_state = check_random_state(self.random_state)
         value_dict = {}
-        for key, param_def in enumerate(experiment.parameter_definitions):
+        for key, param_def in experiment.parameter_definitions.iteritems():
             value_dict[key] = self._gen_param_val(param_def)
         return [Candidate(value_dict)]
 

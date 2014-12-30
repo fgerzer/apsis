@@ -59,7 +59,7 @@ class Optimizer(object):
             False iff one or more of experiment's parameter definitions are not
             supported.
         """
-        for name, pd in enumerate(experiment.parameter_definitions):
+        for name, pd in experiment.parameter_definitions.iteritems():
             if not self._is_supported_param_type(pd):
                 return False
         return True
