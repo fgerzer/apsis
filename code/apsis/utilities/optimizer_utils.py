@@ -1,8 +1,9 @@
 __author__ = 'Frederik Diehl'
 
-#TODO imports
+from apsis.optimizers.random_search import RandomSearch
+from apsis.optimizers.optimizer import Optimizer
 
-AVAILABLE_OPTIMIZERS = {}
+AVAILABLE_OPTIMIZERS = {"RandomSearch": RandomSearch}
 
 def check_optimizer(optimizer, optimizer_arguments=None):
     """
