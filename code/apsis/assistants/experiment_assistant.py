@@ -2,6 +2,7 @@ __author__ = 'Frederik Diehl'
 
 from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
+from apsis.utilities.optimizer_utils import check_optimizer
 
 class BasicExperimentAssistant(object):
     """
@@ -50,8 +51,21 @@ class BasicExperimentAssistant(object):
         self.experiment = Experiment(param_defs, minimization)
 
     def get_next_candidate(self):
-        #TODO
-        pass
+        """
+        Returns the Candidate next to evaluate.
+
+        Returns
+        -------
+        next_candidate: Candidate or None:
+            The Candidate object that should be evaluated next. May be None.
+        """
+        self.optimizer = check_optimizer(self.optimizer)
+        if self.experiment.candidates_pending.empty():
+            self.experiment.candidates_pending.extend(
+                self.optimizer.get_next_candidates(self.experiment))
+        return self.experiment.candidates_pending.pop()
+
+
 
     def update(self, candidate, status="finished"):
         """
@@ -61,10 +75,13 @@ class BasicExperimentAssistant(object):
         Parameters
         ----------
         candidate: Candidate
-
-        :param candidate:
-        :param status:
-        :return:
+            The Candidate object whose status is updated.
+        status=finished: string
+            A string defining the status change. Can be one of the following:
+            - finished: The Candidate is now finished.
+            - pausing: The evaluation of Candidate has been paused and can be
+                resumed by another worker.
+            - working: The Candidate is now being worked on by a worker.
         """
         if status not in self.AVAILABLE_STATUS:
             raise ValueError("status not in %s but %s."
@@ -76,6 +93,9 @@ class BasicExperimentAssistant(object):
 
         if status == "finished":
             self.experiment.add_finished(candidate)
+            #Also delete all pending candidates from the experiment - we have
+            #new data available.
+            self.experiment.candidates_pending = []
         elif status == "pausing":
             self.experiment.add_pausing(candidate)
         elif status == "working":
