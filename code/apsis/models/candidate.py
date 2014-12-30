@@ -89,7 +89,7 @@ class Candidate(object):
         return False
 
     def __str__(self):
-        string = str(self) + "\n"
+        string = "Candidate\n"
         string += "params: " + str(self.params) + "\n"
         if self.cost is not None:
             string += "cost: " + str(self.cost) + "\n"
