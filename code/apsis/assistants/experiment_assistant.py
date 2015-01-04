@@ -3,6 +3,7 @@ __author__ = 'Frederik Diehl'
 from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer
+import matplotlib.pyplot as plt
 
 class BasicExperimentAssistant(object):
     """
@@ -32,14 +33,16 @@ class BasicExperimentAssistant(object):
     optimizer_arguments = None
     experiment = None
 
-    def __init__(self, optimizer, param_defs, optimizer_arguments=None,
+    def __init__(self, name, optimizer, param_defs, optimizer_arguments=None,
                  minimization=True):
         """
         Initializes the BasicExperimentAssistant.
 
         Parameters
         ----------
-
+        name: string
+            The name of the experiment. This does not have to be unique, but is
+            for human orientation.
         optimizer: Optimizer instance or string
             This is an optimizer implementing the corresponding functions: It
             gets an experiment instance, and returns one or multiple candidates
@@ -56,7 +59,7 @@ class BasicExperimentAssistant(object):
         """
         self.optimizer = optimizer
         self.optimizer_arguments = optimizer_arguments
-        self.experiment = Experiment(param_defs, minimization)
+        self.experiment = Experiment(name, param_defs, minimization)
 
     def get_next_candidate(self):
         """
@@ -120,3 +123,56 @@ class BasicExperimentAssistant(object):
             at least one candidate evaluated) or None if none exists.
         """
         return self.experiment.best_candidate
+
+class PrettyExperimentAssistant(BasicExperimentAssistant):
+    """
+    A 'prettier' version of the experiment assistant, mostly through plots.
+    """
+
+
+    def plot_result_per_step(self):
+
+        this_plot = plt.figure()
+        x, step_eval, step_best = self._best_result_per_step_data()
+        plt.plot(x, step_best, label="%s, best result"
+                                     %str(self.experiment.name))
+        plt.scatter(x, step_eval, label="%s, current result"
+                                        %str(self.experiment.name))
+        plt.xlabel("steps")
+        plt.ylabel("result")
+        if self.experiment.minimization_problem:
+            plt.legend(loc='upper right')
+        else:
+            plt.legend(loc='upper left')
+        plt.show()
+
+    def _best_result_per_step_data(self):
+        """
+        This internal function returns goodness of the results by step.
+
+        This returns an x coordinate, and for each of them a value for the
+        currently evaluated result and the best found result.
+
+        Returns
+        -------
+        x: list of ints
+            The results per step. Should usually be [0, ..., maxSteps]
+        step_evaluation: list of floats
+            The result of the evaluated candidate during the corresponding step
+        step_best: list of floats
+            The best result that has been found until then.
+
+        """
+        x = []
+        step_evaluation = []
+        step_best = []
+        best_candidate = None
+        for i, e in enumerate(self.experiment.candidates_finished):
+            x.append(i)
+            step_evaluation.append(e.result)
+            if self.experiment.better_cand(e, best_candidate):
+                best_candidate = e
+                step_best.append(e.result)
+            else:
+                step_best.append(best_candidate.result)
+        return x, step_evaluation, step_best
