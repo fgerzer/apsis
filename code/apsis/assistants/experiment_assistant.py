@@ -4,6 +4,7 @@ from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer
 import matplotlib.pyplot as plt
+from apsis.utilities.plot_utils import plot_lists
 
 class BasicExperimentAssistant(object):
     """
@@ -130,21 +131,59 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
     """
 
 
-    def plot_result_per_step(self):
+    def plot_result_per_step(self, show_plot=True):
+        """
+        Returns (and plots) the plt.figure plotting the results over the steps.
 
-        this_plot = plt.figure()
+        Parameters
+        ----------
+        show_plot=True: bool
+            Whether to show the plot after creation.
+
+        Returns
+        -------
+        fig: plt.figure
+            The figure containing the results over the steps.
+        """
+
         x, step_eval, step_best = self._best_result_per_step_data()
-        plt.plot(x, step_best, label="%s, best result"
-                                     %str(self.experiment.name))
-        plt.scatter(x, step_eval, label="%s, current result"
-                                        %str(self.experiment.name))
-        plt.xlabel("steps")
-        plt.ylabel("result")
+
+        step_eval_dict = {
+            "x": x,
+            "y": step_eval,
+            "type": "scatter",
+            "label": "%s, current result" %(str(self.experiment.name)),
+            "color": "g"
+        }
+
+        step_best_dict = {
+            "x": x,
+            "y": step_best,
+            "type": "line",
+            "color": "g",
+            "label": "%s, best result" %(str(self.experiment.name))
+        }
+
         if self.experiment.minimization_problem:
-            plt.legend(loc='upper right')
+            legend_loc = 'upper right'
         else:
-            plt.legend(loc='upper left')
-        plt.show()
+            legend_loc = 'upper left'
+
+        plot_options = {
+            "legend_loc": legend_loc,
+            "x_label": "steps",
+            "y_label": "result",
+            "title": "Plot of %s result over the steps."
+                     %(str(self.experiment.name))
+        }
+
+        fig = plot_lists([step_best_dict, step_eval_dict],
+                          fig_options=plot_options)
+
+        if show_plot:
+            plt.show()
+
+        return fig
 
     def _best_result_per_step_data(self):
         """
