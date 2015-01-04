@@ -9,6 +9,9 @@ class Experiment(object):
 
     Attributes
     ----------
+    name: string
+        The name of the experiment. This does not have to be unique, but is
+        for human orientation.
     parameter_definitions: dict of ParamDefs
         A dictionary of ParamDef instances. These define the parameter space
         over which optimization is possible.
@@ -30,6 +33,8 @@ class Experiment(object):
     best_candidate: Candidate instance
         The as of yet best Candidate instance found, according to the result.
     """
+    name = None
+
     parameter_definitions = None
     minimization_problem = None
 
@@ -39,7 +44,7 @@ class Experiment(object):
 
     best_candidate = None
 
-    def __init__(self, parameter_definitions, minimization_problem=True):
+    def __init__(self, name, parameter_definitions, minimization_problem=True):
         """
         Initializes an Experiment with a certain parameter definition.
 
@@ -48,6 +53,10 @@ class Experiment(object):
 
         Parameters
         ----------
+        name: string
+            The name of the experiment. This does not have to be unique, but is
+            for human orientation.
+
         parameter_definitions: dict of ParamDef
             Defines the parameter space of the experiment. Each entry of the
             dictionary has to be a ParamDef, and it is that space over which
@@ -62,6 +71,7 @@ class Experiment(object):
         ValueError:
             Iff parameter_definitions are not a dictionary.
         """
+        self.name = name
         if not isinstance(parameter_definitions, dict):
             raise ValueError("parameter_definitions are not a dict.")
         self.parameter_definitions = parameter_definitions
@@ -96,7 +106,7 @@ class Experiment(object):
             self.candidates_working.remove(candidate)
         self.candidates_finished.append(candidate)
         if (self.best_candidate is None or
-                    self.better(candidate, self.best_candidate)):
+                    self.better_cand(candidate, self.best_candidate)):
             self.best_candidate = candidate
 
     def add_pending(self, candidate):
@@ -167,7 +177,7 @@ class Experiment(object):
             self.candidates_working.remove(candidate)
         self.candidates_pending.append(candidate)
 
-    def better(self, candidateA, candidateB):
+    def better_cand(self, candidateA, candidateB):
         """
         Determines whether CandidateA is better than candidateB in the context
         of this experiment.
@@ -195,12 +205,18 @@ class Experiment(object):
         ValueError:
             If candidateA or candidateB are no Candidates.
         """
-        if not isinstance(candidateA, Candidate):
+        if not isinstance(candidateA, Candidate) and candidateA is not None:
             raise ValueError("candidateA is %s, but no Candidate instance."
                              %str(candidateA))
-        if not isinstance(candidateB, Candidate):
+        if not isinstance(candidateB, Candidate) and candidateB is not None:
             raise ValueError("candidateB is %s, but no Candidate instance."
                              %str(candidateB))
+
+        if candidateA is None:
+            return False
+        if candidateB is None:
+            return True
+
         aResult = candidateA.result
         bResult = candidateB.result
 
