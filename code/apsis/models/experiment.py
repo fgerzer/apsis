@@ -230,3 +230,16 @@ class Experiment(object):
         else:
             if aResult > bResult:
                 return True
+
+
+    def warp_pt_in(self, params):
+        warped_in = {}
+        for name, value in params.iteritems():
+            warped_in[name] = self.parameter_definitions[name].warp_in(value)
+        return warped_in
+
+    def warp_pt_out(self, params):
+        warped_out = {}
+        for name, value in params.iteritems():
+            warped_out[name] = self.parameter_definitions[name].warp_out(value)
+        return warped_out
