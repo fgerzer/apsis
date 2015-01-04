@@ -181,7 +181,7 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
                           fig_options=plot_options)
 
         if show_plot:
-            plt.show()
+            plt.show(True)
 
         return fig
 
