@@ -20,9 +20,12 @@ class AcquisitionFunction(object):
     """
     __metaclass__ = ABCMeta
 
+    logger = None
+
     params = None
 
     def __init__(self, params=None):
+        self.logger = logging.getLogger(__name__)
         self.params = params
 
         if self.params is None:
@@ -32,7 +35,7 @@ class AcquisitionFunction(object):
     def evaluate(self, x, gp, experiment):
         pass
 
-    def _compute_minimizing_evaluate(self, x, experiment):
+    def _compute_minimizing_evaluate(self, x, gp, experiment):
         """
         One problem is that, as a standard, scipy.optimize only searches
         minima. This means we have to convert each acquisition function to
@@ -45,7 +48,7 @@ class AcquisitionFunction(object):
 
         Function signature is as evaluate.
         """
-        value = self.evaluate(x, experiment, args_)
+        value = self.evaluate(x, gp, experiment)
         return value
 
     def compute_proposals(self, gp, experiment, number_proposals=1,
@@ -76,7 +79,7 @@ class AcquisitionFunction(object):
                                     "NumericParamDef are supported."
                                     %(str(pdef), str(type(pdef))))
 
-            score = self._compute_minimizing_evaluate(param_dict_eval, experiment)
+            score = self._compute_minimizing_evaluate(param_dict_eval, gp, experiment)
 
             if score < best_score:
                 best_param_idx = i
@@ -106,8 +109,12 @@ class AcquisitionFunction(object):
             param_to_eval.append(x[pn])
 
             #And to np.array for gpy.
-        param_to_eval = np.array(param_to_eval)
-        return param_to_eval
+        param_nd_array = np.zeros((1, len(param_to_eval)))
+        #param_nd_array = np.ndarray(param_to_eval)
+        for i in range(len(param_to_eval)):
+            param_nd_array[0, i] = param_to_eval[i]
+
+        return param_nd_array
 
 class ExpectedImprovement(AcquisitionFunction):
     """
@@ -135,11 +142,11 @@ class ExpectedImprovement(AcquisitionFunction):
         self.exploitation_exploration_tradeoff = params.get(
             "exploitation_tradeoff", 0)
 
-    def compute_minimizing_evaluate(self, x, experiment):
+    def compute_minimizing_evaluate(self, x, gp, experiment):
         """
         Changes the sign of the evaluate function.
         """
-        value = self.evaluate(self, x, experiment)
+        value = self.evaluate(self, x, gp, experiment)
         return -value
 
 
@@ -151,7 +158,7 @@ class ExpectedImprovement(AcquisitionFunction):
         dimensions = len(experiment.parameter_definitions)
         x_value = self._translate_dict_vector(x)
 
-        mean, variance, _025pm, _975pm = gp.predict(x_value)
+        mean, variance = gp.predict(x_value)
 
         #See issue #32 on github. using the variance works better than std_dev.
         std_dev = variance ** 0.5
