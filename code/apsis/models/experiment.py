@@ -76,6 +76,8 @@ class Experiment(object):
             raise ValueError("parameter_definitions are not a dict.")
         self.parameter_definitions = parameter_definitions
 
+        self.minimization_problem = minimization_problem
+
         self.candidates_finished = []
         self.candidates_pending = []
         self.candidates_working = []
@@ -227,9 +229,14 @@ class Experiment(object):
         if self.minimization_problem:
             if aResult < bResult:
                 return True
+            else:
+                return False
         else:
             if aResult > bResult:
                 return True
+            else:
+                return False
+
 
 
     def warp_pt_in(self, params):
