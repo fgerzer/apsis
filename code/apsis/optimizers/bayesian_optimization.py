@@ -85,7 +85,6 @@ class SimpleBayesianOptimizer(Optimizer):
         :return:
         """
         self.logger = logging.getLogger(__name__)
-        #TODO documentation.
         if optimizer_arguments is None:
             optimizer_arguments = {}
         self.initial_random_runs = optimizer_arguments.get(
