@@ -132,7 +132,6 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
 
 
     def plot_result_per_step(self, show_plot=True, fig=None, color="b", plot_at_least=1):
-        #TODO update docs
         """
         Returns (and plots) the plt.figure plotting the results over the steps.
 
@@ -140,6 +139,12 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
         ----------
         show_plot=True: bool
             Whether to show the plot after creation.
+        fig=None: None or pyplot figure
+            The figure to update. If None, a new figure will be created.
+        color="b": string
+            A string representing a pyplot color.
+        plot_at_least=1: float
+            The percentage of entries to show.
 
         Returns
         -------
@@ -184,6 +189,21 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
         return fig
 
     def _best_result_per_step_dicts(self, color="b"):
+        """
+        Returns a dict to use with plot_utils.
+
+        Parameters
+        ----------
+        color="b": string
+            A pyplot-color representing string. Both plots will have that
+            color.
+
+        Returns
+        -------
+        dicts: list of dicts
+            Two dicts, one for step_eval, one for step_best, and their
+            corresponding definitions.
+        """
         x, step_eval, step_best = self._best_result_per_step_data()
 
         step_eval_dict = {
