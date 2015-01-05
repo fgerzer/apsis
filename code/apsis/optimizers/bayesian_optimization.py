@@ -18,6 +18,8 @@ class SimpleBayesianOptimizer(Optimizer):
 
     Attributes
     ----------
+    SUPPORTED_PARAM_TYPES: list of ParamDefs
+        The supported parameter types. Currently only numberic and position.
     kernel: GPy Kernel
         The Kernel to be used with the gp. Note that this is currently not
         possible to be set from the outside.
@@ -26,13 +28,24 @@ class SimpleBayesianOptimizer(Optimizer):
     acquisition_hyperparams:
         The acquisition hyperparameters.
     random_state: scipy random_state or int.
-
+        The scipy random state or object to initialize one. For reproduction.
+    random_searcher: RandomSearch
+        The random search instance used to generate the first
+        initial_random_runs candidates.
+    gp: GPy gaussian process
+        The gaussian process used here.
+    initial_random_runs=10: int
+        The number of initial random runs before using the GP.
+    num_gp_restarts=10: int
+        GPy's optimization requires restarts to find a good solution. This
+        parameter controls this.
+    logger: logger
+        The logger instance for this object.
     """
-    #TODO document attributes.
-
     SUPPORTED_PARAM_TYPES = [NumericParamDef, PositionParamDef]
 
     kernel = None
+    kernel_params = None
     acquisition_function = None
     acquisition_hyperparams = None
 
@@ -46,6 +59,31 @@ class SimpleBayesianOptimizer(Optimizer):
     logger = None
 
     def __init__(self, optimizer_arguments=None):
+        """
+        Initializes a bayesian optimizer.
+
+        Parameters
+        ----------
+        optimizer_arguments: dict of string keys
+            Sets the possible arguments for this optimizer. Available are:
+            "initial_random_runs"=10: int
+                initial_random_runs=10: int
+                The number of initial random runs before using the GP.
+            "random_state"=None: scipy random state
+                The scipy random state or object to initialize one.
+                For reproduction.
+            "acquisition_hyperparameters"=None: dict
+                dictionary of acquisition-function hyperparameters
+            "num_gp_restarts"=10: int
+                GPy's optimization requires restarts to find a good solution. This
+                parameter controls this.
+            "acquisition"=ExpectedImprovement: AcquisitionFunction
+                The acquisition function to use.
+            "num_precomputed"=10
+
+        :param optimizer_arguments:
+        :return:
+        """
         self.logger = logging.getLogger(__name__)
         #TODO documentation.
         if optimizer_arguments is None:
@@ -60,10 +98,11 @@ class SimpleBayesianOptimizer(Optimizer):
             'num_gp_restarts', self.num_gp_restarts)
         self.acquisition_function = optimizer_arguments.get(
             'acquisition', ExpectedImprovement)(self.acquisition_hyperparams)
-        #TODO Find a better way to set the Kernel parameters, that is at all.
+        self.kernel_params = optimizer_arguments.get("kernel_params", {})
+        self.kernel = optimizer_arguments.get("kernel", "matern52")
         self.random_searcher = RandomSearch({"random_state": self.random_state})
 
-        self.num_precomputed = optimizer_arguments.get('num_precomputed', 0)
+        self.num_precomputed = optimizer_arguments.get('num_precomputed', 10)
 
     def get_next_candidates(self, experiment):
 
@@ -91,6 +130,7 @@ class SimpleBayesianOptimizer(Optimizer):
         results_vector = np.zeros((len(experiment.candidates_finished), 1))
 
         param_names = sorted(experiment.parameter_definitions.keys())
+        self.kernel = self._check_kernel(self.kernel, len(param_names), kernel_params=self.kernel_params)
         self.kernel = GPy.kern.Matern52(len(param_names), ARD=True)
         for i, c in enumerate(experiment.candidates_finished):
             warped_in = experiment.warp_pt_in(c.params)
@@ -107,3 +147,16 @@ class SimpleBayesianOptimizer(Optimizer):
         #self.gp.constrain_bounded('.*noise*', 0.1, 1.)
         self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,
                                   verbose=False)
+
+    def _check_kernel(self, kernel, dimension, kernel_params):
+        if (isinstance(kernel, GPy.kern.Kern)):
+            return kernel
+        translation_dict = {
+            "matern52": GPy.kern.Matern52,
+            "rbf": GPy.kern.RBF
+        }
+
+        if isinstance(kernel, str) and kernel in translation_dict:
+            return translation_dict[kernel](dimension, **kernel_params)
+
+        raise ValueError("%s is not a kernel or string representing one!" %kernel)
