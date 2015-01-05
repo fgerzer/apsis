@@ -2,7 +2,7 @@ __author__ = 'Frederik Diehl'
 import matplotlib.pyplot as plt
 import random
 
-def plot_lists(to_plot_list, fig=None, fig_options=None):
+def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1)):
     """
     Plots several functions.
 
@@ -49,10 +49,31 @@ def plot_lists(to_plot_list, fig=None, fig_options=None):
     for p in to_plot_list:
         fig = plot_single(p, fig)
 
+    if (plot_at_least[0] < 1) or plot_at_least[1] < 1:
+        max_y = -float("inf")
+        min_y = float("inf")
+
+        for i in range(len(to_plot_list)):
+            cur_min, cur_max = _get_y_min_max(to_plot_list[i]["y"], plot_at_least)
+            if cur_min < min_y:
+                min_y = cur_min
+            if cur_max > max_y:
+                max_y = cur_max
+            plt.ylim(ymax = max_y, ymin = min_y)
+
     if newly_created:
-        _polish_figure(fig_options)
+        _polish_figure(fig, fig_options)
 
     return fig
+
+def _get_y_min_max(y, plot_at_least):
+    sorted_y = sorted(y)
+    print(len(sorted_y))
+    print(plot_at_least)
+    print(len(sorted_y))
+    max_y_new = sorted_y[min(len(sorted_y)-1, int(plot_at_least[1] * len(sorted_y)))]
+    min_y_new = sorted_y[int(plot_at_least[0] * (1-len(sorted_y)))]
+    return min_y_new, max_y_new
 
 COLORS = ["g", "r", "c", "b", "m", "y"]
 
@@ -145,7 +166,7 @@ def _create_figure(fig_options=None):
     plt.title(fig_options.get("title", ""))
     return fig
 
-def _polish_figure(fig_options=None):
+def _polish_figure(fig, fig_options=None):
     """
     Polishes a finished figure.
 
@@ -154,6 +175,7 @@ def _polish_figure(fig_options=None):
         "legend_loc"="upper right": string
             Location for the legend.
     """
+    plt.figure(fig.number)
     if fig_options is None:
         fig_options = {}
     plt.legend(loc=fig_options.get("legend_loc", "upper right"))
