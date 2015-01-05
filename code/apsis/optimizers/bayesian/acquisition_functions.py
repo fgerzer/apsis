@@ -188,3 +188,40 @@ class ExpectedImprovement(AcquisitionFunction):
             return z_numerator * cdf_z + std_dev * pdf_z
         else:
             return 0
+
+
+class ProbabilityOfImprovement(AcquisitionFunction):
+    """
+    Implements the probability of improvement function.
+
+    See page 12 of "A Tutorial on Bayesian Optimization of Expensive Cost
+    Functions, with Application to Active User Modeling and Hierarchical
+    Reinforcement Learning", Brochu et. al., 2010.
+    """
+
+    def evaluate(self, x, gp, experiment):
+        """
+        Evaluates the function.
+        """
+
+        dimensions = len(experiment.parameter_definitions)
+        x_value = self._translate_dict_vector(x)
+
+        mean, variance = gp.predict(x_value)
+
+        # do not standardize on our own, but use the mean, and covariance
+        # we get from the gp
+        cdf = scipy.stats.norm().cdf(x, mean)
+        result = cdf
+        if not experiment.minimization_problem:
+            result = 1 - cdf
+        return result
+
+    def compute_minimizing_evaluate(self, x, gp, experiment):
+        """
+        Changes the sign of the evaluate function.
+        """
+        value = self.evaluate(x, gp, experiment=experiment)
+        value = -value
+
+        return value
