@@ -10,13 +10,14 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   
+   installation
    reference
+   tutorial
   
    
 The apsis module
 
-.. automodule:: apsis.bayesian
-    :members:
 
 
 Indices and tables

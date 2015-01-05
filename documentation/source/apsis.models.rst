@@ -4,18 +4,26 @@ apsis.models package
 Submodules
 ----------
 
-apsis.models.Candidate module
+apsis.models.candidate module
 -----------------------------
 
-.. automodule:: apsis.models.Candidate
+.. automodule:: apsis.models.candidate
     :members:
     :undoc-members:
     :show-inheritance:
 
-apsis.models.ParamInformation module
-------------------------------------
+apsis.models.experiment module
+------------------------------
 
-.. automodule:: apsis.models.ParamInformation
+.. automodule:: apsis.models.experiment
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+apsis.models.parameter_definition module
+----------------------------------------
+
+.. automodule:: apsis.models.parameter_definition
     :members:
     :undoc-members:
     :show-inheritance:

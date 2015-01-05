@@ -6,40 +6,11 @@ Subpackages
 
 .. toctree::
 
-    apsis.adapters
-    apsis.bayesian
-    apsis.evaluation
+    apsis.assistants
     apsis.models
-    apsis.test
+    apsis.optimizers
+    apsis.tests
     apsis.utilities
-
-Submodules
-----------
-
-apsis.OptimizationCoreInterface module
---------------------------------------
-
-.. automodule:: apsis.OptimizationCoreInterface
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-apsis.RandomSearchCore module
------------------------------
-
-.. automodule:: apsis.RandomSearchCore
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-apsis.SimpleBayesianOptimizationCore module
--------------------------------------------
-
-.. automodule:: apsis.SimpleBayesianOptimizationCore
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

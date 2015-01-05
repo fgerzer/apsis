@@ -9,7 +9,7 @@ In general, there are three important classes: Candidates, Cores and ParameterDe
 Candidate
 =========
 
-The :class:`apsis.models.Candidate` class represents a hypothesis of parameters, and their result. It is used to communicate with the workers on which parameters to try next.
+The :class:`models.Candidate` class represents a hypothesis of parameters, and their result. It is used to communicate with the workers on which parameters to try next.
 
 Core
 ====
