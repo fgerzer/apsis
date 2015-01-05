@@ -131,7 +131,8 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
     """
 
 
-    def plot_result_per_step(self, show_plot=True):
+    def plot_result_per_step(self, show_plot=True, fig=None, color="b", plot_at_least=1):
+        #TODO update docs
         """
         Returns (and plots) the plt.figure plotting the results over the steps.
 
@@ -146,24 +147,8 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
             The figure containing the results over the steps.
         """
 
-        x, step_eval, step_best = self._best_result_per_step_data()
 
-        step_eval_dict = {
-            "x": x,
-            "y": step_eval,
-            "type": "scatter",
-            "label": "%s, current result" %(str(self.experiment.name)),
-            "color": "g"
-        }
-
-        step_best_dict = {
-            "x": x,
-            "y": step_best,
-            "type": "line",
-            "color": "g",
-            "label": "%s, best result" %(str(self.experiment.name))
-        }
-
+        plots = self._best_result_per_step_dicts(color)
         if self.experiment.minimization_problem:
             legend_loc = 'upper right'
         else:
@@ -176,14 +161,47 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
             "title": "Plot of %s result over the steps."
                      %(str(self.experiment.name))
         }
+        if fig is None:
+            fig = plot_lists(plots,
+                              fig_options=plot_options)
+        else:
+            fig = plot_lists(plots, fig=fig)
 
-        fig = plot_lists([step_best_dict, step_eval_dict],
-                          fig_options=plot_options)
+        print("PlotLeast: %s" %plot_at_least)
+        if plot_at_least < 1:
+            sorted_y = sorted(plots[0]["y"])
+            ymin, ymax = plt.ylim()
+            if self.experiment.minimization_problem:
+                max_y_new = sorted_y[int(plot_at_least * len(sorted_y))]
+                print("New limit: %s" %max_y_new)
+                if (max_y_new > ymax):
+                    plt.ylim(ymax = max_y_new, ymin=sorted_y[0])
+
 
         if show_plot:
             plt.show(True)
 
         return fig
+
+    def _best_result_per_step_dicts(self, color="b"):
+        x, step_eval, step_best = self._best_result_per_step_data()
+
+        step_eval_dict = {
+            "x": x,
+            "y": step_eval,
+            "type": "scatter",
+            "label": "%s, current result" %(str(self.experiment.name)),
+            "color": color
+        }
+
+        step_best_dict = {
+            "x": x,
+            "y": step_best,
+            "type": "line",
+            "color": color,
+            "label": "%s, best result" %(str(self.experiment.name))
+        }
+        return [step_eval_dict, step_best_dict]
 
     def _best_result_per_step_data(self):
         """
@@ -212,6 +230,7 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
             if self.experiment.better_cand(e, best_candidate):
                 best_candidate = e
                 step_best.append(e.result)
+
             else:
                 step_best.append(best_candidate.result)
         return x, step_evaluation, step_best
