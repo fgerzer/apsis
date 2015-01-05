@@ -15,6 +15,18 @@ class SimpleBayesianOptimizer(Optimizer):
 
     It is simple because it only implements the simplest form - no freeze-thaw,
     (currently) now multiple workers, only numeric parameters.
+
+    Attributes
+    ----------
+    kernel: GPy Kernel
+        The Kernel to be used with the gp. Note that this is currently not
+        possible to be set from the outside.
+    acquisition_function: acquisition_function
+        The acquisition function to use
+    acquisition_hyperparams:
+        The acquisition hyperparameters.
+    random_state: scipy random_state or int.
+
     """
     #TODO document attributes.
 
@@ -66,8 +78,8 @@ class SimpleBayesianOptimizer(Optimizer):
             self.gp, experiment, number_proposals=1, random_steps=1000)
 
         for point in new_candidate_points:
-            experiment.warp_pt_out(point)
-            point_candidate = Candidate(point)
+
+            point_candidate = Candidate(experiment.warp_pt_out(point))
             candidates.append(point_candidate)
         return candidates
 
@@ -80,7 +92,6 @@ class SimpleBayesianOptimizer(Optimizer):
 
         param_names = sorted(experiment.parameter_definitions.keys())
         self.kernel = GPy.kern.Matern52(len(param_names), ARD=True)
-
         for i, c in enumerate(experiment.candidates_finished):
             warped_in = experiment.warp_pt_in(c.params)
             param_values = []
