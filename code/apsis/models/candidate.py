@@ -95,3 +95,11 @@ class Candidate(object):
             string += "cost: " + str(self.cost) + "\n"
         string += "result: " + str(self.result) + "\n"
         return string
+
+    def to_csv_entry(self, divider=","):
+        string = ""
+        for k in sorted(self.params.keys()):
+            string += str(self.params[k]) + divider
+        string += str(self.cost) + divider
+        string += str(self.result)
+        return string
