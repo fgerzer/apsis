@@ -96,10 +96,12 @@ class Candidate(object):
         string += "result: " + str(self.result) + "\n"
         return string
 
-    def to_csv_entry(self, divider=","):
+    def to_csv_entry(self, delimiter=",", key_order=None):
+        if key_order is None:
+            key_order = sorted(self.params.keys())
         string = ""
-        for k in sorted(self.params.keys()):
-            string += str(self.params[k]) + divider
-        string += str(self.cost) + divider
+        for k in key_order:
+            string += str(self.params[k]) + delimiter
+        string += str(self.cost) + delimiter
         string += str(self.result)
         return string
