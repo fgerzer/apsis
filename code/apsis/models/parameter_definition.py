@@ -318,6 +318,7 @@ class PositionParamDef(OrdinalParamDef):
         for i, p in enumerate(self.positions):
             if p >= value_out:
                 return self.values[i]
+        return self.values[-1]
 
     def distance(self, valueA, valueB):
         if valueA not in self.values or valueB not in self.values:
