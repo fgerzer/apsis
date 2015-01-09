@@ -142,8 +142,8 @@ class SimpleBayesianOptimizer(Optimizer):
         self.logger.debug("Refitting gp with cand %s and results %s" %(candidate_matrix, results_vector))
         self.gp = GPy.models.GPRegression(candidate_matrix, results_vector, self.kernel)
         self.gp.constrain_positive("*")
-        #self.gp.constrain_bounded('.*lengthscale*', 0.1, 1.)
-        #self.gp.constrain_bounded('.*noise*', 0.1, 1.)
+
+        self.gp.constrain_bounded(0.1, 1, warning=False)
         self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,
                                   verbose=False)
 
