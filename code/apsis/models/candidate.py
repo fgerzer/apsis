@@ -105,3 +105,25 @@ class Candidate(object):
         string += str(self.cost) + delimiter
         string += str(self.result)
         return string
+
+    def to_dict(self):
+        d = {}
+        d["params"] = self._param_defs_to_dict()
+        d["result"] = self.result
+        d["cost"] = self.cost
+        d["worker_information"] = self.worker_information
+
+        return d
+
+    def _param_defs_to_dict(self):
+        d = {}
+        for k in self.params.keys():
+            d[k] = self.params[k]
+        return d
+
+def from_dict(dict):
+    c = Candidate(dict["params"])
+    c.result = dict.get("result", None)
+    c.cost = dict.get("cost", None)
+    c.worker_information = dict.get("worker_information", None)
+    return c
