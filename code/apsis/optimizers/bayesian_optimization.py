@@ -130,7 +130,6 @@ class SimpleBayesianOptimizer(Optimizer):
 
         param_names = sorted(experiment.parameter_definitions.keys())
         self.kernel = self._check_kernel(self.kernel, len(param_names), kernel_params=self.kernel_params)
-        self.kernel = GPy.kern.Matern52(len(param_names), ARD=True)
         for i, c in enumerate(experiment.candidates_finished):
             warped_in = experiment.warp_pt_in(c.params)
             param_values = []
