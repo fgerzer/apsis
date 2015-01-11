@@ -71,7 +71,8 @@ class BasicExperimentAssistant(object):
         next_candidate: Candidate or None:
             The Candidate object that should be evaluated next. May be None.
         """
-        self.optimizer = check_optimizer(self.optimizer)
+        self.optimizer = check_optimizer(self.optimizer,
+                                optimizer_arguments=self.optimizer_arguments)
         if not self.experiment.candidates_pending:
             self.experiment.candidates_pending.extend(
                 self.optimizer.get_next_candidates(self.experiment))
