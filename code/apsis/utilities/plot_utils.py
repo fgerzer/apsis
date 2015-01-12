@@ -68,9 +68,6 @@ def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1)):
 
 def _get_y_min_max(y, plot_at_least):
     sorted_y = sorted(y)
-    print(len(sorted_y))
-    print(plot_at_least)
-    print(len(sorted_y))
     max_y_new = sorted_y[min(len(sorted_y)-1, int(plot_at_least[1] * len(sorted_y)))]
     min_y_new = sorted_y[int(plot_at_least[0] * (1-len(sorted_y)))]
     return min_y_new, max_y_new
@@ -127,7 +124,6 @@ def plot_single(to_plot, fig=None, fig_options=None):
     color = to_plot.get("color", random.choice(COLORS))
     x = to_plot.get("x", [])
     y = to_plot.get("y", [])
-    print("label: %s" %label)
 
     if type == "line":
         plt.plot(x, y, label=label, color=color)
