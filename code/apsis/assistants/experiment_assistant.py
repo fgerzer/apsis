@@ -182,7 +182,7 @@ class BasicExperimentAssistant(object):
 
         with open(filename, 'a+') as detailed_file:
             detailed_file.write(csv_string)
-            
+
         self.csv_steps_written += steps_included
 
     def _create_experiment_directory(self):
