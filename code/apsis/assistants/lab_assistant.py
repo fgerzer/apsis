@@ -20,11 +20,20 @@ class BasicLabAssistant(object):
     """
     exp_assistants = None
 
-    def __init__(self):
+    write_directory_base = None
+    lab_run_directory = None
+    global_start_date = None
+
+    def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
         """
         Initializes the lab assistant with no experiments.
         """
         self.exp_assistants = {}
+
+        self.write_directory_base = write_directory_base
+        self.global_start_date = time.time()
+
+        self._init_directory_structure()
 
     def init_experiment(self, name, optimizer, param_defs,
                         optimizer_arguments=None, minimization=True):
@@ -109,26 +118,36 @@ class BasicLabAssistant(object):
         """
         return self.exp_assistants[exp_name].get_best_candidate()
 
+    def _init_directory_structure(self):
+        """
+        Method to create the directory structure if not exists
+        for results and plots writing
+        """
+        if self.lab_run_directory is None:
+            date_name = datetime.datetime.utcfromtimestamp(
+                self.global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
+
+            self.lab_run_directory = os.path.join(self.write_directory_base,
+                                                  date_name)
+
+            self._ensure_directory_exists(self.lab_run_directory)
+
+    def _ensure_directory_exists(self, directory):
+        """
+        Creates the given directory if not existed.
+        """
+        if not os.path.exists(directory):
+                os.makedirs(directory)
+
 class PrettyLabAssistant(BasicLabAssistant):
     COLORS = ["g", "r", "c", "b", "m", "y"]
-
-    write_directory_base = None
-    lab_run_directory = None
-    global_start_date = None
-
-    def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
-        super(PrettyLabAssistant, self).__init__()
-
-        self.write_directory_base = write_directory_base
-        self.global_start_date = time.time()
-
-        self._init_directory_structure()
 
     def update(self, exp_name, candidate, status="finished"):
         super(PrettyLabAssistant, self).update(exp_name, candidate, status=status)
 
         #trigger the writing, but by default only on equal steps
         self.write_out_plots_current_step(same_steps_only=True)
+
 
     def write_out_plots_current_step(self, same_steps_only=True):
         """
@@ -218,32 +237,6 @@ class PrettyLabAssistant(BasicLabAssistant):
             plt.show(True)
             
         return fig
-
-    def _init_directory_structure(self):
-        """
-        Method to create the directory structure if not exists
-        for results and plots writing
-        """
-        if self.lab_run_directory is None:
-            date_name = datetime.datetime.utcfromtimestamp(
-                self.global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
-
-            self.lab_run_directory = os.path.join(self.write_directory_base,
-                                                  date_name)
-
-            plot_directory = os.path.join(self.lab_run_directory, "plots")
-
-            #make all the dirs if not exist, directly to the plots of this run
-            #will create all sub dirs
-            if not os.path.exists(plot_directory):
-                os.makedirs(plot_directory)
-
-    def _ensure_directory_exists(self, directory):
-        """
-        Creates the given directory if not existed.
-        """
-        if not os.path.exists(directory):
-                os.makedirs(directory)
 
     def _compute_current_step_overall(self):
         """
