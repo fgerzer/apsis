@@ -50,6 +50,7 @@ def test_function():
 
     results = []
 
+    #evaluate all experiments one step at the time.
     for i in range(50):
         to_eval = LAss.get_next_candidate("rand")
         print(to_eval)

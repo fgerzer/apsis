@@ -2,8 +2,10 @@ __author__ = 'Frederik Diehl'
 
 from apsis.assistants.experiment_assistant import BasicExperimentAssistant, PrettyExperimentAssistant
 import matplotlib.pyplot as plt
-from apsis.utilities.plot_utils import _create_figure, _polish_figure, plot_lists
-
+from apsis.utilities.plot_utils import _create_figure, _polish_figure, plot_lists, write_plot_to_file
+import time
+import datetime
+import os
 
 class BasicLabAssistant(object):
     """
@@ -110,6 +112,61 @@ class BasicLabAssistant(object):
 class PrettyLabAssistant(BasicLabAssistant):
     COLORS = ["g", "r", "c", "b", "m", "y"]
 
+    write_directory_base = None
+    lab_run_directory = None
+    global_start_date = None
+
+    def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
+        super(PrettyLabAssistant, self).__init__()
+
+        self.write_directory_base = write_directory_base
+        self.global_start_date = time.time()
+
+        self._init_directory_structure()
+
+    def update(self, exp_name, candidate, status="finished"):
+        super(PrettyLabAssistant, self).update(exp_name, candidate, status=status)
+
+        #trigger the writing, but by default only on equal steps
+        self.write_out_plots_current_step(same_steps_only=True)
+
+    def write_out_plots_current_step(self, same_steps_only=True):
+        """
+        This method will write out all plots available to the path
+        configured in self.lab_run_directory.
+
+        Parameters
+        ---------
+        same_steps_only=True: boolean
+            Write only if all experiment assistants in this lab assistant
+            are currently in the same step.
+        """
+        step_string, same_step = self._compute_current_step_overall()
+        if same_steps_only and not same_step:
+            return
+
+        plot_base = os.path.join(self.lab_run_directory, "plots")
+        plot_step_base = os.path.join(plot_base, step_string)
+        self._ensure_directory_exists(plot_step_base)
+
+        #this hash will store all the plots to write
+        plots_to_write = {}
+
+        #result per step plot
+        result_per_step = self.plot_result_per_step(
+            experiments=self.exp_assistants.keys(),
+            show_plot=False)
+        plots_to_write['result_per_step'] = result_per_step
+
+        #TODO add new plots here if any!
+
+        #finally write out all plots created above to their files
+
+        for plot_name in plots_to_write.keys():
+            plot_fig = plots_to_write[plot_name]
+
+            write_plot_to_file(plot_fig, plot_name + "_" + step_string, plot_step_base)
+
     def plot_result_per_step(self, experiments, show_plot=True, plot_at_least=1):
         """
         Returns (and plots) the plt.figure plotting the results over the steps
@@ -161,3 +218,68 @@ class PrettyLabAssistant(BasicLabAssistant):
             plt.show(True)
             
         return fig
+
+    def _init_directory_structure(self):
+        """
+        Method to create the directory structure if not exists
+        for results and plots writing
+        """
+        if self.lab_run_directory is None:
+            date_name = datetime.datetime.utcfromtimestamp(
+                self.global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
+
+            self.lab_run_directory = os.path.join(self.write_directory_base,
+                                                  date_name)
+
+            plot_directory = os.path.join(self.lab_run_directory, "plots")
+
+            #make all the dirs if not exist, directly to the plots of this run
+            #will create all sub dirs
+            if not os.path.exists(plot_directory):
+                os.makedirs(plot_directory)
+
+    def _ensure_directory_exists(self, directory):
+        """
+        Creates the given directory if not existed.
+        """
+        if not os.path.exists(directory):
+                os.makedirs(directory)
+
+    def _compute_current_step_overall(self):
+        """
+        Compute the string used to describe the current state of experiments
+
+        If we have three running experiments in this lab assistant, then
+        we can have the first in step 3, the second in step 100 and the third
+        in step 1 - hence this would yield the step string "3_100_1".
+
+        Returns
+        -------
+
+        step_string: string
+            The string describing the overall steps of experiments.
+
+        same_step: boolean
+            A boolean if all experiments are in the same step.
+        """
+
+        step_string = ""
+        last_step = 0
+        same_step = True
+
+        experiment_names_sorted = sorted(self.exp_assistants.keys())
+
+        for i, ex_assistant_name in enumerate(experiment_names_sorted):
+            experiment = self.exp_assistants[ex_assistant_name].experiment
+            curr_step = len(experiment.candidates_finished)
+            if i == 0:
+                last_step = curr_step
+            elif last_step != curr_step:
+                same_step = False
+
+            step_string += str(curr_step)
+
+            if not i == len(experiment_names_sorted)  - 1:
+                step_string += "_"
+
+        return step_string, same_step

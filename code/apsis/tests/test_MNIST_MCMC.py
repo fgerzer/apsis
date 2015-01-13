@@ -73,8 +73,6 @@ def evaluate_on_mnist_mcmc_vs_likelyhood(percentage=1.):
 
     LAss = PrettyLabAssistant()
 
-
-
     LAss.init_experiment("random_mnist", "RandomSearch", param_defs, minimization=False)
     LAss.init_experiment("bay_mnist", "BayOpt", param_defs, minimization=False)
     LAss.init_experiment("bay_mcmc_mnist", "BayOpt", param_defs,

@@ -1,6 +1,7 @@
 __author__ = 'Frederik Diehl'
 import matplotlib.pyplot as plt
 import random
+import os
 
 def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1)):
     """
@@ -134,6 +135,29 @@ def plot_single(to_plot, fig=None, fig_options=None):
         _polish_figure(fig_options)
     return fig
 
+def write_plot_to_file(fig, filename, store_path,  file_format="png", transparent=False):
+    """
+    Wirte out plot to the file given in filename. Assumes that all
+    directories already exist.
+
+    Parameters
+    ----------
+    fig: matplotlib.figure
+        The figure object to store.
+    filename: string or os.path
+        A string or path can be given here to specify where
+        the plot is written to. All parent directories have to exist!
+    file_format="png": string
+        Specifies file format of plot - all supported file formats
+        by matplotlib can be given here.
+    transparent=False: boolean
+        Specifies if a transparent figure is written
+    """
+    filename_w_extension = os.path.join(store_path, filename + "." + file_format)
+    fig.savefig(filename_w_extension, format=file_format, transparent=transparent)
+
+    plt.close(fig)
+
 def _create_figure(fig_options=None):
     """
     Creates a new figure with fig_options.
@@ -174,4 +198,27 @@ def _polish_figure(fig, fig_options=None):
     plt.figure(fig.number)
     if fig_options is None:
         fig_options = {}
-    plt.legend(loc=fig_options.get("legend_loc", "upper right"))
+
+    legend_loc = fig_options.get("legend_loc", "below")
+
+
+    if legend_loc == "below":
+        #TODO This code doesn't work yet, needs to be fixed - but before
+        # matplotlib usage has to be refactored to use pure object
+        #oriented mode.
+
+        # Shrink current axis's height by 10% on the bottom
+        box = fig.get_position()
+        fig.set_position([box.x0, box.y0 + box.height * 0.1,
+                 box.width, box.height * 0.9])
+
+        # Put a legend below current axis
+        fig.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+          fancybox=True, shadow=True, ncol=5)
+    elif legend_loc == "no":
+        #do nothing right now, since no legend
+        pass
+    else:
+        plt.legend(loc=legend_loc)
+
+
