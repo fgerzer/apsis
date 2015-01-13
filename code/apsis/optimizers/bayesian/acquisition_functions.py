@@ -126,7 +126,7 @@ class ExpectedImprovement(AcquisitionFunction):
     exploitation_exploration_tradeoff = 0
 
 
-    def __init__(self, params = None):
+    def __init__(self, params=None):
         """
         Initializes the EI instance.
 
