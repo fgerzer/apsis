@@ -156,4 +156,8 @@ class PrettyLabAssistant(BasicLabAssistant):
             "title": "Comparison of %s." % experiments
         }
         fig = plot_lists(plots_list, fig_options=plot_options, plot_at_least=(plot_min, plot_max))
-        plt.show(True)
+
+        if show_plot:
+            plt.show(True)
+            
+        return fig
