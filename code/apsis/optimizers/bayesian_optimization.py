@@ -7,6 +7,7 @@ from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 from apsis.optimizers.bayesian.acquisition_functions import *
 import GPy
+import pymcmc as pm
 import logging
 
 class SimpleBayesianOptimizer(Optimizer):
@@ -53,6 +54,7 @@ class SimpleBayesianOptimizer(Optimizer):
     random_searcher = None
 
     gp = None
+    mcmc = False
     initial_random_runs = 10
     num_gp_restarts = 10
 
@@ -101,6 +103,8 @@ class SimpleBayesianOptimizer(Optimizer):
         self.kernel = optimizer_arguments.get("kernel", "matern52")
         self.random_searcher = RandomSearch({"random_state": self.random_state})
 
+        self.mcmc = optimizer_arguments.get("mcmc", False)
+
         self.num_precomputed = optimizer_arguments.get('num_precomputed', 10)
 
     def get_next_candidates(self, experiment):
@@ -140,11 +144,22 @@ class SimpleBayesianOptimizer(Optimizer):
 
         self.logger.debug("Refitting gp with cand %s and results %s" %(candidate_matrix, results_vector))
         self.gp = GPy.models.GPRegression(candidate_matrix, results_vector, self.kernel)
-        self.gp.constrain_positive("*")
+        if self.mcmc:
+            proposal = pm.MALAProposal(dt=1.)
+            mcmc = pm.MetropolisHastings(self.gp, proposal=proposal,
+            db_filename='apsis.h5')
 
-        self.gp.constrain_bounded(0.1, 1, warning=False)
-        self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,
+            mcmc.sample(100000, # Number of MCMC steps
+            num_thin=100, # Number of steps to skip
+            num_burn=1000, # Number of steps to burn initially
+            verbose=True)
+
+        else:
+            self.gp.constrain_positive("*")
+            self.gp.constrain_bounded(0.1, 1, warning=False)
+            self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,
                                   verbose=False)
+
 
     def _check_kernel(self, kernel, dimension, kernel_params):
         if (isinstance(kernel, GPy.kern.Kern)):
