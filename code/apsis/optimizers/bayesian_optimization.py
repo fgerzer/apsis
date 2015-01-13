@@ -145,6 +145,7 @@ class SimpleBayesianOptimizer(Optimizer):
         self.logger.debug("Refitting gp with cand %s and results %s" %(candidate_matrix, results_vector))
         self.gp = GPy.models.GPRegression(candidate_matrix, results_vector, self.kernel)
         if self.mcmc:
+
             proposal = pm.MALAProposal(dt=1.)
             mcmc = pm.MetropolisHastings(self.gp, proposal=proposal,
             db_filename='apsis.h5')
@@ -160,6 +161,7 @@ class SimpleBayesianOptimizer(Optimizer):
             self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,
                                   verbose=False)
 
+        print(self.gp)
 
     def _check_kernel(self, kernel, dimension, kernel_params):
         if (isinstance(kernel, GPy.kern.Kern)):
@@ -170,6 +172,10 @@ class SimpleBayesianOptimizer(Optimizer):
         }
 
         if isinstance(kernel, str) and kernel in translation_dict:
-            return translation_dict[kernel](dimension, **kernel_params)
+            if kernel_params.get('ARD', None) is None:
+                kernel_params['ARD'] = True
+
+            constructed_kernel = translation_dict[kernel](dimension, **kernel_params)
+            return constructed_kernel
 
         raise ValueError("%s is not a kernel or string representing one!" %kernel)
