@@ -3,8 +3,12 @@ __author__ = 'Frederik Diehl'
 from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer
+from apsis.utilities.file_utils import ensure_directory_exists
 import matplotlib.pyplot as plt
 from apsis.utilities.plot_utils import plot_lists
+import datetime
+import os
+import time
 
 class BasicExperimentAssistant(object):
     """
@@ -34,8 +38,14 @@ class BasicExperimentAssistant(object):
     optimizer_arguments = None
     experiment = None
 
+    write_directory_base = None
+    experiment_directory_base = None
+    csv_write_frequency = None
+    csv_steps_written = 0
+
     def __init__(self, name, optimizer, param_defs, optimizer_arguments=None,
-                 minimization=True):
+                 minimization=True, write_directory_base="/tmp/APSIS_WRITING",
+                 experiment_directory_base=None, csv_write_frequency=1):
         """
         Initializes the BasicExperimentAssistant.
 
@@ -57,10 +67,30 @@ class BasicExperimentAssistant(object):
             as to which are available.
         minimization=True: bool
             Whether the problem is one of minimization or maximization.
+        write_directory_base="/tmp/APSIS_WRITING": string
+            The global base directory for all writing. Will only be used
+            for creation of experiment_directory_base if this is not given.
+        experiment_directory_base: string
+            The directory to dedidacte all the results writing to. If not
+            given a directory with timestamp will automatically be created
+            in write_directory_base
+        csv_write_frequency: int
+            A number stating every XX steps results shall be written to
+            reporting files. If set to 0 no results will be written.
         """
         self.optimizer = optimizer
         self.optimizer_arguments = optimizer_arguments
         self.experiment = Experiment(name, param_defs, minimization)
+
+        self.csv_write_frequency = csv_write_frequency
+
+        if self.csv_write_frequency != 0:
+            self.write_directory_base = write_directory_base
+            if self.experiment_directory_base is not None:
+                self.experiment_directory_base = experiment_directory_base
+                ensure_directory_exists(self.experiment_directory_base)
+            else:
+                self._create_experiment_directory()
 
     def get_next_candidate(self):
         """
@@ -109,6 +139,13 @@ class BasicExperimentAssistant(object):
             #Also delete all pending candidates from the experiment - we have
             #new data available.
             self.experiment.candidates_pending = []
+
+            #invoke the writing to files
+            step = len(self.experiment.candidates_finished)
+            if self.csv_write_frequency != 0 and step != 0 \
+                    and step % self.csv_write_frequency == 0:
+                self._append_to_detailed_csv()
+
         elif status == "pausing":
             self.experiment.add_pausing(candidate)
         elif status == "working":
@@ -125,6 +162,40 @@ class BasicExperimentAssistant(object):
             at least one candidate evaluated) or None if none exists.
         """
         return self.experiment.best_candidate
+
+    def _append_to_detailed_csv(self):
+        if len(self.experiment.candidates_finished) <= self.csv_steps_written:
+            return
+
+        #create file and header if
+        wHeader = False
+        if self.csv_steps_written == 0:
+            #set use header
+            wHeader = True
+
+        csv_string, steps_included = self.experiment.to_csv_results(wHeader=wHeader,
+                                            fromIndex=self.csv_steps_written)
+
+        #write
+        filename = os.path.join(self.experiment_directory_base,
+                                self.experiment.name + "_results.csv")
+
+        with open(filename, 'a+') as detailed_file:
+            detailed_file.write(csv_string)
+            
+        self.csv_steps_written += steps_included
+
+    def _create_experiment_directory(self):
+        global_start_date = time.time()
+
+        date_name = datetime.datetime.utcfromtimestamp(
+                global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
+
+        self.experiment_directory_base = os.path.join(self.write_directory_base,
+                                    self.experiment.name + "_" + date_name)
+
+        ensure_directory_exists(self.experiment_directory_base)
+
 
 class PrettyExperimentAssistant(BasicExperimentAssistant):
     """

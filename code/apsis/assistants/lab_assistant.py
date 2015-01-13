@@ -3,6 +3,7 @@ __author__ = 'Frederik Diehl'
 from apsis.assistants.experiment_assistant import BasicExperimentAssistant, PrettyExperimentAssistant
 import matplotlib.pyplot as plt
 from apsis.utilities.plot_utils import _create_figure, _polish_figure, plot_lists, write_plot_to_file
+from apsis.utilities.file_utils import ensure_directory_exists
 import time
 import datetime
 import os
@@ -17,6 +18,9 @@ class BasicLabAssistant(object):
     ----------
     exp_assistants: dict of ExperimentAssistants.
         The dictionary of experiment assistants this LabAssistant uses.
+
+    write_directory_base="/tmp/APSIS_WRITING": String
+        The directory to dedidacte all the results and plots writing to.
     """
     exp_assistants = None
 
@@ -63,7 +67,9 @@ class BasicLabAssistant(object):
                              %name)
         self.exp_assistants[name] = PrettyExperimentAssistant(name, optimizer,
             param_defs, optimizer_arguments=optimizer_arguments,
-            minimization=minimization)
+            minimization=minimization,
+            write_directory_base=self.lab_run_directory,
+            csv_write_frequency=1)
 
     def get_next_candidate(self, exp_name):
         """
@@ -130,14 +136,7 @@ class BasicLabAssistant(object):
             self.lab_run_directory = os.path.join(self.write_directory_base,
                                                   date_name)
 
-            self._ensure_directory_exists(self.lab_run_directory)
-
-    def _ensure_directory_exists(self, directory):
-        """
-        Creates the given directory if not existed.
-        """
-        if not os.path.exists(directory):
-                os.makedirs(directory)
+            ensure_directory_exists(self.lab_run_directory)
 
 class PrettyLabAssistant(BasicLabAssistant):
     COLORS = ["g", "r", "c", "b", "m", "y"]
@@ -166,7 +165,7 @@ class PrettyLabAssistant(BasicLabAssistant):
 
         plot_base = os.path.join(self.lab_run_directory, "plots")
         plot_step_base = os.path.join(plot_base, step_string)
-        self._ensure_directory_exists(plot_step_base)
+        ensure_directory_exists(plot_step_base)
 
         #this hash will store all the plots to write
         plots_to_write = {}

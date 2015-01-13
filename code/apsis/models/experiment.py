@@ -251,16 +251,23 @@ class Experiment(object):
             warped_out[name] = self.parameter_definitions[name].warp_out(value)
         return warped_out
 
-    def to_csv_results(self, delimiter=",", key_order=None):
+    def to_csv_results(self, delimiter=",", key_order=None, wHeader=True, fromIndex=0):
         #parameter names
         csv_string = ""
         if key_order is None:
             key_order = sorted(self.parameter_definitions.keys())
-        print(self.parameter_definitions.keys())
-        print("key: " + str(key_order))
-        for k in key_order:
-            csv_string += k + delimiter
-        csv_string += "cost" + delimiter + "result\n"
-        for c in self.candidates_finished:
-            csv_string += c.to_csv_entry(delimiter=delimiter, key_order=key_order) + "\n"
-        return csv_string
+
+        if wHeader:
+            for k in key_order:
+                csv_string += k + delimiter
+            csv_string += "cost" + delimiter + "result\n"
+
+        steps_included = 0
+        for c in range(fromIndex, len(self.candidates_finished)):
+            cand = self.candidates_finished[c]
+            csv_string += cand.to_csv_entry(delimiter=delimiter,
+                                            key_order=key_order) + "\n"
+
+            steps_included += 1
+
+        return csv_string, steps_included
