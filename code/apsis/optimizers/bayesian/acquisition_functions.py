@@ -142,11 +142,11 @@ class ExpectedImprovement(AcquisitionFunction):
         self.exploitation_exploration_tradeoff = params.get(
             "exploitation_tradeoff", 0)
 
-    def compute_minimizing_evaluate(self, x, gp, experiment):
+    def _compute_minimizing_evaluate(self, x, gp, experiment):
         """
         Changes the sign of the evaluate function.
         """
-        value = self.evaluate(self, x, gp, experiment)
+        value = self.evaluate(x, gp, experiment)
         return -value
 
 
@@ -211,13 +211,17 @@ class ProbabilityOfImprovement(AcquisitionFunction):
 
         # do not standardize on our own, but use the mean, and covariance
         # we get from the gp
-        cdf = scipy.stats.norm().cdf(x, mean)
+        stdv = variance ** 0.5
+        x_best = experiment.best_candidate.result
+        z = (x_best - mean)/stdv
+
+        cdf = scipy.stats.norm().cdf(z)
         result = cdf
         if not experiment.minimization_problem:
             result = 1 - cdf
         return result
 
-    def compute_minimizing_evaluate(self, x, gp, experiment):
+    def _compute_minimizing_evaluate(self, x, gp, experiment):
         """
         Changes the sign of the evaluate function.
         """
