@@ -260,7 +260,7 @@ class Experiment(object):
         print("key: " + str(key_order))
         for k in key_order:
             csv_string += k + delimiter
-        csv_string += "cost," + "result\n"
+        csv_string += "cost" + delimiter + "result\n"
         for c in self.candidates_finished:
             csv_string += c.to_csv_entry(delimiter=delimiter, key_order=key_order) + "\n"
         return csv_string
