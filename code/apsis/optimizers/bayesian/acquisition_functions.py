@@ -53,6 +53,37 @@ class AcquisitionFunction(object):
 
     def compute_proposals(self, gp, experiment, number_proposals=1,
                           random_steps=1000):
+        """
+        This computes a number of proposals for candidates next to evaluate.
+
+        The first returned proposal is the one maximizing the acquisition
+        function, while the rest are randomly chosen proportional to their
+         acquisition function value.
+
+        Optimization over the acquisition function is done via random search.
+
+        Parameters
+        ----------
+        gp: GPy gaussian process
+            The gaussian process to use as a basis
+
+        experiment: Experiment
+            The experiment for which to find new proposals
+
+        number_proposals=1: int
+            The number of proposals to return.
+
+        random_steps=1000: int
+            The number of random steps to try out. Must be greater than
+            number_proposals, ideally much greater.
+
+        Returns
+        -------
+        proposals: list of Candidates
+            The list of proposals to try next. The first proposal in that list
+            will always be the one maximizing the acquisition function,
+            followed by an unordered list of points.
+        """
         evaluated_params = []
         evaluated_acq_scores = []
         sum_acq = []
