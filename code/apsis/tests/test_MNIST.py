@@ -73,22 +73,21 @@ def evaluate_on_mnist(percentage=1.):
 
     LAss = PrettyLabAssistant()
 
-
-
     LAss.init_experiment("random_mnist", "RandomSearch", param_defs, minimization=False)
-    LAss.init_experiment("bay_mnist", "BayOpt", param_defs, minimization=False)
+    LAss.init_experiment("bay_mnist_ei_rand", "BayOpt", param_defs, minimization=False)
+    LAss.init_experiment("bay_mnist_ei_bfgs", "BayOpt", param_defs, minimization=False, optimizer_arguments={"acquisition_hyperparams":{"optimization": "bfgs"}})
 
 
     steps = 50
 
     for i in range(steps):
-        for n in ["random_mnist", "bay_mnist"]:
+        for n in ["random_mnist", "bay_mnist_ei_rand", "bay_mnist_ei_bfgs"]:
             do_evaluation(LAss, n, regressor, mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test)
 
     #finally do an evaluation
-    for n in ["random_mnist", "bay_mnist"]:
+    for n in ["random_mnist", "bay_mnist_ei_rand", "bay_mnist_ei_bfgs"]:
         print("Best %s score:  %s" %(n, LAss.get_best_candidate(n).result))
-    LAss.plot_result_per_step(["random_mnist", "bay_mnist"], plot_at_least=1)
+    LAss.plot_result_per_step(["random_mnist", "bay_mnist_ei_rand", "bay_mnist_ei_bfgs"], plot_at_least=1)
 
 
 if __name__ == '__main__':

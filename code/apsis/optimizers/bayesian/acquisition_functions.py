@@ -1,5 +1,3 @@
-__author__ = 'Frederik Diehl'
-
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import scipy.optimize
@@ -7,6 +5,8 @@ import logging
 from scipy.stats import multivariate_normal
 from apsis.models.parameter_definition import NumericParamDef, PositionParamDef
 import random
+import os
+from apsis.utilities.file_utils import ensure_directory_exists
 
 class AcquisitionFunction(object):
     """
@@ -21,11 +21,32 @@ class AcquisitionFunction(object):
     __metaclass__ = ABCMeta
 
     logger = None
-
     params = None
+    LOG_ROOT = None
+    LOG_FILE_NAME = "acquisition_functions.log"
+    debug_file_handler = None
 
     def __init__(self, params=None):
         self.logger = logging.getLogger(__name__)
+
+        self.LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
+        ensure_directory_exists(self.LOG_ROOT)
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # create console handler for info logging
+        # ch = logging.StreamHandler()
+        # ch.setLevel(logging.INFO)
+        # ch.setFormatter(formatter)
+        # self.logger.addHandler(ch)
+
+        #file handler
+        fh = logging.FileHandler(os.path.join(self.LOG_ROOT, self.LOG_FILE_NAME))
+        fh.setFormatter(formatter)
+        fh.setLevel(logging.DEBUG)
+        self.debug_file_handler = fh
+        self.logger.addHandler(fh)
+
+
         self.params = params
 
         if self.params is None:
@@ -108,13 +129,30 @@ class AcquisitionFunction(object):
         for pn in param_names:
             param_to_eval.append(x[pn])
 
-            #And to np.array for gpy.
-        param_nd_array = np.zeros((1, len(param_to_eval)))
-        #param_nd_array = np.ndarray(param_to_eval)
-        for i in range(len(param_to_eval)):
-            param_nd_array[0, i] = param_to_eval[i]
+        return param_to_eval
+
+    def _translate_vector_dict(self, x_vector, param_names):
+        #TODO find out if this method does the right thing??
+        # do a test
+
+        #translates from param vector, where order of params is assumed
+        #to be by lexicographic sorting of keys
+        x_dict = {}
+
+        param_names_sorted = sorted(param_names)
+        for i, pn in enumerate(param_names_sorted):
+            x_dict[pn] = x_vector[i]
+
+        return x_dict
+
+    def _translate_vector_nd_array(self, x_vec):
+        param_nd_array = np.zeros((1, len(x_vec)))
+        for i in range(len(x_vec)):
+            #print (x_vec)
+            param_nd_array[0,i] = x_vec[i]
 
         return param_nd_array
+
 
 class ExpectedImprovement(AcquisitionFunction):
     """
@@ -146,19 +184,47 @@ class ExpectedImprovement(AcquisitionFunction):
         """
         Changes the sign of the evaluate function.
         """
-        value = self.evaluate(x, gp, experiment)
+        if isinstance(x, dict):
+            value, gradient = self.evaluate(x, gp, experiment)
+        #otherwise assume vector
+        else:
+            value, gradient = self._evaluate_vector(x, gp, experiment)
+
+
+        #TODO should we also return the gradient?
         return -value
 
-
-
-    def evaluate(self, x, gp, experiment):
+    def _compute_minimizing_gradient(self, x, gp, experiment):
         """
-        Evaluates the Expected Improvement acquisition function.
+        Compute the gradient of EI if we want to minimize its negation
         """
-        dimensions = len(experiment.parameter_definitions)
-        x_value = self._translate_dict_vector(x)
+        if isinstance(x, dict):
+            value, gradient = self.evaluate(x, gp, experiment)
+        else:
+            value, gradient = self._evaluate_vector(x, gp, experiment)
 
+        return -1 * gradient
+
+    def _evaluate_vector(self, x_vec, gp, experiment):
+        x_value = self._translate_vector_nd_array(x_vec)
+
+        #mean, variance and their gradients
         mean, variance = gp.predict(x_value)
+        gradient_mean, gradient_variance = gp.predictive_gradients(x_value)
+
+        #gpy does everythin in matrices
+        gradient_mean = gradient_mean[0]
+        #for whatever reason gpy retorns the variance gradient as row vector?!?!?
+        gradient_variance = np.transpose(gradient_variance)
+
+        # print("gradient_meam")
+        # print(gradient_mean)
+        # print("gradient_var transposed")
+        # print(gradient_variance)
+
+        #these values should be real scalars!
+        mean = mean[0][0]
+        variance = variance[0][0]
 
         #See issue #32 on github. using the variance works better than std_dev.
         std_dev = variance ** 0.5
@@ -179,15 +245,111 @@ class ExpectedImprovement(AcquisitionFunction):
         z_numerator = sign * (x_best - mean +
                               self.exploitation_exploration_tradeoff)
 
-        if variance != 0:
+        ei_value = 0
+        ei_gradient = 0
+        if std_dev != 0:
             z = float(z_numerator) / std_dev
 
             cdf_z = scipy.stats.norm().cdf(z)
             pdf_z = scipy.stats.norm().pdf(z)
 
-            return z_numerator * cdf_z + std_dev * pdf_z
+            ei_value = z_numerator * cdf_z + std_dev * pdf_z
+
+            #compute ei gradient
+            #following the formula in http://members.unine.ch/david.ginsbourger/recherche/these/compile_chap4.pdf
+            #page 16 (in French)
+            ei_gradient_scalar_left = (1/(2*variance)) * (ei_value - z * cdf_z)
+            ei_gradient = ei_gradient_scalar_left * gradient_variance - (1/std_dev) * gradient_mean
+
+        # print("ei")
+        # print(ei_value)
+        ei_gradient = np.transpose(ei_gradient)[0]
+        #ei_gradient = [ei_gradient]
+        # print("gradient")
+        # print(ei_gradient)
+
+        return ei_value, ei_gradient
+
+    def _evaluate_vector_gradient(self, x_vec, gp, experiment):
+        """
+        Only used to check the gradient
+        """
+        value, grad = self._evaluate_vector(x_vec, gp, experiment)
+
+        return grad
+
+    def evaluate(self, x, gp, experiment):
+        """
+        TODO commenting
+
+        TODO gradient only correct for maximization
+        """
+        x_value = self._translate_dict_vector(x)
+
+        return self._evaluate_vector(x_value, gp, experiment)
+
+
+    def compute_proposals(self, gp, experiment, number_proposals=1,
+                          random_steps=1000):
+        random_proposals = super(ExpectedImprovement, self).compute_proposals(
+            gp=gp, experiment=experiment, number_proposals=number_proposals,
+            random_steps=random_steps)
+
+        optimizer = self.params.get('optimization', 'random')
+        if(optimizer == 'random'):
+            return random_proposals
+
+        #we have only one else case here, where we use bfgs at the moment,
+        #therefor no else right now for readability.
+
+        #do a scipy minimize, use bfgs since we only have gradient, no hessian
+        #initial guess is the best found by random search
+        initial_guess = self._translate_dict_vector(random_proposals[0])
+        #print initial_guess
+
+        # x_min, f_min, g_opt, num_f_steps, num_grad_steps, warnflag = \
+        #     scipy.optimize.fmin_bfgs(f=self._compute_minimizing_evaluate,
+        # x0=initial_guess, fprime=self._compute_minimizing_gradient,
+        # args=tuple([gp, experiment]), retall=False)
+
+        result = scipy.optimize.minimize(self._compute_minimizing_evaluate,
+                                         x0=initial_guess, method='BFGS',
+                                         jac=self._compute_minimizing_gradient,
+                                         options={'disp': True}, args=tuple([gp, experiment]))
+        x_min = result.x
+        #print x_min
+        f_min = result.fun
+        num_f_steps = result.nfev
+        num_grad_steps = result.njev
+        success = result.success
+
+        self.logger.setLevel(level=logging.DEBUG)
+        self.logger.debug("BFGS EI Optimization finished.")
+        self.logger.debug("\tx_min: " + str(x_min))
+        self.logger.debug("\tf_min: " + str(f_min))
+        self.logger.debug("\tNum f evaluations: " + str(num_f_steps))
+        self.logger.debug("\tNum grad(f) evaluations: " + str(num_grad_steps))
+        self.logger.debug("RandomSearch")
+        if self.logger.level == logging.DEBUG:
+            rand_f_min = self._compute_minimizing_evaluate(random_proposals[0], gp, experiment)
+            self.logger.debug("\tx_min " + str(random_proposals[0]))
+            self.logger.debug("\tf_min " + str(rand_f_min))
+
+        #deal with result, eventually take random then
+        #when using scipy.optimize.minimize use the success flag
+        if not success:
+            self.logger.warning("BFGS Optimization failed. Using result from RandomSearch.")
+
         else:
-            return 0
+            #remove the last entry from random_proposals and add the new one at
+            #first place
+            del random_proposals[-1]
+            param_names = experiment.parameter_definitions.keys()
+            x_min_dict = self._translate_vector_dict(x_min, param_names)
+
+            random_proposals.insert(0, x_min_dict)
+
+        return random_proposals
 
 
 class ProbabilityOfImprovement(AcquisitionFunction):

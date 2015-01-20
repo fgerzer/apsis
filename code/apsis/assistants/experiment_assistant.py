@@ -293,6 +293,9 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
             "color": color,
             "label": "%s, best result" %(str(self.experiment.name))
         }
+
+        #print [step_eval_dict, step_best_dict]
+
         return [step_eval_dict, step_best_dict]
 
     def _best_result_per_step_data(self):
