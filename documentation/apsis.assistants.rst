@@ -1,21 +1,21 @@
-apsis.optimizers package
+apsis.assistants package
 ========================
 
 Submodules
 ----------
 
-apsis.optimizers.optimizer module
----------------------------------
+apsis.assistants.experiment_assistant module
+--------------------------------------------
 
-.. automodule:: apsis.optimizers.optimizer
+.. automodule:: apsis.assistants.experiment_assistant
     :members:
     :undoc-members:
     :show-inheritance:
 
-apsis.optimizers.random_search module
+apsis.assistants.lab_assistant module
 -------------------------------------
 
-.. automodule:: apsis.optimizers.random_search
+.. automodule:: apsis.assistants.lab_assistant
     :members:
     :undoc-members:
     :show-inheritance:
@@ -24,7 +24,7 @@ apsis.optimizers.random_search module
 Module contents
 ---------------
 
-.. automodule:: apsis.optimizers
+.. automodule:: apsis.assistants
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,5 +1,5 @@
-apsis
-=====
+code
+====
 
 .. toctree::
    :maxdepth: 4

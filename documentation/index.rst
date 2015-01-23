@@ -1,24 +1,24 @@
 .. apsis documentation master file, created by
-   sphinx-quickstart on Tue Dec  9 16:37:47 2014.
+   sphinx-quickstart on Fri Jan 23 11:11:04 2015.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-apsis - scaleable, efficient hyperparameter optimizer
-=====================================================
+Welcome to apsis's documentation!
+=================================
+
+.. include:: ../README.md
+
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
    
-   installation
-   tutorial
-  
+   ./tutorials/base
    
-The apsis module
 
-
-
+   
+   
 Indices and tables
 ==================
 
