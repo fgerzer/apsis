@@ -15,7 +15,8 @@ Contents:
    :maxdepth: 2
    
    ./tutorials/base
-   
+   design
+   modules
 
    
    
