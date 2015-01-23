@@ -16,8 +16,8 @@ import numpy as np
 
 def test_function():
     param_defs = {
-        "x": LowerUpperNumericParamDef(-5, 10),
-        "y": LowerUpperNumericParamDef(0, 15)
+        "x": MinMaxNumericParamDef(-5, 10),
+        "y": MinMaxNumericParamDef(0, 15)
     }
 
     #logging.basicConfig(level=logging.DEBUG)
@@ -68,10 +68,10 @@ def test_boston():
     boston_data = datasets.load_boston()
     regressor = SVC(kernel="poly")
     param_defs = {
-        "C": LowerUpperNumericParamDef(0,10),
+        "C": MinMaxNumericParamDef(0,10),
         "degree": FixedValueParamDef([1,2,3]),
-        "gamma": LowerUpperNumericParamDef(0, 10),
-        "coef0": LowerUpperNumericParamDef(0,10)
+        "gamma": MinMaxNumericParamDef(0, 10),
+        "coef0": MinMaxNumericParamDef(0,10)
     }
 
     LAss = PrettyLabAssistant()
@@ -111,5 +111,6 @@ def test_boston():
     #x, y, z = BAss._best_result_per_step_data()
     LAss.plot_result_per_step(["rand", "bay"], plot_at_least=1)
 
-#test_boston()
-test_function()
+if __name__ == '__main__':
+    #test_boston()
+    test_function()

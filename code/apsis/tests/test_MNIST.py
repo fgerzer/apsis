@@ -55,17 +55,17 @@ def evaluate_on_mnist(percentage=1.):
 
     regressor = SVC(kernel="poly")
     param_defs = {
-        "C": LowerUpperNumericParamDef(0,10),
+        "C": MinMaxNumericParamDef(0,10),
         "degree": FixedValueParamDef([1, 2, 3]),
-        "gamma":LowerUpperNumericParamDef(0, 1),
-        "coef0": LowerUpperNumericParamDef(0,1)
+        "gamma":MinMaxNumericParamDef(0, 1),
+        "coef0": MinMaxNumericParamDef(0,1)
     }
 
     #regressor = LassoLars()
     #regressor = DecisionTreeClassifier()
 
     #param_defs = {
-    #    "max_features": LowerUpperNumericParamDef(0, 1),
+    #    "max_features": MinMaxNumericParamDef(0, 1),
     #    "max_depth": FixedValueParamDef([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     #    "min_samples_split": FixedValueParamDef([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     #    "min_samples_leaf": FixedValueParamDef([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])

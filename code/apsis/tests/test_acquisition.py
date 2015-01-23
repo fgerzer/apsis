@@ -38,8 +38,8 @@ class TestAcquisition(object):
 
     def test_expected_improvement_optimization(self):
         param_defs = {
-            "x": LowerUpperNumericParamDef(-5, 10),
-            "y": LowerUpperNumericParamDef(0, 15)
+            "x": MinMaxNumericParamDef(-5, 10),
+            "y": MinMaxNumericParamDef(0, 15)
         }
 
 
@@ -96,8 +96,8 @@ class TestAcquisition(object):
     # def test_ei_gradient(self):
     #TODO replace this by a manual check with scipy.optimize.approx_fprime
     #     param_defs = {
-    #         "x": LowerUpperNumericParamDef(-5, 10),
-    #         "y": LowerUpperNumericParamDef(0, 15)
+    #         "x": MinMaxNumericParamDef(-5, 10),
+    #         "y": MinMaxNumericParamDef(0, 15)
     #     }
     #     LAss = PrettyLabAssistant()
     #     LAss.init_experiment("bay_rand", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 2, "mcmc": False, "acquisition_hyperparams":{"optimization": "random"}})

@@ -265,7 +265,7 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
             return 0
 
 
-class LowerUpperNumericParamDef(NumericParamDef):
+class MinMaxNumericParamDef(NumericParamDef):
     """
     Defines a numeric parameter definition defined by a lower and upper bound.
     """
