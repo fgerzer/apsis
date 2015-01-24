@@ -19,17 +19,22 @@ class BasicExperimentAssistant(object):
 
     Attributes
     ----------
-
-    optimizer: Optimizer
+    optimizer : Optimizer
         This is an optimizer implementing the corresponding functions: It
         gets an experiment instance, and returns one or multiple candidates
         which should be evaluated next.
-    optimizer_arguments: dict
+    optimizer_arguments : dict
         These are arguments for the optimizer. Refer to their documentation
         as to which are available.
-
-    experiment: Experiment
+    experiment : Experiment
         The experiment this assistant assists with.
+    write_directory_base : string or None
+        The directory to write all results to. If not
+        given, a directory with timestamp will automatically be created
+        in write_directory_base
+    csv_write_frequency : int
+        States how often the csv file should be written to.
+        If set to 0 no results will be written.
     """
 
     AVAILABLE_STATUS = ["finished", "pausing", "working"]
@@ -51,32 +56,32 @@ class BasicExperimentAssistant(object):
 
         Parameters
         ----------
-        name: string
+        name : string
             The name of the experiment. This does not have to be unique, but is
             for human orientation.
-        optimizer: Optimizer instance or string
+        optimizer : Optimizer instance or string
             This is an optimizer implementing the corresponding functions: It
             gets an experiment instance, and returns one or multiple candidates
             which should be evaluated next.
             Alternatively, it can be a string corresponding to the optimizer,
             as defined by apsis.utilities.optimizer_utils.
-        param_defs: dict of ParamDef.
+        param_defs : dict of ParamDef.
             This is the parameter space defining the experiment.
-        optimizer_arguments=None: dict
+        optimizer_arguments=None : dict
             These are arguments for the optimizer. Refer to their documentation
             as to which are available.
-        minimization=True: bool
+        minimization=True : bool
             Whether the problem is one of minimization or maximization.
-        write_directory_base="/tmp/APSIS_WRITING": string
+        write_directory_base : string, optional
             The global base directory for all writing. Will only be used
             for creation of experiment_directory_base if this is not given.
-        experiment_directory_base: string
-            The directory to dedidacte all the results writing to. If not
+        experiment_directory_base : string or None, optional
+            The directory to write all the results to. If not
             given a directory with timestamp will automatically be created
             in write_directory_base
-        csv_write_frequency: int
-            A number stating every XX steps results shall be written to
-            reporting files. If set to 0 no results will be written.
+        csv_write_frequency : int, optional
+            States how often the csv file should be written to.
+            If set to 0 no results will be written.
         """
         self.optimizer = optimizer
         self.optimizer_arguments = optimizer_arguments
@@ -98,7 +103,7 @@ class BasicExperimentAssistant(object):
 
         Returns
         -------
-        next_candidate: Candidate or None:
+        next_candidate : Candidate or None
             The Candidate object that should be evaluated next. May be None.
         """
         self.optimizer = check_optimizer(self.optimizer,
@@ -117,14 +122,15 @@ class BasicExperimentAssistant(object):
 
         Parameters
         ----------
-        candidate: Candidate
+        candidate : Candidate
             The Candidate object whose status is updated.
-        status=finished: string
+        status : {"finished", "pausing", "working"}
             A string defining the status change. Can be one of the following:
             - finished: The Candidate is now finished.
             - pausing: The evaluation of Candidate has been paused and can be
                 resumed by another worker.
             - working: The Candidate is now being worked on by a worker.
+
         """
         if status not in self.AVAILABLE_STATUS:
             raise ValueError("status not in %s but %s."
@@ -157,7 +163,7 @@ class BasicExperimentAssistant(object):
 
         Returns
         -------
-        best_candidate: candidate or None
+        best_candidate : candidate or None
             Returns a candidate if there is a best one (which corresponds to
             at least one candidate evaluated) or None if none exists.
         """
@@ -202,20 +208,20 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
     A 'prettier' version of the experiment assistant, mostly through plots.
     """
 
-
-    def plot_result_per_step(self, show_plot=True, fig=None, color="b", plot_at_least=1):
+    def plot_result_per_step(self, show_plot=True, fig=None, color="b",
+                             plot_at_least=1):
         """
         Returns (and plots) the plt.figure plotting the results over the steps.
 
         Parameters
         ----------
-        show_plot=True: bool
+        show_plot : bool, optional
             Whether to show the plot after creation.
-        fig=None: None or pyplot figure
+        fig : None or pyplot figure, optional
             The figure to update. If None, a new figure will be created.
-        color="b": string
+        color: string, optional
             A string representing a pyplot color.
-        plot_at_least=1: float
+        plot_at_least: float, optional
             The percentage of entries to show.
 
         Returns

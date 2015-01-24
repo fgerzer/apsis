@@ -16,11 +16,11 @@ class BasicLabAssistant(object):
 
     Attributes
     ----------
-    exp_assistants: dict of ExperimentAssistants.
+    exp_assistants : dict of ExperimentAssistants.
         The dictionary of experiment assistants this LabAssistant uses.
 
-    write_directory_base="/tmp/APSIS_WRITING": String
-        The directory to dedidacte all the results and plots writing to.
+    write_directory_base : String, optional
+        The directory to write all the results and plots to.
     """
     exp_assistants = None
 
@@ -31,6 +31,11 @@ class BasicLabAssistant(object):
     def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
         """
         Initializes the lab assistant with no experiments.
+
+        Parameters
+        ----------
+        write_directory_base : String, optional
+            The directory to write all the results and plots to.
         """
         self.exp_assistants = {}
 
@@ -46,20 +51,20 @@ class BasicLabAssistant(object):
 
         Parameters
         ----------
-        name: string
+        name : string
             The name of the experiment. This has to be unique.
-        optimizer: Optimizer instance or string
+        optimizer : Optimizer instance or string
             This is an optimizer implementing the corresponding functions: It
             gets an experiment instance, and returns one or multiple candidates
             which should be evaluated next.
             Alternatively, it can be a string corresponding to the optimizer,
             as defined by apsis.utilities.optimizer_utils.
-        param_defs: dict of ParamDef.
+        param_defs : dict of ParamDef.
             This is the parameter space defining the experiment.
-        optimizer_arguments=None: dict
+        optimizer_arguments : dict, optional
             These are arguments for the optimizer. Refer to their documentation
             as to which are available.
-        minimization=True: bool
+        minimization : bool, optional
             Whether the problem is one of minimization or maximization.
         """
         if name in self.exp_assistants:
@@ -77,12 +82,12 @@ class BasicLabAssistant(object):
 
         Parameters
         ----------
-        exp_name: string
+        exp_name : string
             Has to be in experiment_assistants.
 
         Returns
         -------
-        next_candidate: Candidate or None:
+        next_candidate : Candidate or None:
             The Candidate object that should be evaluated next. May be None.
         """
         return self.exp_assistants[exp_name].get_next_candidate()
@@ -94,11 +99,11 @@ class BasicLabAssistant(object):
 
         Parameters
         ----------
-        exp_name: string
+        exp_name : string
             Has to be in experiment_assistants
-        candidate: Candidate
+        candidate : Candidate
             The Candidate object whose status is updated.
-        status=finished: string
+        status : {"finished", "pausing", "working"}, optional
             A string defining the status change. Can be one of the following:
             - finished: The Candidate is now finished.
             - pausing: The evaluation of Candidate has been paused and can be
@@ -113,12 +118,12 @@ class BasicLabAssistant(object):
 
         Parameters
         ----------
-        exp_name: string
+        exp_name : string
             Has to be in experiment_assistants.
 
         Returns
         -------
-        best_candidate: candidate or None
+        best_candidate : candidate or None
             Returns a candidate if there is a best one (which corresponds to
             at least one candidate evaluated) or None if none exists.
         """
@@ -155,7 +160,7 @@ class PrettyLabAssistant(BasicLabAssistant):
 
         Parameters
         ---------
-        same_steps_only=True: boolean
+        same_steps_only : boolean, optional
             Write only if all experiment assistants in this lab assistant
             are currently in the same step.
         """
@@ -192,20 +197,20 @@ class PrettyLabAssistant(BasicLabAssistant):
 
         Parameters
         ----------
-        experiments: list of experiment names or experiment name.
+        experiments : list of experiment names or experiment name.
             The experiments to plot.
-        show_plot=True: bool
+        show_plot : bool, optional
             Whether to show the plot after creation.
-        fig=None: None or pyplot figure
+        fig : None or pyplot figure, optional
             The figure to update. If None, a new figure will be created.
-        color="b": string
+        color : string, optional
             A string representing a pyplot color.
-        plot_at_least=1: float
+        plot_at_least : float, optional
             The percentage of entries to show.
 
         Returns
         -------
-        fig: plt.figure
+        fig : plt.figure
             The figure containing the results over the steps.
         """
         if not isinstance(experiments, list):
@@ -247,11 +252,10 @@ class PrettyLabAssistant(BasicLabAssistant):
 
         Returns
         -------
-
-        step_string: string
+        step_string : string
             The string describing the overall steps of experiments.
 
-        same_step: boolean
+        same_step : boolean
             A boolean if all experiments are in the same step.
         """
 
