@@ -19,18 +19,22 @@ class ParamDef(object):
 
         Parameters
         ----------
-        value: object
+        value : object
             Tests whether the object is in the parameter domain.
 
         Returns
         -------
-        is_in_parameter_domain: bool
+        is_in_parameter_domain : bool
             True iff value is in the parameter domain as defined by this
             instance.
         """
         pass
 
     def distance(self, valueA, valueB):
+        """
+        Returns the distance between `valueA` and `valueB`.
+        In this case, it's 0 iff valueA == valueB, 1 otherwise.
+        """
         if valueA == valueB:
             return 0
         return 1
@@ -58,10 +62,10 @@ class ComparableParameterDef(object):
 
         Parameters
         ----------
-        one: object in parameter definition
+        one : object in parameter definition
             The first value used in comparison.
 
-        two: object in parameter definition
+        two : object in parameter definition
             The second value used in comparison.
 
         Returns
@@ -90,13 +94,13 @@ class NominalParamDef(ParamDef):
 
         Parameters
         ----------
-        values: list
+        values : list
             A list of values which are the possible values that are in this
             parameter definition.
 
         Raises
         ------
-        ValueError:
+        ValueError :
             Iff values is not a list, or values is an empty list.
         """
         if not isinstance(values, list):
@@ -156,6 +160,10 @@ class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
         return 0
 
     def distance(self, valueA, valueB):
+        """
+        This distance is defined as the absolute difference between the values'
+        position in the list, normed to the [0, 1] hypercube.
+        """
         if valueA not in self.values or valueB not in self.values:
             raise ValueError(
                 "Values not comparable! Either one or the other is not in the "
@@ -186,10 +194,10 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
 
         Parameters
         ----------
-        warping_in: function
+        warping_in : function
             warping_in must take a value and return a corresponding value in
             the [0, 1] space.
-        warping_out: function
+        warping_out : function
             warping_out is the reverse function to warping_in.
         """
         super(NumericParamDef, self).__init__()
@@ -210,7 +218,7 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
 
         Parameters
         ----------
-        value_in: float
+        value_in : float
             The input value
 
         Returns
@@ -226,12 +234,12 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
 
         Parameters
         ----------
-        value_out: float in [0, 1]
+        value_out : float in [0, 1]
             The output value.
 
         Returns
         -------
-        value_out_unscaled: float
+        value_out_unscaled : float
             The unscaled value in the parameter space.
         """
         return self.warping_out(value_out)
@@ -278,10 +286,10 @@ class MinMaxNumericParamDef(NumericParamDef):
 
         Parameters
         ----------
-        lower_bound: float
+        lower_bound : float
             The lowest possible value
 
-        upper_bound: float
+        upper_bound : float
             The highest possible value
         """
         self.x_min = lower_bound
@@ -298,19 +306,39 @@ class MinMaxNumericParamDef(NumericParamDef):
 
 
 class PositionParamDef(OrdinalParamDef):
+    """
+    Defines positions for each of its values.
+    """
     positions = None
 
     def __init__(self, values, positions):
+        """
+        Initializes PositionParamDef
+
+        Parameters
+        ----------
+        values : list
+            List of the values
+        positions : list of floats
+            The corresponding positions of these values. Has to have the same
+            length as values.
+        """
         assert len(values) == len(positions)
         super(PositionParamDef, self).__init__(values)
         self.positions = positions
 
     def warp_in(self, value_in):
+        """
+        Warps in the value to a [0, 1] hypercube value.
+        """
         pos = self.positions[self.values.index(value_in)]
         value_out = (pos - self.positions[0])/(self.positions[-1]-self.positions[0])
         return value_out
 
     def warp_out(self, value_out):
+        """
+        Warps out a value from a [0, 1] hypercube to one of the values.
+        """
         if value_out > self.positions[-1]:
             return self.values[-1]
         if value_out < self.positions[0]:
@@ -331,6 +359,10 @@ class PositionParamDef(OrdinalParamDef):
         return float(diff)
 
 class FixedValueParamDef(PositionParamDef):
+    """
+    Extension of PositionParamDef, in which the position is equal to the value
+    of each entry from values.
+    """
     def __init__(self, values):
         positions = []
         pos = 0

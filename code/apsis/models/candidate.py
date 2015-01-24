@@ -13,20 +13,20 @@ class Candidate(object):
     Attributes
     ----------
 
-    params: dict of string keys
+    params : dict of string keys
         A dictionary of parameter value. The keys must correspond to the
         problem definition.
         The dictionary requires one key - and value - per parameter defined.
 
-    result: float
+    result : float
         The results of evaluating the parameter set. This value is optimized
         over.
 
-    cost: float
+    cost : float
         The cost of evaluating the parameter set. This may correspond to
         runtime, cost of ingredients or human attention required.
 
-    worker_information: string
+    worker_information : string
         This is worker-settable information which might be used for
         communicating things necessary for resuming evaluations et cetera. This
         is never touched in apsis.
@@ -43,11 +43,11 @@ class Candidate(object):
 
         Parameters
         ----------
-        params: dict of string keys
+        params : dict of string keys
             A dictionary of parameter value. The keys must correspond to the
             problem definition.
             The dictionary requires one key - and value - per parameter defined.
-        worker_information: string
+        worker_information : string, optional
             This is worker-settable information which might be used for
             communicating things necessary for resuming evaluations et cetera.
 
@@ -63,7 +63,7 @@ class Candidate(object):
 
     def __eq__(self, other):
         """
-        Compares two Canidate instances.
+        Compares two Candidate instances.
 
         Two Candidate instances are defined as being equal iff their params
         vectors are equal. A non-Candidate instance is never equal to a
@@ -71,12 +71,12 @@ class Candidate(object):
 
         Parameters
         ----------
-        other: object
+        other :
             The object to compare this Candidate instance to.
 
         Returns
         -------
-        equality: bool
+        equality : bool
             True iff other is a Candidate instance and their params are
             identical.
         """
@@ -89,6 +89,21 @@ class Candidate(object):
         return False
 
     def __str__(self):
+        """
+        Stringifies this Candidate.
+
+        A stringified Candidate is of the form:
+        Candidate
+        params: XXX
+        cost: XXX
+        result XXX
+
+        Returns
+        -------
+        string : string
+            The stringified Candidate.
+
+        """
         string = "Candidate\n"
         string += "params: " + str(self.params) + "\n"
         if self.cost is not None:
@@ -97,6 +112,25 @@ class Candidate(object):
         return string
 
     def to_csv_entry(self, delimiter=",", key_order=None):
+        """
+        Returns a csv entry representing this candidate.
+
+        It is delimited by `delimiter`, and first consists of all parameters
+        in the order defined by `key_order`, followed by the cost and result.
+
+        Parameters
+        ----------
+            delimiter : string, optional
+                The string delimiting csv entries
+            key_order : list of param names, optional
+                A list defining the order of keys written to csv. If None, the
+                order will be set by sorting the keys.
+
+        Returns
+        -------
+            string : string
+                The (one-line) string representing this Candidate as a csv line
+        """
         if key_order is None:
             key_order = sorted(self.params.keys())
         string = ""
@@ -107,6 +141,9 @@ class Candidate(object):
         return string
 
     def to_dict(self):
+        """
+        EXPERIMENTAL
+        """
         d = {}
         d["params"] = self._param_defs_to_dict()
         d["result"] = self.result
@@ -116,12 +153,18 @@ class Candidate(object):
         return d
 
     def _param_defs_to_dict(self):
+        """
+        EXPERIMENTAL
+        """
         d = {}
         for k in self.params.keys():
             d[k] = self.params[k]
         return d
 
 def from_dict(dict):
+    """
+    EXPERIMENTAL
+    """
     c = Candidate(dict["params"])
     c.result = dict.get("result", None)
     c.cost = dict.get("cost", None)
