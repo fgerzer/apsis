@@ -190,7 +190,7 @@ class PrettyLabAssistant(BasicLabAssistant):
 
             write_plot_to_file(plot_fig, plot_name + "_" + step_string, plot_step_base)
 
-    def plot_result_per_step(self, experiments, show_plot=True, plot_at_least=1):
+    def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None):
         """
         Returns (and plots) the plt.figure plotting the results over the steps
         for the specified experiments.
@@ -223,19 +223,15 @@ class PrettyLabAssistant(BasicLabAssistant):
 
         if self.exp_assistants[experiments[0]].experiment.minimization_problem:
             legend_loc = 'upper right'
-            plot_min = 1
-            plot_max = plot_at_least
         else:
             legend_loc = 'upper left'
-            plot_min = plot_at_least
-            plot_max = 1
         plot_options = {
             "legend_loc": legend_loc,
             "x_label": "steps",
             "y_label": "result",
             "title": "Comparison of %s." % experiments
         }
-        fig = plot_lists(plots_list, fig_options=plot_options, plot_at_least=(plot_min, plot_max))
+        fig = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
         if show_plot:
             plt.show(True)

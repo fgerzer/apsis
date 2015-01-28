@@ -26,7 +26,7 @@ def test_function():
 
     LAss.init_experiment("rand", "RandomSearch", param_defs, minimization=True)
     LAss.init_experiment("bay", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5})
-    LAss.init_experiment("bay_mcmc", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5, "mcmc": True})
+    #LAss.init_experiment("bay_mcmc", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5, "mcmc": True})
 
     results = []
 
@@ -46,22 +46,22 @@ def test_function():
         print(to_eval)
         LAss.update("bay", to_eval)
 
-        to_eval = LAss.get_next_candidate("bay_mcmc")
-        result = branin_func(to_eval.params["x"], to_eval.params["y"])
-        results.append(result)
-        to_eval.result = result
-        print(to_eval)
-        LAss.update("bay_mcmc", to_eval)
+        #to_eval = LAss.get_next_candidate("bay_mcmc")
+        #result = branin_func(to_eval.params["x"], to_eval.params["y"])
+        #results.append(result)
+        #to_eval.result = result
+        #print(to_eval)
+        #LAss.update("bay_mcmc", to_eval)
 
     print("Best bay score:  %s" %LAss.get_best_candidate("bay").result)
     print("Best bay:  %s" %LAss.get_best_candidate("bay"))
     print("Best rand score: %s" %LAss.get_best_candidate("rand").result)
     print("Best rand:  %s" %LAss.get_best_candidate("rand"))
-    print("Best mcmc score: %s" %LAss.get_best_candidate("bay_mcmc").result)
-    print("Best mcmc:  %s" %LAss.get_best_candidate("bay_mcmc"))
+    #print("Best mcmc score: %s" %LAss.get_best_candidate("bay_mcmc").result)
+    #print("Best mcmc:  %s" %LAss.get_best_candidate("bay_mcmc"))
     #x, y, z = BAss._best_result_per_step_data()
     print(LAss.exp_assistants["rand"].experiment.to_csv_results())
-    LAss.plot_result_per_step(["rand", "bay", "bay_mcmc"], plot_at_least=0.8)
+    LAss.plot_result_per_step(["rand", "bay"], plot_min=0, plot_max=10)
 
 
 def test_boston():
@@ -109,7 +109,7 @@ def test_boston():
     print("Best bay score:  %s" %LAss.get_best_candidate("bay").result)
     print("Best rand score: %s" %LAss.get_best_candidate("rand").result)
     #x, y, z = BAss._best_result_per_step_data()
-    LAss.plot_result_per_step(["rand", "bay"], plot_at_least=1)
+    LAss.plot_result_per_step(["rand", "bay"])
 
 if __name__ == '__main__':
     #test_boston()

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import os
 
-def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1)):
+def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1), plot_min=None, plot_max=None):
     """
     Plots several functions.
 
@@ -50,17 +50,22 @@ def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1)):
     for p in to_plot_list:
         fig = plot_single(p, fig)
 
-    if (plot_at_least[0] < 1) or plot_at_least[1] < 1:
-        max_y = -float("inf")
-        min_y = float("inf")
+    if plot_min is not None:
+        plt.ylim(ymin=plot_min)
+    if plot_max is not None:
+        plt.ylim(ymax=plot_max)
 
-        for i in range(len(to_plot_list)):
-            cur_min, cur_max = _get_y_min_max(to_plot_list[i]["y"], plot_at_least)
-            if cur_min < min_y:
-                min_y = cur_min
-            if cur_max > max_y:
-                max_y = cur_max
-            plt.ylim(ymax = max_y, ymin = min_y)
+    #if (plot_at_least[0] < 1) or plot_at_least[1] < 1:
+    #    max_y = -float("inf")
+    #    min_y = float("inf")
+
+    #    for i in range(len(to_plot_list)):
+    #        cur_min, cur_max = _get_y_min_max(to_plot_list[i]["y"], plot_at_least)
+    #        if cur_min < min_y:
+    #            min_y = cur_min
+    #        if cur_max > max_y:
+    #            max_y = cur_max
+    #        plt.ylim(ymax = max_y, ymin = min_y)
 
     if newly_created:
         _polish_figure(fig, fig_options)
