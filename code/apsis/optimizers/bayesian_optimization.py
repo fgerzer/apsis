@@ -6,9 +6,11 @@ from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 from apsis.optimizers.bayesian.acquisition_functions import *
+from apsis.utilities.import_utils import import_if_exists
 import GPy
-import pymcmc as pm
 import logging
+
+mcmc_imported, pm = import_if_exists("pymcmc")
 
 class SimpleBayesianOptimizer(Optimizer):
     """
@@ -103,7 +105,10 @@ class SimpleBayesianOptimizer(Optimizer):
         self.kernel = optimizer_arguments.get("kernel", "matern52")
         self.random_searcher = RandomSearch({"random_state": self.random_state})
 
-        self.mcmc = optimizer_arguments.get("mcmc", False)
+        if mcmc_imported:
+            self.mcmc = optimizer_arguments.get("mcmc", False)
+        else:
+            self.mcmc = False
 
         self.num_precomputed = optimizer_arguments.get('num_precomputed', 10)
 
