@@ -9,6 +9,7 @@ from apsis.utilities.plot_utils import plot_lists
 import datetime
 import os
 import time
+from apsis.utilities.logging_utils import get_logger
 
 class BasicExperimentAssistant(object):
     """
@@ -35,6 +36,8 @@ class BasicExperimentAssistant(object):
     csv_write_frequency : int
         States how often the csv file should be written to.
         If set to 0 no results will be written.
+    logger : logging.logger
+        The logger for this class.
     """
 
     AVAILABLE_STATUS = ["finished", "pausing", "working"]
@@ -47,6 +50,8 @@ class BasicExperimentAssistant(object):
     experiment_directory_base = None
     csv_write_frequency = None
     csv_steps_written = 0
+
+    logger = None
 
     def __init__(self, name, optimizer, param_defs, optimizer_arguments=None,
                  minimization=True, write_directory_base="/tmp/APSIS_WRITING",
@@ -83,6 +88,8 @@ class BasicExperimentAssistant(object):
             States how often the csv file should be written to.
             If set to 0 no results will be written.
         """
+        self.logger = get_logger(self)
+        self.logger.info("Initializing experiment assistant.")
         self.optimizer = optimizer
         self.optimizer_arguments = optimizer_arguments
         self.experiment = Experiment(name, param_defs, minimization)
@@ -96,6 +103,7 @@ class BasicExperimentAssistant(object):
                 ensure_directory_exists(self.experiment_directory_base)
             else:
                 self._create_experiment_directory()
+        self.logger.info("Experiment assistant successfully initialized.")
 
     def get_next_candidate(self):
         """
@@ -106,12 +114,15 @@ class BasicExperimentAssistant(object):
         next_candidate : Candidate or None
             The Candidate object that should be evaluated next. May be None.
         """
+        self.logger.info("Returning next candidate.")
         self.optimizer = check_optimizer(self.optimizer,
                                 optimizer_arguments=self.optimizer_arguments)
         if not self.experiment.candidates_pending:
             self.experiment.candidates_pending.extend(
                 self.optimizer.get_next_candidates(self.experiment))
-        return self.experiment.candidates_pending.pop()
+        next_candidate = self.experiment.candidates_pending.pop()
+        self.logger.info("next candidate found: %s" %next_candidate)
+        return next_candidate
 
 
 
@@ -132,13 +143,20 @@ class BasicExperimentAssistant(object):
             - working: The Candidate is now being worked on by a worker.
 
         """
+        self.logger.info("Got new %s of candidate %s with parameters %s"
+                         " and result %s" %(status, candidate, candidate.params,
+                                            candidate.result))
         if status not in self.AVAILABLE_STATUS:
-            raise ValueError("status not in %s but %s."
+            message = ("status not in %s but %s."
                              %(str(self.AVAILABLE_STATUS), str(status)))
+            self.logger.error(message)
+            raise ValueError(message)
 
         if not isinstance(candidate, Candidate):
-            raise ValueError("candidate %s not a Candidate instance."
+            message = ("candidate %s not a Candidate instance."
                              %str(candidate))
+            self.logger.error(message)
+            raise ValueError(message)
 
         if status == "finished":
             self.experiment.add_finished(candidate)

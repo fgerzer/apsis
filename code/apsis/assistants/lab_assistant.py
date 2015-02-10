@@ -7,6 +7,7 @@ from apsis.utilities.file_utils import ensure_directory_exists
 import time
 import datetime
 import os
+from apsis.utilities.logging_utils import get_logger
 
 class BasicLabAssistant(object):
     """
@@ -21,12 +22,16 @@ class BasicLabAssistant(object):
 
     write_directory_base : String, optional
         The directory to write all the results and plots to.
+
+    logger : logging.logger
+        The logger for this class.
     """
     exp_assistants = None
 
     write_directory_base = None
     lab_run_directory = None
     global_start_date = None
+    logger = None
 
     def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
         """
@@ -38,11 +43,13 @@ class BasicLabAssistant(object):
             The directory to write all the results and plots to.
         """
         self.exp_assistants = {}
-
+        self.logger = get_logger(self)
+        self.logger.info("Initializing laboratory assistant.")
         self.write_directory_base = write_directory_base
         self.global_start_date = time.time()
 
         self._init_directory_structure()
+        self.logger.info("laboratory assistant successfully initialized.")
 
     def init_experiment(self, name, optimizer, param_defs,
                         optimizer_arguments=None, minimization=True):
@@ -67,6 +74,9 @@ class BasicLabAssistant(object):
         minimization : bool, optional
             Whether the problem is one of minimization or maximization.
         """
+        self.logger.info("Initializing new experiment \"%s\". "
+                     " Parameter definitions: %s. Minimization is %s"
+                     %(name, param_defs, minimization))
         if name in self.exp_assistants:
             raise ValueError("Already an experiment with name %s registered."
                              %name)
@@ -75,6 +85,7 @@ class BasicLabAssistant(object):
             minimization=minimization,
             write_directory_base=self.lab_run_directory,
             csv_write_frequency=1)
+        self.logger.info("Experiment initialized successfully.")
 
     def get_next_candidate(self, exp_name):
         """
