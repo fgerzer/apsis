@@ -6,7 +6,7 @@ from apsis.utilities.file_utils import ensure_directory_exists
 
 logging_intitialized = False
 
-def get_logger(name, specific_log_name=None):
+def get_logger(module, specific_log_name=None):
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     if not logging_intitialized:
         #initialize the root logger.
@@ -20,7 +20,7 @@ def get_logger(name, specific_log_name=None):
     else:
         LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
 
-    logger = logging.getLogger(name)
+    logger = logging.getLogger(module.__module__ + "." + module.__class__.__name__)
     if specific_log_name is not None:
 
         fh = logging.FileHandler(os.path.join(LOG_ROOT, specific_log_name))
