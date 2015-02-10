@@ -5,8 +5,7 @@ import logging
 from scipy.stats import multivariate_normal
 from apsis.models.parameter_definition import NumericParamDef, PositionParamDef
 import random
-import os
-from apsis.utilities.file_utils import ensure_directory_exists
+from apsis.utilities.logging_utils import get_logger
 
 class AcquisitionFunction(object):
     """
@@ -22,30 +21,11 @@ class AcquisitionFunction(object):
 
     logger = None
     params = None
-    LOG_ROOT = None
     LOG_FILE_NAME = "acquisition_functions.log"
     debug_file_handler = None
 
     def __init__(self, params=None):
-        self.logger = logging.getLogger(__name__)
-
-        self.LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
-        ensure_directory_exists(self.LOG_ROOT)
-
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        # create console handler for info logging
-        # ch = logging.StreamHandler()
-        # ch.setLevel(logging.INFO)
-        # ch.setFormatter(formatter)
-        # self.logger.addHandler(ch)
-
-        #file handler
-        fh = logging.FileHandler(os.path.join(self.LOG_ROOT, self.LOG_FILE_NAME))
-        fh.setFormatter(formatter)
-        fh.setLevel(logging.DEBUG)
-        self.debug_file_handler = fh
-        self.logger.addHandler(fh)
-
+        self.logger = get_logger(self, specific_log_name=self.LOG_FILE_NAME)
 
         self.params = params
 
@@ -54,6 +34,17 @@ class AcquisitionFunction(object):
 
     @abstractmethod
     def evaluate(self, x, gp, experiment):
+        """
+        Evaluates the gp on the point x.
+
+        Parameters
+        ----------
+        x :
+        :param x:
+        :param gp:
+        :param experiment:
+        :return:
+        """
         pass
 
     def _compute_minimizing_evaluate(self, x, gp, experiment):
@@ -125,11 +116,13 @@ class AcquisitionFunction(object):
                         or isinstance(pdef, PositionParamDef):
                     param_dict_eval[pn] = random.random()
                 else:
-                    raise TypeError("Tried using an acquisition function on "
-                                    "%s, which is an object of type %s."
-                                    "Only "
-                                    "NumericParamDef are supported."
-                                    %(str(pdef), str(type(pdef))))
+                    message = ("Tried using an acquisition function on "
+                               "%s, which is an object of type %s."
+                               "Only "
+                               "NumericParamDef are supported."
+                               %(str(pdef), str(type(pdef))))
+                    self.logger.exception(message)
+                    raise TypeError(message)
 
             score = self._compute_minimizing_evaluate(param_dict_eval, gp, experiment)
 
@@ -151,10 +144,24 @@ class AcquisitionFunction(object):
             while sum_rand < sum_acq[next_prop_idx]:
                 next_prop_idx += 1
             proposals.append(evaluated_params[next_prop_idx])
+        self.logger.info("New proposals have been calculated. They are %s"
+                         %proposals)
         return proposals
 
     def _translate_dict_vector(self, x):
-        #here we translate from dict to list format for points.
+        """
+        We translate from a dictionary to a list format for a point's params.
+
+        Parameters
+        ----------
+        x : dictionary of string keys
+            The dictionary defining the point's param values.
+
+        Returns
+        -------
+        param_to_eval : vector
+            Vector of the points' parameter values in order of key.
+        """
         param_to_eval = []
         param_names = sorted(x.keys())
         for pn in param_names:
@@ -163,11 +170,20 @@ class AcquisitionFunction(object):
         return param_to_eval
 
     def _translate_vector_dict(self, x_vector, param_names):
-        #TODO find out if this method does the right thing??
-        # do a test
+        """
+        We translate from a vector format to a dictionary of a point's params.
 
-        #translates from param vector, where order of params is assumed
-        #to be by lexicographic sorting of keys
+        Parameters
+        ----------
+        x_vector : vector
+            Vector of the points' parameter values. They are assumed to be
+             in order of key.
+
+        Returns
+        -------
+        x : dictionary of string keys
+            The dictionary defining the point's param values.
+        """
         x_dict = {}
 
         param_names_sorted = sorted(param_names)
@@ -177,6 +193,21 @@ class AcquisitionFunction(object):
         return x_dict
 
     def _translate_vector_nd_array(self, x_vec):
+        """
+        We translate from a vector of x_vec's params to a numpy nd_array.
+
+        Parameters
+        ----------
+        x_vec : vector
+            Vector of the points' parameter values. They are assumed to be
+             in order of key.
+
+        Returns
+        -------
+        param_nd_array : numpy nd_array
+            nd_array of the points' parameter values. They are assumed to be
+            in order of key.
+        """
         param_nd_array = np.zeros((1, len(x_vec)))
         for i in range(len(x_vec)):
             #print (x_vec)
@@ -216,19 +247,33 @@ class ExpectedImprovement(AcquisitionFunction):
         Changes the sign of the evaluate function.
         """
         if isinstance(x, dict):
-            value, gradient = self.evaluate(x, gp, experiment)
+            value = self.evaluate(x, gp, experiment)
         #otherwise assume vector
         else:
-            value, gradient = self._evaluate_vector(x, gp, experiment)
+            value, _ = self._evaluate_vector(x, gp, experiment)
 
-
-        #TODO should we also return the gradient?
         return -value
 
     def _compute_minimizing_gradient(self, x, gp, experiment):
         """
         Compute the gradient of EI if we want to minimize its negation
+
+        Parameters
+        ----------
+        x : dictionary or vector
+            The point for which we'd like to get the gradient.
+        gp : GPy gp
+            The process on which to evaluate the point on.
+        experiment : experiment
+            Some acquisition functions require more information about the
+            experiment.
+
+        Results
+        -------
+        min_gradient :
+
         """
+        #TODO: find format of the result
         if isinstance(x, dict):
             value, gradient = self.evaluate(x, gp, experiment)
         else:
@@ -237,6 +282,26 @@ class ExpectedImprovement(AcquisitionFunction):
         return -1 * gradient
 
     def _evaluate_vector(self, x_vec, gp, experiment):
+        """
+        Evaluates the value of the gp at the point x_vec.
+
+        Parameters
+        ----------
+        x_vec : vector
+            The vector defining the point.
+        gp : GPy gp
+            The gp on which to evaluate
+        experiment : experiment
+            Some acquisition functions require more information about the
+            experiment.
+
+        Results
+        -------
+        ei_value : vector
+            The value of this acquisition funciton on the point.
+        ei_gradient : vector
+            The value of the gradient on the point
+        """
         x_value = self._translate_vector_nd_array(x_vec)
 
         #mean, variance and their gradients
@@ -245,27 +310,19 @@ class ExpectedImprovement(AcquisitionFunction):
 
         #gpy does everythin in matrices
         gradient_mean = gradient_mean[0]
-        #for whatever reason gpy retorns the variance gradient as row vector?!?!?
+        #gpy returns variance in row matrices.
         gradient_variance = np.transpose(gradient_variance)
-
-        # print("gradient_meam")
-        # print(gradient_mean)
-        # print("gradient_var transposed")
-        # print(gradient_variance)
 
         #these values should be real scalars!
         mean = mean[0][0]
         variance = variance[0][0]
 
-        #See issue #32 on github. using the variance works better than std_dev.
         std_dev = variance ** 0.5
 
         #Formula adopted from the phd thesis of Jasper Snoek page 48 with
         # \gamma equals Z here
-
         #Additionally support for the exploration exploitation trade-off
         #as suggested by Brochu et al.
-        #Z = (f(x_max) - \mu(x)) / (\sigma(x))
         x_best = experiment.best_candidate.result
 
         #handle case of maximization
@@ -292,32 +349,36 @@ class ExpectedImprovement(AcquisitionFunction):
             ei_gradient_scalar_left = (1/(2*variance)) * (ei_value - z * cdf_z)
             ei_gradient = ei_gradient_scalar_left * gradient_variance - (1/std_dev) * gradient_mean
 
-        # print("ei")
-        # print(ei_value)
         ei_gradient = np.transpose(ei_gradient)[0]
-        #ei_gradient = [ei_gradient]
-        # print("gradient")
-        # print(ei_gradient)
-
         return ei_value, ei_gradient
 
     def _evaluate_vector_gradient(self, x_vec, gp, experiment):
         """
-        Only used to check the gradient
+        Evaluates the gradoemt of the gp at the point x_vec.
+
+        Parameters
+        ----------
+        x_vec : vector
+            The vector defining the point.
+        gp : GPy gp
+            The gp on which to evaluate
+        experiment : experiment
+            Some acquisition functions require more information about the
+            experiment.
+
+        Results
+        -------
+        gradient : vector
+            The value of the gradient on the point
         """
         value, grad = self._evaluate_vector(x_vec, gp, experiment)
 
         return grad
 
     def evaluate(self, x, gp, experiment):
-        """
-        TODO commenting
-
-        TODO gradient only correct for maximization
-        """
         x_value = self._translate_dict_vector(x)
-
-        return self._evaluate_vector(x_value, gp, experiment)
+        value, gradient = self._evaluate_vector(x_value, gp, experiment)
+        return value
 
 
     def compute_proposals(self, gp, experiment, number_proposals=1,
@@ -331,30 +392,22 @@ class ExpectedImprovement(AcquisitionFunction):
             return random_proposals
 
         #we have only one else case here, where we use bfgs at the moment,
-        #therefor no else right now for readability.
+        #therefore no else right now for readability.
 
         #do a scipy minimize, use bfgs since we only have gradient, no hessian
         #initial guess is the best found by random search
         initial_guess = self._translate_dict_vector(random_proposals[0])
-        #print initial_guess
-
-        # x_min, f_min, g_opt, num_f_steps, num_grad_steps, warnflag = \
-        #     scipy.optimize.fmin_bfgs(f=self._compute_minimizing_evaluate,
-        # x0=initial_guess, fprime=self._compute_minimizing_gradient,
-        # args=tuple([gp, experiment]), retall=False)
 
         result = scipy.optimize.minimize(self._compute_minimizing_evaluate,
                                          x0=initial_guess, method='BFGS',
                                          jac=self._compute_minimizing_gradient,
                                          options={'disp': True}, args=tuple([gp, experiment]))
         x_min = result.x
-        #print x_min
         f_min = result.fun
         num_f_steps = result.nfev
         num_grad_steps = result.njev
         success = result.success
 
-        self.logger.setLevel(level=logging.DEBUG)
         self.logger.debug("BFGS EI Optimization finished.")
         self.logger.debug("\tx_min: " + str(x_min))
         self.logger.debug("\tf_min: " + str(f_min))
