@@ -7,6 +7,32 @@ from apsis.utilities.file_utils import ensure_directory_exists
 logging_intitialized = False
 
 def get_logger(module, specific_log_name=None):
+    """
+    Abstraction from logging.getLogging, which also adds initialization.
+
+    Logging is configured directly at root level (in the standard usecase, at
+    least). You also have the opportunity to specify a certain directory to
+    which details of only this logger (and all subloggers) are written.
+
+    Currently, nothing is configurable from the outside. This is planned to be
+    changed.
+
+    Parameters
+    ----------
+    module : object
+        The object for which we'd like to get the logger. The name of the
+        logger is then, analogous to logging, set to
+        module.__module__ + "." + module.__class__.__name__
+    specific_log_name : string, optional
+        If you want logging for this logger (and all sublogger) to a specific
+        file, this allows you to set the corresponding filename.
+
+    Returns
+    -------
+    logger: logging.logger
+        A logging for module.
+    """
+
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     if not logging_intitialized:
         #initialize the root logger.
