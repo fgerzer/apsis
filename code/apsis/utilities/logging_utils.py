@@ -34,7 +34,10 @@ def get_logger(module, specific_log_name=None):
     """
 
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    new_logger_name = module.__module__ + "." + module.__class__.__name__
+    global logging_intitialized
     if not logging_intitialized:
+        logging_intitialized = True
         #initialize the root logger.
         root_logger = logging.getLogger()
         LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
@@ -46,8 +49,11 @@ def get_logger(module, specific_log_name=None):
     else:
         LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
 
-    logger = logging.getLogger(module.__module__ + "." + module.__class__.__name__)
-    if specific_log_name is not None:
+    logger_existed = False
+    if new_logger_name in logging.Logger.manager.loggerDict:
+        logger_existed = True
+    logger = logging.getLogger(new_logger_name)
+    if specific_log_name is not None and not logger_existed:
 
         fh = logging.FileHandler(os.path.join(LOG_ROOT, specific_log_name))
         fh.setFormatter(formatter)
