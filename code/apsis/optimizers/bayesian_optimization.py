@@ -17,31 +17,30 @@ class SimpleBayesianOptimizer(Optimizer):
     This implements a simple bayesian optimizer.
 
     It is simple because it only implements the simplest form - no freeze-thaw,
-    (currently) now multiple workers, only numeric parameters.
+    (currently) no multiple workers, only numeric parameters.
 
     Attributes
     ----------
-    SUPPORTED_PARAM_TYPES: list of ParamDefs
+    SUPPORTED_PARAM_TYPES : list of ParamDefs
         The supported parameter types. Currently only numberic and position.
-    kernel: GPy Kernel
-        The Kernel to be used with the gp. Note that this is currently not
-        possible to be set from the outside.
-    acquisition_function: acquisition_function
+    kernel : GPy Kernel
+        The Kernel to be used with the gp.
+    acquisition_function : acquisition_function
         The acquisition function to use
-    acquisition_hyperparams:
+    acquisition_hyperparams :
         The acquisition hyperparameters.
-    random_state: scipy random_state or int.
+    random_state : scipy random_state or int.
         The scipy random state or object to initialize one. For reproduction.
-    random_searcher: RandomSearch
+    random_searcher : RandomSearch
         The random search instance used to generate the first
         initial_random_runs candidates.
-    gp: GPy gaussian process
+    gp : GPy gaussian process
         The gaussian process used here.
-    initial_random_runs=10: int
-        The number of initial random runs before using the GP.
-    num_gp_restarts=10: int
+    initial_random_runs : int
+        The number of initial random runs before using the GP. Default is 10.
+    num_gp_restarts : int
         GPy's optimization requires restarts to find a good solution. This
-        parameter controls this.
+        parameter controls this. Default is 10.
     logger: logger
         The logger instance for this object.
     """
@@ -60,6 +59,8 @@ class SimpleBayesianOptimizer(Optimizer):
     initial_random_runs = 10
     num_gp_restarts = 10
 
+    num_precomputed = None
+
     logger = None
 
     def __init__(self, optimizer_arguments=None):
@@ -70,23 +71,23 @@ class SimpleBayesianOptimizer(Optimizer):
         ----------
         optimizer_arguments: dict of string keys
             Sets the possible arguments for this optimizer. Available are:
-            "initial_random_runs"=10: int
-                initial_random_runs=10: int
-                The number of initial random runs before using the GP.
-            "random_state"=None: scipy random state
-                The scipy random state or object to initialize one.
-                For reproduction.
-            "acquisition_hyperparameters"=None: dict
+            "initial_random_runs" : int, optional
+                The number of initial random runs before using the GP. Default
+                is 10.
+            "random_state" : scipy random state, optional
+                The scipy random state or object to initialize one. Default is
+                None.
+            "acquisition_hyperparameters" : dict, optional
                 dictionary of acquisition-function hyperparameters
-            "num_gp_restarts"=10: int
-                GPy's optimization requires restarts to find a good solution. This
-                parameter controls this.
-            "acquisition"=ExpectedImprovement: AcquisitionFunction
-                The acquisition function to use.
-            "num_precomputed"=10
-
-        :param optimizer_arguments:
-        :return:
+            "num_gp_restarts" : int
+                GPy's optimization requires restarts to find a good solution.
+                This parameter controls this. Default is 10.
+            "acquisition" : AcquisitionFunction
+                The acquisition function to use. Default is
+                ExpectedImprovement.
+            "num_precomputed" : int
+                The number of points that should be kept precomputed for faster
+                multiple workers.
         """
         self.logger = logging.getLogger(__name__)
         if optimizer_arguments is None:
@@ -111,6 +112,7 @@ class SimpleBayesianOptimizer(Optimizer):
             self.mcmc = False
 
         self.num_precomputed = optimizer_arguments.get('num_precomputed', 10)
+        self.logger.info("Bayesian optimization initialized.")
 
     def get_next_candidates(self, experiment):
 
@@ -122,10 +124,10 @@ class SimpleBayesianOptimizer(Optimizer):
         #TODO refitted must be set, too.
         candidates = []
         new_candidate_points = self.acquisition_function.compute_proposals(
-            self.gp, experiment, number_proposals=1, random_steps=1000)
+            self.gp, experiment, number_proposals=self.num_gp_restarts,
+            random_steps=1000)
 
         for point in new_candidate_points:
-
             point_candidate = Candidate(experiment.warp_pt_out(point))
             candidates.append(point_candidate)
         return candidates
@@ -133,12 +135,21 @@ class SimpleBayesianOptimizer(Optimizer):
 
 
     def _refit(self, experiment):
+        """
+        Refits the GP with the data from experiment.
+
+        Parameters
+        ----------
+        experiment : experiment
+            The experiment on which to refit this gp.
+        """
         candidate_matrix = np.zeros((len(experiment.candidates_finished),
                                      len(experiment.parameter_definitions)))
         results_vector = np.zeros((len(experiment.candidates_finished), 1))
 
         param_names = sorted(experiment.parameter_definitions.keys())
-        self.kernel = self._check_kernel(self.kernel, len(param_names), kernel_params=self.kernel_params)
+        self.kernel = self._check_kernel(self.kernel, len(param_names),
+                                         kernel_params=self.kernel_params)
         for i, c in enumerate(experiment.candidates_finished):
             warped_in = experiment.warp_pt_in(c.params)
             param_values = []
@@ -147,18 +158,21 @@ class SimpleBayesianOptimizer(Optimizer):
             candidate_matrix[i, :] = param_values
             results_vector[i] = c.result
 
-        self.logger.debug("Refitting gp with cand %s and results %s" %(candidate_matrix, results_vector))
-        self.gp = GPy.models.GPRegression(candidate_matrix, results_vector, self.kernel)
-        if self.mcmc:
+        self.logger.debug("Refitting gp with cand %s and results %s"
+                          %(candidate_matrix, results_vector))
+        self.gp = GPy.models.GPRegression(candidate_matrix, results_vector,
+                                          self.kernel)
 
+
+        if self.mcmc:
             proposal = pm.MALAProposal(dt=1.)
             mcmc = pm.MetropolisHastings(self.gp, proposal=proposal,
-            db_filename='apsis.h5')
+                                db_filename='apsis.h5')
 
             mcmc.sample(100000, # Number of MCMC steps
-            num_thin=100, # Number of steps to skip
-            num_burn=1000, # Number of steps to burn initially
-            verbose=True)
+                        num_thin=100, # Number of steps to skip
+                        num_burn=1000, # Number of steps to burn initially
+                        verbose=True)
 
         else:
             self.gp.constrain_positive("*")
@@ -166,9 +180,28 @@ class SimpleBayesianOptimizer(Optimizer):
             self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,
                                   verbose=False)
 
-        print(self.gp)
 
     def _check_kernel(self, kernel, dimension, kernel_params):
+        """
+        Checks and initializes a kernel.
+
+        Parameters
+        ----------
+        kernel : kernel or string representation
+            The kernel to use. If a kernel, is returned like that. If not, a
+            new kernel is initialized with the respective parameters.
+        dimension : int
+            The dimensions of the new kernel.
+        kernel_params : dict
+            The dictionary of kernel parameters. Currently supported:
+            "ARD" : bool, optional
+                Whether to use ARD. Default is True.
+
+        Returns
+        -------
+        kernel : GPy.kern
+            A GPy kernel.
+        """
         if (isinstance(kernel, GPy.kern.Kern)):
             return kernel
         translation_dict = {
