@@ -19,7 +19,7 @@ class Optimizer(object):
 
         Parameters
         ----------
-        optimizer_arguments: dict
+        optimizer_arguments : dict
             The parameters for the optimization. Depending on the optimizer,
             different arguments are needed.
         """
@@ -34,12 +34,12 @@ class Optimizer(object):
         but it will provide at least one.
         Parameters
         ----------
-        experiment: Experiment
+        experiment : Experiment
             The experiment to form the base of the next candidate.
 
         Returns
         -------
-        next_candidate: list of Candidate
+        next_candidate : list of Candidate
             The Candidate to next evaluate.
         """
         pass
@@ -51,11 +51,12 @@ class Optimizer(object):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment : Experiment
             The experiment to test.
 
-        Returns:
-        supported: bool
+        Returns
+        -------
+        supported : bool
             False iff one or more of experiment's parameter definitions are not
             supported.
         """
@@ -70,12 +71,12 @@ class Optimizer(object):
 
         Parameters
         ----------
-        param:
+        param :
             The parameter to be tested
 
         Result
         ------
-        is_supported: bool
+        is_supported : bool
             True iff param is supported by this optimizer.
         """
         if isinstance(self.SUPPORTED_PARAM_TYPES, list):
