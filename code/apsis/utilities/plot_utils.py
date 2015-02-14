@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import random
 import os
 
-def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1), plot_min=None, plot_max=None):
+def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1),
+               plot_min=None, plot_max=None):
     """
     Plots several functions.
 
@@ -37,6 +38,13 @@ def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1), p
             x label for the figure
         "y_label"="": string
             y label for the figure
+    plot_at_least : 2-float tuple, optional
+        How many percent of the values should be displayed, from above and from
+        below.
+    plot_min : float, optional
+        Plot from this value.
+    plot_max : float, optional
+        Plot up to this value.
 
     Returns
     -------
@@ -73,6 +81,25 @@ def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1), p
     return fig
 
 def _get_y_min_max(y, plot_at_least):
+    """
+    Returns the maximum / minimum values which should be plotted according to
+    plot_at_least.
+
+    Parameters
+    ----------
+    y : list of floats
+        The y values in question.
+
+    plot_at_least : 2-tuple of floats
+        The (from_below, from_above) percentage of points to show.
+
+    Returns
+    -------
+    min_y_new : float
+        The new minimum y value.
+    max_y_new : float
+        The new maximum y value.
+    """
     sorted_y = sorted(y)
     max_y_new = sorted_y[min(len(sorted_y)-1, int(plot_at_least[1] * len(sorted_y)))]
     min_y_new = sorted_y[int(plot_at_least[0] * (1-len(sorted_y)))]
@@ -89,35 +116,36 @@ def plot_single(to_plot, fig=None, fig_options=None):
 
     Parameters
     ----------
-    to_plot: dict
+    to_plot : dict
         Defines the function to plot. Must contain at least values for "x" and
         "y", and can contain values for "type", "label" and "color".
-        x: list
+        x : list
             A list of x values
-        y: list
+        y : list
             A list of y values
-        type="line": string
+        type : string, optional
             Either "line", in which case a line will be plotted, or "scatter",
-            in which case a scatter plot will be made.
-        label="": string
+            in which case a scatter plot will be made. Default is "line".
+        label : string, optional
             The label for the function.
-        color=random colour: string
+        color : string, optional
             Which color the plot should have.
-    fig=None: pyplot.figure
+    fig : pyplot.figure, optional
         A plot to continue, or None in which case a new plot is made using
         fig_options.
-    fig_options=None: dict
+    fig_options : dict, optional
         Options used when creating a new plot.
-        "legend_loc"="upper right": string
+        "legend_loc" : string, optional
             Location for the legend.
-        "x_label"="": string
+            Default is "upper right"
+        "x_label" : string, optional
             x label for the figure
-        "y_label"="": string
+        "y_label" : string, optional
             y label for the figure
 
     Returns
     -------
-    fig: plt.figure
+    fig : plt.figure
         Either a new figure or fig, now containing the plots as specified.
     """
     newly_created = False
@@ -147,16 +175,16 @@ def write_plot_to_file(fig, filename, store_path,  file_format="png", transparen
 
     Parameters
     ----------
-    fig: matplotlib.figure
+    fig : matplotlib.figure
         The figure object to store.
-    filename: string or os.path
+    filename : string or os.path
         A string or path can be given here to specify where
         the plot is written to. All parent directories have to exist!
-    file_format="png": string
+    file_format : string, optional
         Specifies file format of plot - all supported file formats
-        by matplotlib can be given here.
-    transparent=False: boolean
-        Specifies if a transparent figure is written
+        by matplotlib can be given here. Default is "png"
+    transparent : boolean, optional
+        Specifies if a transparent figure is written. Default is False.
     """
     filename_w_extension = os.path.join(store_path, filename + "." + file_format)
     fig.savefig(filename_w_extension, format=file_format, transparent=transparent)
@@ -169,18 +197,18 @@ def _create_figure(fig_options=None):
 
     Parameters
     ----------
-    fig_options=None: dict
+    fig_options : dict, optional
         Options used when creating a new plot.
-        "x_label"="": string
+        "x_label" : string, optional
             x label for the figure
-        "y_label"="": string
+        "y_label" : string, optional
             y label for the figure
-        "title"="": string
+        "title" : string, optional
             The title for the figure.
 
     Returns
     -------
-    fig: plt.figure
+    fig : plt.figure
         A new figure with the options as specified in fig_options.
     """
     if fig_options is None:
@@ -195,10 +223,14 @@ def _polish_figure(fig, fig_options=None):
     """
     Polishes a finished figure.
 
-    fig_options=None: dict
-        Options used.
-        "legend_loc"="upper right": string
-            Location for the legend.
+    Parameters
+    ----------
+    fig : figure
+        The figure to polish
+    fig_options : dict, optional
+        Options to be applied after the figure has been created. Supported:
+        "legend_loc" : string
+            Location for the legend. Default is "upper right"
     """
     plt.figure(fig.number)
     if fig_options is None:

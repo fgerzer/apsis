@@ -17,11 +17,11 @@ def check_optimizer(optimizer, optimizer_arguments=None):
 
     Parameters
     ----------
-    optimizer: Optimizer or String
+    optimizer : Optimizer or String
         The optimizer - or string representing it - to return.
-    optimizer_arguments: dict or None:
+    optimizer_arguments : dict or None, optional
         The parameters for the optimizer. Will not be used if optimizer is
-        already an optimizer
+        already an Optimizer.
 
     Returns
     -------

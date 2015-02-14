@@ -1,4 +1,6 @@
-import logging
+from apsis.utilities.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 def import_if_exists(module_name):
     """
@@ -7,17 +9,20 @@ def import_if_exists(module_name):
 
     Parameters
     ----------
-    module_name: String
+    module_name : String
      The name of the module to be imported.
 
     Returns
     --------
-    A boolean if the module was successfully imported.
+    success : True
+        Whether the module was successfully imported.
+    module : module or None
+        Returns the imported module iff successful, otherwise returns None.
     """
     try:
         module = __import__(module_name)
     except ImportError:
-        logging.warning("Module " + str(module_name) +
+        logger.warning("Module " + str(module_name) +
                         " could not be imported as it could not be found.")
         return False, None
     else:
