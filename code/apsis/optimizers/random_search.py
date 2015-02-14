@@ -11,7 +11,7 @@ class RandomSearch(Optimizer):
 
     Attributes
     ----------
-    random_state: None, int or random_state
+    random_state : None, int or random_state
         The random_state used to generate random numbers.
     """
 
@@ -25,10 +25,10 @@ class RandomSearch(Optimizer):
 
         Parameters
         ----------
-        optimizer_arguments=None: dict or None
+        optimizer_arguments : dict or None, optional
             A dictionary of parameters for the optimizer. The following keys
             are used:
-            "random_state"=None: random_state, None or int
+            "random_state" : random_state, None or int, optional
                 A numpy random_state (after which it is modelled). Can be used
                 for repeatability.
         """
@@ -49,7 +49,7 @@ class RandomSearch(Optimizer):
 
         Parameters
         ----------
-        param_def: ParamDef
+        param_def : ParamDef
             The parameter definition from which to choose one at random. The
             following may happen:
             NumericParamDef: warps_out a uniform 0-1 chosen value.
