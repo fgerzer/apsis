@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import os
 
-def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1),
+def plot_lists(to_plot_list, fig=None, fig_options=None,
                plot_min=None, plot_max=None):
     """
     Plots several functions.
