@@ -51,7 +51,8 @@ class TestAcquisition(object):
 
         LAss.init_experiment("rand", "RandomSearch", param_defs, minimization=True)
         LAss.init_experiment("bay_rand", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5, "mcmc": False, "acquisition_hyperparams":{"optimization": "random"}})
-        LAss.init_experiment("bay_bfgs", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5, "mcmc": False, "acquisition_hyperparams":{"optimization": "bfgs"}} )
+        LAss.init_experiment("bay_bfgs", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5, "mcmc": False, "acquisition_hyperparams":{"optimization": "BFGS"}} )
+        LAss.init_experiment("bay_NelderMead", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5, "mcmc": False, "acquisition_hyperparams":{"optimization": "Nelder-Mead"}} )
 
         results = []
 
@@ -78,14 +79,23 @@ class TestAcquisition(object):
             print(to_eval)
             LAss.update("bay_bfgs", to_eval)
 
+            to_eval = LAss.get_next_candidate("bay_NelderMead")
+            result = branin_func(to_eval.params["x"], to_eval.params["y"])
+            results.append(result)
+            to_eval.result = result
+            print(to_eval)
+            LAss.update("bay_NelderMead", to_eval)
+
         print("Best rand score: %s" %LAss.get_best_candidate("rand").result)
         print("Best rand:  %s" %LAss.get_best_candidate("rand"))
         print("Best bay_rand:  %s" %LAss.get_best_candidate("bay_rand").result)
         print("Best bay_rand:  %s" %LAss.get_best_candidate("bay_rand"))
         print("Best bay_bfgs score: %s" %LAss.get_best_candidate("bay_bfgs").result)
         print("Best bay_bfgs:  %s" %LAss.get_best_candidate("bay_bfgs"))
+        print("Best bay_NelderMead score: %s" %LAss.get_best_candidate("bay_NelderMead").result)
+        print("Best bay_NelderMead:  %s" %LAss.get_best_candidate("bay_NelderMead"))
         #x, y, z = BAss._best_result_per_step_data()
-        LAss.plot_result_per_step(["rand", "bay_rand", "bay_bfgs"], plot_at_least=1)
+        LAss.plot_result_per_step(["rand", "bay_rand", "bay_bfgs", "bay_NelderMead"], plot_at_least=1)
 
         real_min = 0.397887
         #check for real min: LAss.get_best_candidate("bay_rand").result

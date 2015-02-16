@@ -75,7 +75,7 @@ def evaluate_on_mnist(percentage=1.):
 
     LAss.init_experiment("random_mnist", "RandomSearch", param_defs, minimization=False)
     LAss.init_experiment("bay_mnist_ei_rand", "BayOpt", param_defs, minimization=False)
-    LAss.init_experiment("bay_mnist_ei_bfgs", "BayOpt", param_defs, minimization=False, optimizer_arguments={"acquisition_hyperparams":{"optimization": "bfgs"}})
+    LAss.init_experiment("bay_mnist_ei_bfgs", "BayOpt", param_defs, minimization=False, optimizer_arguments={"acquisition_hyperparams":{"optimization": "BFGS"}})
 
 
     steps = 50
