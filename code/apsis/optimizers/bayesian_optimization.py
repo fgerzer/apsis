@@ -127,8 +127,9 @@ class SimpleBayesianOptimizer(Optimizer):
             self.gp, experiment, number_proposals=self.num_gp_restarts,
             random_steps=1000)
 
-        for point in new_candidate_points:
-            point_candidate = Candidate(experiment.warp_pt_out(point))
+        for point_and_value in new_candidate_points:
+            #get the the candidate point which is the first entry in the tuple.
+            point_candidate = Candidate(experiment.warp_pt_out(point_and_value[0]))
             candidates.append(point_candidate)
         return candidates
 

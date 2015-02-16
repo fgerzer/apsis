@@ -91,8 +91,11 @@ class AcquisitionFunction(object):
 
         Returns
         -------
-        proposals: list of Candidates
-            The list of proposals to try next. The first proposal in that list
+        proposals: list of tuples of (Candidate, float)
+            The list of proposals to try next. It will be a list of
+            tuples where the first entry is the candidate object and the second
+            is the acquisition function value for this candidate.
+            The first proposal in that list
             will always be the one maximizing the acquisition function,
             followed by an unordered list of points.
         """
@@ -137,13 +140,13 @@ class AcquisitionFunction(object):
                 sum_acq.append(score)
 
         proposals = []
-        proposals.append(evaluated_params[best_param_idx])
+        proposals.append((evaluated_params[best_param_idx], evaluated_acq_scores[best_param_idx]))
         while len(proposals) < number_proposals:
             next_prop_idx = 0
             sum_rand = random.uniform(0, sum_acq[-1])
             while sum_rand < sum_acq[next_prop_idx]:
                 next_prop_idx += 1
-            proposals.append(evaluated_params[next_prop_idx])
+            proposals.append((evaluated_params[next_prop_idx], evaluated_acq_scores[next_prop_idx]))
         self.logger.info("New proposals have been calculated. They are %s"
                          %proposals)
         return proposals
@@ -356,7 +359,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
     def _evaluate_vector_gradient(self, x_vec, gp, experiment):
         """
-        Evaluates the gradoemt of the gp at the point x_vec.
+        Evaluates the gradient of the gp at the point x_vec.
 
         Parameters
         ----------
@@ -384,7 +387,13 @@ class ExpectedImprovement(AcquisitionFunction):
 
 
     def compute_proposals(self, gp, experiment, number_proposals=1,
-                          random_steps=1000):
+                          random_steps=1000, random_restarts=10):
+        param_names = experiment.parameter_definitions.keys()
+
+        #for bfgs random restarts we need to ensure having enough random
+        #samples for initial guesses
+        number_proposals = max(number_proposals, random_restarts)
+
         random_proposals = super(ExpectedImprovement, self).compute_proposals(
             gp=gp, experiment=experiment, number_proposals=number_proposals,
             random_steps=random_steps)
@@ -398,46 +407,62 @@ class ExpectedImprovement(AcquisitionFunction):
 
         #do a scipy minimize, use bfgs since we only have gradient, no hessian
         #initial guess is the best found by random search
-        initial_guess = self._translate_dict_vector(random_proposals[0])
 
-        result = scipy.optimize.minimize(self._compute_minimizing_evaluate,
-                                         x0=initial_guess, method='BFGS',
-                                         jac=self._compute_minimizing_gradient,
-                                         options={'disp': True}, args=tuple([gp, experiment]))
-        x_min = result.x
-        f_min = result.fun
-        num_f_steps = result.nfev
-        num_grad_steps = result.njev
-        success = result.success
+        #stores tuples (x_min, f_min) from the loop of random restarts
+        bfgs_results = []
+        for i in range(10):
+            initial_guess = self._translate_dict_vector(random_proposals[i][0])
 
-        #Extensive Debug Logging to Debug Acquisition Optimization
-        #self.logger.level=logging.DEBUG
-        self.logger.debug("BFGS EI Optimization finished.")
-        self.logger.debug("\tx_min: " + str(x_min))
-        self.logger.debug("\tf_min: " + str(f_min))
-        self.logger.debug("\tNum f evaluations: " + str(num_f_steps))
-        self.logger.debug("\tNum grad(f) evaluations: " + str(num_grad_steps))
-        self.logger.debug("RandomSearch")
-        if self.logger.level == logging.DEBUG:
-            rand_f_min = self._compute_minimizing_evaluate(random_proposals[0], gp, experiment)
-            self.logger.debug("\tx_min " + str(random_proposals[0]))
-            self.logger.debug("\tf_min " + str(rand_f_min))
+            result = scipy.optimize.minimize(self._compute_minimizing_evaluate,
+                                             x0=initial_guess, method='BFGS',
+                                             jac=self._compute_minimizing_gradient,
+                                             options={'disp': True}, args=tuple([gp, experiment]))
+            x_min = result.x
+            f_min = result.fun
+            num_f_steps = result.nfev
+            num_grad_steps = result.njev
+            success = result.success
 
-        #deal with result, eventually take random then
-        #when using scipy.optimize.minimize use the success flag
-        if not success:
-            self.logger.warning("BFGS Optimization failed. Using result from RandomSearch.")
+            #Extensive Debug Logging to Debug Acquisition Optimization
+            self.logger.debug("BFGS EI Optimization finished.")
+            self.logger.debug("\tx_min: " + str(x_min))
+            self.logger.debug("\tf_min: " + str(f_min))
+            self.logger.debug("\tNum f evaluations: " + str(num_f_steps))
+            self.logger.debug("\tNum grad(f) evaluations: " + str(num_grad_steps))
+            self.logger.debug("RandomSearch")
+            if self.logger.level == logging.DEBUG:
+                self.logger.debug("\tx_min " + str(random_proposals[i][0]))
+                self.logger.debug("\tf_min " + str(random_proposals[i][1]))
 
+            #find out if we want to keep the result
+            #when using scipy.optimize.minimize use the success flag
+            if success:
+                x_min_dict = self._translate_vector_dict(x_min, param_names)
+                bfgs_results.append((x_min_dict, f_min))
+            else:
+                self.logger.debug("BFGS Optimization failed (random iteration: "
+                                + str(i) + ". Using result from RandomSearch.")
+
+
+        #if there was no success at all give a warning
+        if len(bfgs_results) == 0:
+            self.logger.warning("BFGS Optimization failed. Using results from RandomSearch.")
+
+            return random_proposals
+        #otherwise merge the scipy.optimize results with the random ones
         else:
-            #remove the last entry from random_proposals and add the new one at
-            #first place
-            del random_proposals[-1]
-            param_names = experiment.parameter_definitions.keys()
-            x_min_dict = self._translate_vector_dict(x_min, param_names)
+            #add the random proposals to the bfgs result
+            bfgs_results.extend(random_proposals)
 
-            random_proposals.insert(0, x_min_dict)
+            #sort them to get the best points
+            bfgs_results.sort(key=lambda x: x[1])
 
-        return random_proposals
+            self.logger.debug("SORTED EI RESULTS by EI VALUE ASC")
+            for i in range(len(bfgs_results)):
+                self.logger.debug(bfgs_results[i])
+
+            return bfgs_results
+
 
 
 class ProbabilityOfImprovement(AcquisitionFunction):
