@@ -344,12 +344,14 @@ class ExpectedImprovement(AcquisitionFunction):
             ei_value = z_numerator * cdf_z + std_dev * pdf_z
 
             #compute ei gradient
-            #following the formula in http://members.unine.ch/david.ginsbourger/recherche/these/compile_chap4.pdf
-            #page 16 (in French)
-            ei_gradient_scalar_left = (1/(2*variance)) * (ei_value - z * cdf_z)
-            ei_gradient = ei_gradient_scalar_left * gradient_variance - (1/std_dev) * gradient_mean
+            #new implementation based on own derivation
+            ei_gradient_part1 = (1/(2*variance)) * ei_value * gradient_variance
+            ei_gradient_part2 = -1 * sign * gradient_mean * cdf_z
+            ei_gradient_part3 = -1 * gradient_variance * cdf_z * z * (1/(2*std_dev))
+            ei_gradient = ei_gradient_part1 + ei_gradient_part2 + ei_gradient_part3
 
-        ei_gradient = np.transpose(ei_gradient)[0]
+            ei_gradient = np.transpose(ei_gradient)[0]
+
         return ei_value, ei_gradient
 
     def _evaluate_vector_gradient(self, x_vec, gp, experiment):
@@ -408,6 +410,8 @@ class ExpectedImprovement(AcquisitionFunction):
         num_grad_steps = result.njev
         success = result.success
 
+        #Extensive Debug Logging to Debug Acquisition Optimization
+        #self.logger.level=logging.DEBUG
         self.logger.debug("BFGS EI Optimization finished.")
         self.logger.debug("\tx_min: " + str(x_min))
         self.logger.debug("\tf_min: " + str(f_min))
