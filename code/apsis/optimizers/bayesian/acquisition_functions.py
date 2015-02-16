@@ -415,7 +415,7 @@ class ExpectedImprovement(AcquisitionFunction):
                 result = scipy.optimize.minimize(self._compute_minimizing_evaluate,
                                                  x0=initial_guess, method=optimizer,
                                                  jac=self._compute_minimizing_gradient,
-                                                 options={'disp': True},
+                                                 options={'disp': False},
                                                  args=tuple([gp, experiment]))
 
                 #track results
