@@ -23,6 +23,8 @@ def get_logger(module, specific_log_name=None):
         The object for which we'd like to get the logger. The name of the
         logger is then, analogous to logging, set to
         module.__module__ + "." + module.__class__.__name__
+
+        If the object is a string it will be taken as name directly.
     specific_log_name : string, optional
         If you want logging for this logger (and all sublogger) to a specific
         file, this allows you to set the corresponding filename.
@@ -33,8 +35,14 @@ def get_logger(module, specific_log_name=None):
         A logging for module.
     """
 
+    #if logger is already given as a string take directly. otherwise compute.
+    if isinstance(module, basestring):
+        new_logger_name = module
+    else:
+        new_logger_name = module.__module__ + "." + module.__class__.__name__
+
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    new_logger_name = module.__module__ + "." + module.__class__.__name__
+
     global logging_intitialized
     if not logging_intitialized:
         logging_intitialized = True
