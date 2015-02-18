@@ -13,8 +13,8 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
-   ./tutorials/base
+
+   ./tutorials/usage/usage
    ./tutorials/installation
    design
    modules

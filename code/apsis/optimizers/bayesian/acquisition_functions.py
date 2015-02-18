@@ -487,9 +487,9 @@ class ProbabilityOfImprovement(AcquisitionFunction):
         """
         Evaluates the function.
         """
-
         dimensions = len(experiment.parameter_definitions)
-        x_value = self._translate_dict_vector(x)
+        x_value_vector = self._translate_dict_vector(x)
+        x_value = self._translate_vector_nd_array(x_value_vector)
 
         mean, variance = gp.predict(x_value)
 
