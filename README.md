@@ -14,3 +14,7 @@ State
 -----
 
 We currently are in a pre-alpha version. That is, functionality is still highly limited, and documentation very much lacking.
+
+Documentation
+
+Check out our docs that are hosted at [apsis.readthedocs.org](http://apsis.readthedocs.org)
