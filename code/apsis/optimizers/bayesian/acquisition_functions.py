@@ -24,6 +24,8 @@ class AcquisitionFunction(object):
     LOG_FILE_NAME = "acquisition_functions.log"
     debug_file_handler = None
 
+    optimization_random_steps = 1000
+
     def __init__(self, params=None):
         self.logger = get_logger(self, specific_log_name=self.LOG_FILE_NAME)
 
@@ -31,6 +33,9 @@ class AcquisitionFunction(object):
 
         if self.params is None:
             self.params = {}
+
+        self.optimization_random_steps = self.params.get(
+            "optimization_random_steps", 1000)
 
     @abstractmethod
     def evaluate(self, x, gp, experiment):
@@ -63,8 +68,7 @@ class AcquisitionFunction(object):
         value = self.evaluate(x, gp, experiment)
         return value
 
-    def compute_proposals(self, gp, experiment, number_proposals=1,
-                          random_steps=1000):
+    def compute_proposals(self, gp, experiment, number_proposals=1):
         """
         This computes a number of proposals for candidates next to evaluate.
 
@@ -73,6 +77,9 @@ class AcquisitionFunction(object):
          acquisition function value.
 
         Optimization over the acquisition function is done via random search.
+        You can set the parameter optimization_random_steps of this class
+        to specify how many iterations of random search will be carried out.
+        Defaults to 1000.
 
         Parameters
         ----------
@@ -84,10 +91,6 @@ class AcquisitionFunction(object):
 
         number_proposals=1: int
             The number of proposals to return.
-
-        random_steps=1000: int
-            The number of random steps to try out. Must be greater than
-            number_proposals, ideally much greater.
 
         Returns
         -------
@@ -109,7 +112,7 @@ class AcquisitionFunction(object):
 
         param_names = sorted(param_defs.keys())
 
-        random_steps = max(random_steps, number_proposals)
+        random_steps = max(self.optimization_random_steps, number_proposals)
 
         for i in range(random_steps):
             param_dict_eval = {}
@@ -227,6 +230,8 @@ class ExpectedImprovement(AcquisitionFunction):
     Reinforcement Learning", Brochu et. al., 2010.
     """
     exploitation_exploration_tradeoff = 0
+    optimization_random_restarts = 10
+
 
 
     def __init__(self, params=None):
@@ -244,6 +249,9 @@ class ExpectedImprovement(AcquisitionFunction):
             params = {}
         self.exploitation_exploration_tradeoff = params.get(
             "exploitation_tradeoff", 0)
+
+        self.optimization_random_restarts = params.get(
+            "optimization_random_restarts", 10)
 
     def _compute_minimizing_evaluate(self, x, gp, experiment):
         """
@@ -386,17 +394,15 @@ class ExpectedImprovement(AcquisitionFunction):
         return value
 
 
-    def compute_proposals(self, gp, experiment, number_proposals=1,
-                          random_steps=1000, random_restarts=10):
+    def compute_proposals(self, gp, experiment, number_proposals=1):
         param_names = experiment.parameter_definitions.keys()
 
         #for bfgs random restarts we need to ensure having enough random
         #samples for initial guesses
-        number_proposals = max(number_proposals, random_restarts)
+        number_proposals = max(number_proposals, self.optimization_random_restarts)
 
         random_proposals = super(ExpectedImprovement, self).compute_proposals(
-            gp=gp, experiment=experiment, number_proposals=number_proposals,
-            random_steps=random_steps)
+            gp=gp, experiment=experiment, number_proposals=number_proposals)
 
         optimizer = self.params.get('optimization', 'BFGS')
         if(optimizer == 'random'):
@@ -408,7 +414,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
             #stores tuples (x_min, f_min) from the loop of random restarts
             scipy_optimizer_results = []
-            for i in range(random_restarts):
+            for i in range(self.optimization_random_restarts):
                 #initial guess is the best found by random search
                 initial_guess = self._translate_dict_vector(random_proposals[i][0])
 
