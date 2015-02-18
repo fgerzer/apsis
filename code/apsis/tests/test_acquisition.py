@@ -4,13 +4,15 @@ from apsis.models.parameter_definition import *
 from apsis.assistants.lab_assistant import BasicLabAssistant, PrettyLabAssistant
 import logging
 from apsis.utilities.benchmark_functions import branin_func
-from apsis.optimizers.bayesian.acquisition_functions import ExpectedImprovement
+from apsis.optimizers.bayesian.acquisition_functions import ExpectedImprovement, ProbabilityOfImprovement
 from apsis.models.candidate import Candidate
 import nose.tools as nt
 import scipy
 
 class TestAcquisition(object):
     #LOG_FILENAME = "/tmp/APSIS_WRITING/logs/TestNumericParamDef.log"
+
+    real_min = 0.397887
 
     def test__translate_dict_vector(self):
         ei = ExpectedImprovement()
@@ -36,16 +38,49 @@ class TestAcquisition(object):
         assert vec[0] == param_dict['x'] and vec[1] == param_dict['y']
 
 
+    def test_probability_of_improvement(self):
+        param_defs = {
+            "x": MinMaxNumericParamDef(-5, 10),
+            "y": MinMaxNumericParamDef(0, 15)
+        }
+
+        print("Running test_acquisition: test_probability_of_improvement")
+
+        LAss = PrettyLabAssistant()
+        LAss.init_experiment("rand", "RandomSearch", param_defs, minimization=True)
+        LAss.init_experiment("bay_POI_rand", "BayOpt", param_defs, minimization=True, optimizer_arguments={"acquisition": ProbabilityOfImprovement,"initial_random_runs": 5, "mcmc": False})
+
+        results = []
+
+        for i in range(15):
+            to_eval = LAss.get_next_candidate("rand")
+            result = branin_func(to_eval.params["x"], to_eval.params["y"])
+            results.append(result)
+            to_eval.result = result
+            LAss.update("rand", to_eval)
+
+            to_eval = LAss.get_next_candidate("bay_POI_rand")
+            result = branin_func(to_eval.params["x"], to_eval.params["y"])
+            results.append(result)
+            to_eval.result = result
+            LAss.update("bay_POI_rand", to_eval)
+
+        print("Best rand score: %s" %LAss.get_best_candidate("rand").result)
+        print("Best rand:  %s" %LAss.get_best_candidate("rand"))
+        print("Best bay_rand:  %s" %LAss.get_best_candidate("bay_POI_rand").result)
+        print("Best bay_rand:  %s" %LAss.get_best_candidate("bay_POI_rand"))
+
+        LAss.plot_result_per_step(["rand", "bay_POI_rand"], plot_min=0, plot_max=100)
+
     def test_expected_improvement_optimization(self):
         param_defs = {
             "x": MinMaxNumericParamDef(-5, 10),
             "y": MinMaxNumericParamDef(0, 15)
         }
 
-
         #logging.basicConfig(level=logging.DEBUG)
         logger = logging.getLogger("test_acquisition")
-        logger.info("Running test_acquisition")
+        logger.info("Running test_acquisition: test_expected_improvement_optimization")
 
         LAss = PrettyLabAssistant()
 
@@ -95,10 +130,9 @@ class TestAcquisition(object):
         print("Best bay_NelderMead score: %s" %LAss.get_best_candidate("bay_NelderMead").result)
         print("Best bay_NelderMead:  %s" %LAss.get_best_candidate("bay_NelderMead"))
         #x, y, z = BAss._best_result_per_step_data()
-        LAss.plot_result_per_step(["rand", "bay_rand", "bay_bfgs", "bay_NelderMead"], plot_at_least=1)
+        LAss.plot_result_per_step(["rand", "bay_rand", "bay_bfgs", "bay_NelderMead"], plot_min=0, plot_max=100)
 
-        real_min = 0.397887
-        #check for real min: LAss.get_best_candidate("bay_rand").result
+        #TODO check for real min: LAss.get_best_candidate("bay_rand").result
 
         return True
 
