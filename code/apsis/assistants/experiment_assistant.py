@@ -227,7 +227,7 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
     """
 
     def plot_result_per_step(self, show_plot=True, fig=None, color="b",
-                             plot_at_least=1):
+                             plot_min=None, plot_max=None):
         """
         Returns (and plots) the plt.figure plotting the results over the steps.
 
@@ -237,10 +237,12 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
             Whether to show the plot after creation.
         fig : None or pyplot figure, optional
             The figure to update. If None, a new figure will be created.
-        color: string, optional
+        color : string, optional
             A string representing a pyplot color.
-        plot_at_least: float, optional
-            The percentage of entries to show.
+        plot_min : float, optional
+            The smallest value to plot on the y axis.
+        plot_max : float, optional
+            The biggest value to plot on the y axis.
 
         Returns
         -------
@@ -264,20 +266,11 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
         }
         if fig is None:
             fig = plot_lists(plots,
-                              fig_options=plot_options)
+                              fig_options=plot_options, plot_min=plot_min,
+                             plot_max=plot_max)
         else:
-            fig = plot_lists(plots, fig=fig)
-
-        print("PlotLeast: %s" %plot_at_least)
-        if plot_at_least < 1:
-            sorted_y = sorted(plots[0]["y"])
-            ymin, ymax = plt.ylim()
-            if self.experiment.minimization_problem:
-                max_y_new = sorted_y[int(plot_at_least * len(sorted_y))]
-                print("New limit: %s" %max_y_new)
-                if (max_y_new > ymax):
-                    plt.ylim(ymax = max_y_new, ymin=sorted_y[0])
-
+            fig = plot_lists(plots, fig=fig, plot_min=plot_min,
+                             plot_max=plot_max)
 
         if show_plot:
             plt.show(True)

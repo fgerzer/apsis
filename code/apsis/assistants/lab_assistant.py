@@ -216,8 +216,10 @@ class PrettyLabAssistant(BasicLabAssistant):
             The figure to update. If None, a new figure will be created.
         color : string, optional
             A string representing a pyplot color.
-        plot_at_least : float, optional
-            The percentage of entries to show.
+        plot_min : float, optional
+            The smallest value to plot on the y axis.
+        plot_max : float, optional
+            The biggest value to plot on the y axis.
 
         Returns
         -------
