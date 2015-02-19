@@ -6,10 +6,15 @@
 Welcome to apsis's documentation!
 =================================
 
-.. include:: ../README.md
+A toolkit for hyperparameter optimization for machine learning algorithms.
+
+Our goal is to provide a flexible, simple and scaleable approach - parallel, on clusters and/or on your own machine. Check out our usage tutorials to get started or the design pages to understand how apsis works.
+
+Apsis is open-sourced under the MIT license, see the `License file <https://github.com/FrederikDiehl/apsis/blob/master/License.txt>`_.
 
 
-Contents:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
@@ -19,7 +24,11 @@ Contents:
    design
    modules
 
-   
+Project State
+-------------
+
+We currently are in an alpha state. Documentation is being build up these days and code documentation and test coverage improved.
+
    
 Indices and tables
 ==================
