@@ -124,8 +124,7 @@ class SimpleBayesianOptimizer(Optimizer):
         #TODO refitted must be set, too.
         candidates = []
         new_candidate_points = self.acquisition_function.compute_proposals(
-            self.gp, experiment, number_proposals=self.num_gp_restarts,
-            random_steps=1000)
+            self.gp, experiment, number_proposals=self.num_gp_restarts)
 
         for point_and_value in new_candidate_points:
             #get the the candidate point which is the first entry in the tuple.
