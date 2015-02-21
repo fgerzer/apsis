@@ -1,6 +1,7 @@
 __author__ = 'Frederik Diehl'
 
 from apsis.models.candidate import Candidate
+from apsis.models.parameter_definition import ParamDef
 
 class Experiment(object):
     """
@@ -74,6 +75,10 @@ class Experiment(object):
         self.name = name
         if not isinstance(parameter_definitions, dict):
             raise ValueError("parameter_definitions are not a dict.")
+        for p in parameter_definitions:
+            if not isinstance(parameter_definitions[p], ParamDef):
+                raise ValueError("Parameter definition of %s is not a ParamDef."
+                                 %p)
         self.parameter_definitions = parameter_definitions
 
         self.minimization_problem = minimization_problem
