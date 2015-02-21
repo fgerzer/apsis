@@ -98,7 +98,7 @@ class BasicExperimentAssistant(object):
 
         if self.csv_write_frequency != 0:
             self.write_directory_base = write_directory_base
-            if self.experiment_directory_base is not None:
+            if experiment_directory_base is not None:
                 self.experiment_directory_base = experiment_directory_base
                 ensure_directory_exists(self.experiment_directory_base)
             else:
