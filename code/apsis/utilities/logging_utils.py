@@ -19,7 +19,7 @@ def get_logger(module, specific_log_name=None):
 
     Parameters
     ----------
-    module : object
+    module : object or string
         The object for which we'd like to get the logger. The name of the
         logger is then, analogous to logging, set to
         module.__module__ + "." + module.__class__.__name__
