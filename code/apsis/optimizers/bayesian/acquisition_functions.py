@@ -44,11 +44,17 @@ class AcquisitionFunction(object):
 
         Parameters
         ----------
-        x :
-        :param x:
-        :param gp:
-        :param experiment:
-        :return:
+        x : dict
+            Dictionary of the parameters on point x
+        gp : GPy gp
+            The gp on which to evaluate
+        experiment : Experiment
+            The experiment for further information.
+
+        Returns
+        -------
+        eval : float
+            The value of the acquisition function for the gp on point x.
         """
         pass
 
