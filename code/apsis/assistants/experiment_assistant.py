@@ -143,9 +143,7 @@ class BasicExperimentAssistant(object):
             - working: The Candidate is now being worked on by a worker.
 
         """
-        self.logger.info("Got new %s of candidate %s with parameters %s"
-                         " and result %s" %(status, candidate, candidate.params,
-                                            candidate.result))
+
         if status not in self.AVAILABLE_STATUS:
             message = ("status not in %s but %s."
                              %(str(self.AVAILABLE_STATUS), str(status)))
@@ -157,6 +155,10 @@ class BasicExperimentAssistant(object):
                              %str(candidate))
             self.logger.error(message)
             raise ValueError(message)
+
+        self.logger.info("Got new %s of candidate %s with parameters %s"
+                         " and result %s" %(status, candidate, candidate.params,
+                                            candidate.result))
 
         if status == "finished":
             self.experiment.add_finished(candidate)
