@@ -89,7 +89,7 @@ class SimpleBayesianOptimizer(Optimizer):
                 The number of points that should be kept precomputed for faster
                 multiple workers.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(self)
         if optimizer_arguments is None:
             optimizer_arguments = {}
         self.initial_random_runs = optimizer_arguments.get(
