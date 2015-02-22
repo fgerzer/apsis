@@ -405,14 +405,14 @@ class ExpectedImprovement(AcquisitionFunction):
 
         #for bfgs random restarts we need to ensure having enough random
         #samples for initial guesses
-        number_proposals = max(number_proposals, self.optimization_random_restarts)
+        initial_rand = max(number_proposals, self.optimization_random_restarts)
 
         random_proposals = super(ExpectedImprovement, self).compute_proposals(
-            gp=gp, experiment=experiment, number_proposals=number_proposals)
+            gp=gp, experiment=experiment, number_proposals=initial_rand)
 
         optimizer = self.params.get('optimization', 'BFGS')
         if(optimizer == 'random'):
-            return random_proposals
+            return random_proposals[:number_proposals]
         elif optimizer in ['BFGS', 'Nelder-Mead', 'Powell', 'CG', 'Newton-CG']:
             #do a scipy minimize, allow only methods who need up to 1st
             #derivative since we have no second.
@@ -453,8 +453,9 @@ class ExpectedImprovement(AcquisitionFunction):
                 #find out if we want to keep the result
                 #when using scipy.optimize.minimize use the success flag
                 if success:
-                    x_min_dict = self._translate_vector_dict(x_min, param_names)
-                    scipy_optimizer_results.append((x_min_dict, f_min))
+                    if experiment._check_param_dict(self._translate_vector_dict(x_min, param_names)):
+                        x_min_dict = self._translate_vector_dict(x_min, param_names)
+                        scipy_optimizer_results.append((x_min_dict, f_min))
                 else:
                     self.logger.debug(str(optimizer) + " Optimization failed "
                                     "(random iteration: " + str(i) +
@@ -465,8 +466,7 @@ class ExpectedImprovement(AcquisitionFunction):
             if len(scipy_optimizer_results) == 0:
                 self.logger.warning(str(optimizer) + " Optimization failed. "
                                     "Using results from RandomSearch.")
-
-                return random_proposals
+                return random_proposals[:number_proposals]
             #otherwise merge the scipy.optimize results with the random ones
             else:
                 #add the random proposals to the bfgs result
@@ -478,8 +478,7 @@ class ExpectedImprovement(AcquisitionFunction):
                 self.logger.debug("SORTED EI RESULTS by EI VALUE ASC")
                 for i in range(len(scipy_optimizer_results)):
                     self.logger.debug(scipy_optimizer_results[i])
-
-                return scipy_optimizer_results
+                return scipy_optimizer_results[:number_proposals]
         else:
             self.logger.error("The optimizer '" + str(optimizer) + "' that was"
                               " given is not supported! Please see the docs!")
