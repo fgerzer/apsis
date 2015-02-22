@@ -367,6 +367,6 @@ class FixedValueParamDef(PositionParamDef):
         positions = []
         pos = 0
         for v in values:
-            pos += v
+            pos = v
             positions.append(pos)
         super(FixedValueParamDef, self).__init__(values, positions)
