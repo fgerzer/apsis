@@ -42,3 +42,34 @@ class TestParameterDefinitions(object):
         assert_false(test.is_in_parameter_domain(11))
         assert_equal(test.distance(0, 1), 1./11)
         assert_equal(test.distance(-1, 10), 1)
+
+
+    def test_numeric_def(self):
+        f_in = lambda x: float(x)/10
+        f_out = lambda x: float(x)*10
+        test = NumericParamDef(f_in, f_out)
+
+        assert_true(test.is_in_parameter_domain(0.5))
+        assert_false(test.is_in_parameter_domain(11))
+        assert_equal(test.distance(0, 1), 0.1)
+        assert_equal(test.distance(0, 10), 1)
+        with assert_raises(ValueError):
+            test.distance("A", 1)
+        with assert_raises(ValueError):
+            test.distance(0, "B")
+        assert_equal(test.compare_values(0, 10), -1)
+        assert_equal(test.compare_values(1, 0), 1)
+
+    def test_fixed_def(self):
+        test = FixedValueParamDef([0, 1, 2, 3])
+
+        assert_true(test.is_in_parameter_domain(1))
+        assert_false(test.is_in_parameter_domain(1.5))
+        assert_equal(test.distance(0, 1), 1)
+        assert_equal(test.distance(0, 3), 3)
+        with assert_raises(ValueError):
+            test.distance("A", 1)
+        with assert_raises(ValueError):
+            test.distance(0, 4)
+        assert_equal(test.compare_values(0, 3), -1)
+        assert_equal(test.compare_values(1, 0), 1)
