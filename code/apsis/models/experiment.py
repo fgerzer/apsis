@@ -107,7 +107,7 @@ class Experiment(object):
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
         if not self._check_candidate(candidate):
-            raise  ValueError("candidate is not valid.")
+            raise  ValueError("candidate %s is not valid." %candidate)
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         if candidate in self.candidates_working:
