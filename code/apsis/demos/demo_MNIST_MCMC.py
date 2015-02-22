@@ -15,9 +15,7 @@ from demo_MNIST import evaluate_on_mnist
 # This is in a different file compared to demo_MNIST because MCMC requires
 # quite a bit more time compared to non-MCMC.
 
-if __name__ == '__main__':
-
-
+def demo_MNIST_MCMC(steps, plot=True):
     LAss = PrettyLabAssistant()
 
     regressor = SVC(kernel="poly")
@@ -27,10 +25,12 @@ if __name__ == '__main__':
         "gamma":MinMaxNumericParamDef(0, 1),
         "coef0": MinMaxNumericParamDef(0,1)
     }
-    steps = 10
     LAss.init_experiment("random_mnist", "RandomSearch", param_defs, minimization=False)
     LAss.init_experiment("bay_mnist", "BayOpt", param_defs, minimization=False)
     LAss.init_experiment("bay_mcmc_mnist", "BayOpt", param_defs,
                          minimization=False, optimizer_arguments={"mcmc": True})
     optimizers = ["random_mnist", "bay_mnist", "bay_mcmc_mnist"]
-    evaluate_on_mnist(LAss, optimizers, regressor, 0.01, steps=steps)
+    evaluate_on_mnist(LAss, optimizers, regressor, 0.01, steps=steps, plot=plot)
+
+if __name__ == '__main__':
+    demo_MNIST_MCMC(steps=50)

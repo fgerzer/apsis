@@ -51,7 +51,7 @@ def do_evaluation(LAss, name, regressor, mnist_data_train, mnist_data_test, mnis
     LAss.update(name, to_eval)
 
 
-def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10):
+def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10, plot=True):
     """
     This evaluates the (pre-initialized) optimizers on a percentage of mnist.
 
@@ -88,18 +88,16 @@ def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10):
     for i in range(steps):
         logger.info("Doing step %i" %i)
         for n in optimizers:
-            print(i)
-            print(n)
             do_evaluation(LAss, n, regressor, mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test)
 
     #finally do an evaluation
     for n in optimizers:
         logger.info("Best %s score:  %s" %(n, LAss.get_best_candidate(n).result))
 
-    LAss.plot_result_per_step(optimizers)
+    if plot:
+        LAss.plot_result_per_step(optimizers)
 
-
-if __name__ == '__main__':
+def demo_MNIST(steps, plot=True):
     logging.basicConfig(level=logging.DEBUG)
     regressor = SVC(kernel="poly")
     param_defs = {
@@ -115,6 +113,8 @@ if __name__ == '__main__':
     LAss.init_experiment("bay_mnist_ei_bfgs", "BayOpt", param_defs,
                          minimization=False, optimizer_arguments=
         {"acquisition_hyperparams":{"optimization": "BFGS"}})
-    steps = 50
     optimizers = ["random_mnist", "bay_mnist_ei_rand", "bay_mnist_ei_bfgs"]
-    evaluate_on_mnist(LAss, optimizers, regressor, 0.01, steps=steps)
+    evaluate_on_mnist(LAss, optimizers, regressor, 0.01, steps=steps, plot=plot)
+
+if __name__ == '__main__':
+    demo_MNIST(50)
