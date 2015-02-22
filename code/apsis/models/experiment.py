@@ -106,7 +106,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
-
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate is not valid.")
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         if candidate in self.candidates_working:
@@ -136,6 +137,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate is not valid.")
         self.candidates_pending.append(candidate)
 
     def add_working(self, candidate):
@@ -157,6 +160,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate is not valid.")
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         self.candidates_working.append(candidate)
@@ -181,6 +186,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate is not valid.")
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
         self.candidates_pending.append(candidate)
@@ -224,6 +231,12 @@ class Experiment(object):
             return False
         if candidateB is None:
             return True
+
+        if not self._check_candidate(candidateA):
+            raise  ValueError("candidateA is not valid.")
+        if not self._check_candidate(candidateB):
+            raise  ValueError("candidateB is not valid.")
+
 
         aResult = candidateA.result
         bResult = candidateB.result
@@ -330,3 +343,28 @@ class Experiment(object):
             steps_included += 1
 
         return csv_string, steps_included
+
+    def _check_candidate(self, candidate):
+        """
+        Checks whether candidate is valid for this experiment.
+
+        This checks the existence of all parameter definitions and that all
+        values are acceptable.
+
+        Parameter
+        ---------
+        candidate : Candidate
+            Candidate to check
+
+        Returns
+        -------
+        acceptable : bool
+            True iff the candidate is valid
+        """
+        if not set(candidate.params.keys()) == set(self.parameter_definitions.keys()):
+            return False
+
+        for k in candidate.params:
+            if not self.parameter_definitions[k].is_in_parameter_domain(candidate.params[k]):
+                return False
+        return True

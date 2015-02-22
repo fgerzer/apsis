@@ -38,8 +38,15 @@ class TestExperiment(object):
         }
         minimization = True
         exp = Experiment(name, param_def, minimization)
-        cand = Candidate({"x": 1})
+        cand = Candidate({"x": 1, "name": "A"})
 
+        cand_invalid = Candidate({"x": 1})
+        cand_invalid2 = Candidate({"x": 2, "name": "A"})
+
+        with assert_raises(ValueError):
+            exp.add_pending(cand_invalid)
+        with assert_raises(ValueError):
+            exp.add_pending(cand_invalid2)
 
 
         exp.add_pending(cand)
@@ -52,7 +59,7 @@ class TestExperiment(object):
         with assert_raises(ValueError):
             exp.add_finished(False)
 
-        cand2 = Candidate({"x": 0})
+        cand2 = Candidate({"x": 0, "name": "B"})
         exp.add_working(cand2)
         assert cand2 in exp.candidates_working
         with assert_raises(ValueError):
@@ -81,9 +88,9 @@ class TestExperiment(object):
         }
         minimization = True
         exp = Experiment(name, param_def, minimization)
-        cand = Candidate({"x": 1})
-        cand2 = Candidate({"x": 0})
-        cand_none = Candidate({"x": 0.5})
+        cand = Candidate({"x": 1, "name": "B"})
+        cand2 = Candidate({"x": 0, "name": "A"})
+        cand_none = Candidate({"x": 0.5, "name": "C"})
         cand.result = 1
         cand2.result = 0
         assert_true(exp.better_cand(cand2, cand))
