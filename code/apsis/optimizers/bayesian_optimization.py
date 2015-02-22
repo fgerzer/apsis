@@ -114,17 +114,18 @@ class SimpleBayesianOptimizer(Optimizer):
         self.num_precomputed = optimizer_arguments.get('num_precomputed', 10)
         self.logger.info("Bayesian optimization initialized.")
 
-    def get_next_candidates(self, experiment):
-
+    def get_next_candidates(self, experiment, num_candidates=None):
+        if num_candidates is None:
+            num_candidates = self.num_precomputed
         #check whether a random search is necessary.
         if len(experiment.candidates_finished) < self.initial_random_runs:
-            return self.random_searcher.get_next_candidates(experiment)
+            return self.random_searcher.get_next_candidates(experiment, num_candidates)
 
         self._refit(experiment)
         #TODO refitted must be set, too.
         candidates = []
         new_candidate_points = self.acquisition_function.compute_proposals(
-            self.gp, experiment, number_proposals=self.num_precomputed)
+            self.gp, experiment, number_proposals=num_candidates)
 
         for point_and_value in new_candidate_points:
             #get the the candidate point which is the first entry in the tuple.
