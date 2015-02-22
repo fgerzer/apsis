@@ -368,3 +368,28 @@ class Experiment(object):
             if not self.parameter_definitions[k].is_in_parameter_domain(candidate.params[k]):
                 return False
         return True
+
+    def _check_param_dict(self, param_dict):
+        """
+        Checks whether parameter dictionary is valid for this experiment.
+
+        This checks the existence of all parameter definitions and that all
+        values are acceptable.
+
+        Parameter
+        ---------
+        param_dict : dict with string keys
+            Dictionary to check
+
+        Returns
+        -------
+        acceptable : bool
+            True iff the dictionary is valid
+        """
+        if not set(param_dict.keys()) == set(self.parameter_definitions.keys()):
+            return False
+
+        for k in param_dict:
+            if not self.parameter_definitions[k].is_in_parameter_domain(param_dict[k]):
+                return False
+        return True
