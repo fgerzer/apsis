@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import os
 
-def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1),
+def plot_lists(to_plot_list, fig=None, fig_options=None,
                plot_min=None, plot_max=None):
     """
     Plots several functions.
@@ -59,9 +59,9 @@ def plot_lists(to_plot_list, fig=None, fig_options=None, plot_at_least=(1, 1),
         fig = plot_single(p, fig)
 
     if plot_min is not None:
-        plt.ylim(ymin=plot_min)
+        fig.axes[0].ylim(ymin=plot_min)
     if plot_max is not None:
-        plt.ylim(ymax=plot_max)
+        fig.axes[0].ylim(ymax=plot_max)
 
     #if (plot_at_least[0] < 1) or plot_at_least[1] < 1:
     #    max_y = -float("inf")

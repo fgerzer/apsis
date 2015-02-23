@@ -265,12 +265,7 @@ class NumericParamDef(ParamDef, ComparableParameterDef):
         if not self.is_in_parameter_domain(valueB):
             raise ValueError("Parameter two = " + str(valueB) + " not in value "
                 "domain.")
-        if valueA < valueB:
-            return -1
-        elif valueA > valueB:
-            return 1
-        else:
-            return 0
+        return self.warp_in(valueB) - self.warp_in(valueA)
 
 
 class MinMaxNumericParamDef(NumericParamDef):
@@ -292,6 +287,11 @@ class MinMaxNumericParamDef(NumericParamDef):
         upper_bound : float
             The highest possible value
         """
+        try:
+            lower_bound = float(lower_bound)
+            upper_bound = float(upper_bound)
+        except:
+            raise ValueError("Bounds are not floats.")
         self.x_min = lower_bound
         self.x_max = upper_bound
 
@@ -367,6 +367,6 @@ class FixedValueParamDef(PositionParamDef):
         positions = []
         pos = 0
         for v in values:
-            pos += v
+            pos = v
             positions.append(pos)
         super(FixedValueParamDef, self).__init__(values, positions)

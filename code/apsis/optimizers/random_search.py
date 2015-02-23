@@ -36,12 +36,18 @@ class RandomSearch(Optimizer):
             optimizer_arguments = {}
         self.random_state = optimizer_arguments.get("random_state", None)
 
-    def get_next_candidates(self, experiment):
+    def get_next_candidates(self, experiment, num_candidates=1):
+        list = []
+        for i in range(num_candidates):
+            list.append(self._get_one_candidate(experiment))
+        return list
+
+    def _get_one_candidate(self, experiment):
         self.random_state = check_random_state(self.random_state)
         value_dict = {}
         for key, param_def in experiment.parameter_definitions.iteritems():
             value_dict[key] = self._gen_param_val(param_def)
-        return [Candidate(value_dict)]
+        return Candidate(value_dict)
 
     def _gen_param_val(self, param_def):
         """

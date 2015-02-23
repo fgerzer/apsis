@@ -1,6 +1,7 @@
 __author__ = 'Frederik Diehl'
 
 from apsis.models.candidate import Candidate
+from apsis.models.parameter_definition import ParamDef
 
 class Experiment(object):
     """
@@ -74,6 +75,10 @@ class Experiment(object):
         self.name = name
         if not isinstance(parameter_definitions, dict):
             raise ValueError("parameter_definitions are not a dict.")
+        for p in parameter_definitions:
+            if not isinstance(parameter_definitions[p], ParamDef):
+                raise ValueError("Parameter definition of %s is not a ParamDef."
+                                 %p)
         self.parameter_definitions = parameter_definitions
 
         self.minimization_problem = minimization_problem
@@ -101,7 +106,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
-
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate %s is not valid." %candidate)
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         if candidate in self.candidates_working:
@@ -131,6 +137,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate is not valid.")
         self.candidates_pending.append(candidate)
 
     def add_working(self, candidate):
@@ -152,6 +160,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate is not valid.")
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         self.candidates_working.append(candidate)
@@ -176,6 +186,8 @@ class Experiment(object):
         """
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
+        if not self._check_candidate(candidate):
+            raise  ValueError("candidate is not valid.")
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
         self.candidates_pending.append(candidate)
@@ -219,6 +231,12 @@ class Experiment(object):
             return False
         if candidateB is None:
             return True
+
+        if not self._check_candidate(candidateA):
+            raise  ValueError("candidateA is not valid.")
+        if not self._check_candidate(candidateB):
+            raise  ValueError("candidateB is not valid.")
+
 
         aResult = candidateA.result
         bResult = candidateB.result
@@ -325,3 +343,53 @@ class Experiment(object):
             steps_included += 1
 
         return csv_string, steps_included
+
+    def _check_candidate(self, candidate):
+        """
+        Checks whether candidate is valid for this experiment.
+
+        This checks the existence of all parameter definitions and that all
+        values are acceptable.
+
+        Parameter
+        ---------
+        candidate : Candidate
+            Candidate to check
+
+        Returns
+        -------
+        acceptable : bool
+            True iff the candidate is valid
+        """
+        if not set(candidate.params.keys()) == set(self.parameter_definitions.keys()):
+            return False
+
+        for k in candidate.params:
+            if not self.parameter_definitions[k].is_in_parameter_domain(candidate.params[k]):
+                return False
+        return True
+
+    def _check_param_dict(self, param_dict):
+        """
+        Checks whether parameter dictionary is valid for this experiment.
+
+        This checks the existence of all parameter definitions and that all
+        values are acceptable.
+
+        Parameter
+        ---------
+        param_dict : dict with string keys
+            Dictionary to check
+
+        Returns
+        -------
+        acceptable : bool
+            True iff the dictionary is valid
+        """
+        if not set(param_dict.keys()) == set(self.parameter_definitions.keys()):
+            return False
+
+        for k in param_dict:
+            if not self.parameter_definitions[k].is_in_parameter_domain(param_dict[k]):
+                return False
+        return True
