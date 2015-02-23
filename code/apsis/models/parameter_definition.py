@@ -40,7 +40,7 @@ class ParamDef(object):
         return 1
 
 
-class ComparableParameterDef(object):
+class ComparableParamDef(object):
     """
     This class defines an ordinal parameter definition subclass, that is a
      parameter definition in which the values are comparable.
@@ -125,7 +125,7 @@ class NominalParamDef(ParamDef):
         return value in self.values
 
 
-class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
+class OrdinalParamDef(NominalParamDef, ComparableParamDef):
     """
     Defines an ordinal parameter definition.
 
@@ -174,7 +174,7 @@ class OrdinalParamDef(NominalParamDef, ComparableParameterDef):
         return float(diff)/len(self.values)
 
 
-class NumericParamDef(ParamDef, ComparableParameterDef):
+class NumericParamDef(ParamDef, ComparableParamDef):
     """
     This class defines a numeric parameter definition.
 
