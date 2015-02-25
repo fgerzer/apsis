@@ -123,6 +123,9 @@ def plot_single(to_plot, fig=None, fig_options=None):
             A list of x values
         y : list
             A list of y values
+        var : list
+            A list of the variances for each y value. If exists, the resulting
+            plot will have error bars.
         type : string, optional
             Either "line", in which case a line will be plotted, or "scatter",
             in which case a scatter plot will be made. Default is "line".
@@ -130,6 +133,7 @@ def plot_single(to_plot, fig=None, fig_options=None):
             The label for the function.
         color : string, optional
             Which color the plot should have.
+
     fig : pyplot.figure, optional
         A plot to continue, or None in which case a new plot is made using
         fig_options.
@@ -158,9 +162,13 @@ def plot_single(to_plot, fig=None, fig_options=None):
     color = to_plot.get("color", random.choice(COLORS))
     x = to_plot.get("x", [])
     y = to_plot.get("y", [])
+    var = to_plot.get("var", [])
 
     if type == "line":
-        plt.plot(x, y, label=label, color=color)
+        if "var" in to_plot:
+            plt.errorbar(x, y, label=label, yerr=var, color=color)
+        else:
+            plt.plot(x, y, label=label, color=color)
     elif type=="scatter":
         plt.scatter(x, y, label=label, color=color)
 
