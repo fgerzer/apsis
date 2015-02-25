@@ -5,7 +5,7 @@ from sklearn.cross_validation import train_test_split
 from sklearn.svm import NuSVC, SVC
 import os
 import logging
-from apsis.assistants.lab_assistant import PrettyLabAssistant
+from apsis.assistants.lab_assistant import PrettyLabAssistant, ValidationLabAssistant
 from sklearn.utils import shuffle
 from sklearn.metrics import accuracy_score
 
@@ -97,7 +97,7 @@ def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10, plot
     if plot:
         LAss.plot_result_per_step(optimizers)
 
-def demo_MNIST(steps, plot=True):
+def demo_MNIST(steps, percentage, plot=True):
     logging.basicConfig(level=logging.DEBUG)
     regressor = SVC(kernel="poly")
     param_defs = {
@@ -114,7 +114,7 @@ def demo_MNIST(steps, plot=True):
                          minimization=False, optimizer_arguments=
         {"acquisition_hyperparams":{"optimization": "BFGS"}})
     optimizers = ["random_mnist", "bay_mnist_ei_rand", "bay_mnist_ei_bfgs"]
-    evaluate_on_mnist(LAss, optimizers, regressor, 0.01, steps=steps, plot=plot)
+    evaluate_on_mnist(LAss, optimizers, regressor, percentage, steps=steps, plot=plot)
 
 if __name__ == '__main__':
-    demo_MNIST(50)
+    demo_MNIST(50, 0.001)
