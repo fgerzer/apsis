@@ -44,6 +44,7 @@ def get_logger(module, specific_log_name=None):
 
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
+    ensure_directory_exists(LOG_ROOT)
     global logging_intitialized
     if not logging_intitialized:
         logging_intitialized = True
