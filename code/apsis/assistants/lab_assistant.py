@@ -595,3 +595,46 @@ class ValidationLabAssistant(PrettyLabAssistant):
         }
 
         return best_per_step_plots_list, step_plots_list, plot_options
+
+    def _compute_current_step_overall(self):
+        """
+        Compute the string used to describe the current state of experiments
+
+        If we have three running experiments in this lab assistant, then
+        we can have the first in step 3, the second in step 100 and the third
+        in step 1 - hence this would yield the step string "3_100_1".
+
+        The step of the crossvalidated experiments is the minimum step each
+        of them has achieved.
+
+        Returns
+        -------
+        step_string : string
+            The string describing the overall steps of experiments.
+
+        same_step : boolean
+            A boolean if all experiments are in the same step.
+        """
+
+        step_string = ""
+        last_step = 0
+        same_step = True
+
+        experiment_names_sorted = sorted(self.exp_assistants.keys())
+
+        for i, ex_assistant_name in enumerate(experiment_names_sorted):
+            exp_asss = self.exp_assistants[ex_assistant_name]
+            curr_step = len(exp_asss[0].experiment.candidates_finished)
+            for e in exp_asss:
+                curr_step = min(curr_step, e.experiment.candidates_finished)
+            if i == 0:
+                last_step = curr_step
+            elif last_step != curr_step:
+                same_step = False
+
+            step_string += str(curr_step)
+
+            if not i == len(experiment_names_sorted)  - 1:
+                step_string += "_"
+
+        return step_string, same_step
