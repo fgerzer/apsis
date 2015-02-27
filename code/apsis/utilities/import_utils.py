@@ -1,6 +1,6 @@
 from apsis.utilities.logging_utils import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger("apsis.utils.import_utils")
 
 def import_if_exists(module_name):
     """
