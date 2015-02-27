@@ -147,3 +147,27 @@ class TestAcquisition(object):
         LAss.plot_result_per_step([name], show_plot=False)
         LAss.exp_assistants[name].experiment.minimization_problem = False
         LAss.plot_result_per_step(name, show_plot=False)
+
+    def test_validation_lab_assistant(self):
+        """
+        Just a short test on whether validation lab assistant does not crash.
+        """
+        optimizer = "RandomSearch"
+        name = "test_init_experiment"
+        param_defs = {
+            "x": MinMaxNumericParamDef(0, 1),
+            "name": NominalParamDef(["A", "B", "C"])
+        }
+        minimization = True
+
+        LAss = ValidationLabAssistant()
+        LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
+        LAss.init_experiment(name + "2", optimizer, param_defs, minimization=minimization)
+        cand = LAss.get_next_candidate(name)
+        cand.result = 1
+        LAss.update(name, cand)
+        LAss.write_out_plots_current_step()
+        LAss.plot_result_per_step([name], show_plot=False)
+        LAss.plot_validation([name], show_plot=False)
+        LAss.exp_assistants[name][0].experiment.minimization_problem = False
+        LAss.plot_result_per_step(name, show_plot=False)
