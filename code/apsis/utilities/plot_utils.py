@@ -158,7 +158,7 @@ def plot_single(to_plot, fig=None, fig_options=None):
         newly_created = True
     plt.figure(fig.number)
     type = to_plot.get("type", "line")
-    label = to_plot.get("label", "")
+    label = to_plot.get("label", None)
     color = to_plot.get("color", random.choice(COLORS))
     x = to_plot.get("x", [])
     y = to_plot.get("y", [])
@@ -166,9 +166,9 @@ def plot_single(to_plot, fig=None, fig_options=None):
 
     if type == "line":
         if "var" in to_plot:
-            plt.errorbar(x, y, label=label, yerr=var, color=color)
+            plt.errorbar(x, y, label=label, yerr=var, color=color, linewidth=2.0, capthick=4, capsize=8.0)
         else:
-            plt.plot(x, y, label=label, color=color)
+            plt.plot(x, y, label=label, color=color, linewidth=2.0)
     elif type=="scatter":
         plt.scatter(x, y, label=label, color=color)
 
