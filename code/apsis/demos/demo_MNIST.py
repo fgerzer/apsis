@@ -106,7 +106,7 @@ def demo_MNIST(steps, percentage, plot=True):
         "gamma":MinMaxNumericParamDef(0, 1),
         "coef0": MinMaxNumericParamDef(0,1)
     }
-    LAss = PrettyLabAssistant()
+    LAss = ValidationLabAssistant()
 
     LAss.init_experiment("random_mnist", "RandomSearch", param_defs, minimization=False)
     LAss.init_experiment("bay_mnist_ei_rand", "BayOpt", param_defs, minimization=False)
@@ -117,4 +117,4 @@ def demo_MNIST(steps, percentage, plot=True):
     evaluate_on_mnist(LAss, optimizers, regressor, percentage, steps=steps, plot=plot)
 
 if __name__ == '__main__':
-    demo_MNIST(50, 0.001)
+    demo_MNIST(20*5, 0.001)
