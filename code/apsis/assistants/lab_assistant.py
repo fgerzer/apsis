@@ -184,23 +184,36 @@ class PrettyLabAssistant(BasicLabAssistant):
         plot_step_base = os.path.join(plot_base, step_string)
         ensure_directory_exists(plot_step_base)
 
-        #this hash will store all the plots to write
-        plots_to_write = {}
-
-        #result per step plot
-        result_per_step = self.plot_result_per_step(
-            experiments=self.exp_assistants.keys(),
-            show_plot=False)
-        plots_to_write['result_per_step'] = result_per_step
-
-        #TODO add new plots here if any!
+        plots_to_write = self.generate_all_plots()
 
         #finally write out all plots created above to their files
-
         for plot_name in plots_to_write.keys():
             plot_fig = plots_to_write[plot_name]
 
             write_plot_to_file(plot_fig, plot_name + "_" + step_string, plot_step_base)
+
+    def generate_all_plots(self):
+        """
+        Fnction to generate all plots available.
+
+        Returns
+        -------
+        figures : dict of plt.figure
+            The hash contains all plots available by this assistant. Every
+            plot is keyed by an identifier.
+        """
+        #this hash will store all the plots to write
+        plots_to_write = {}
+
+        result_per_step = self.plot_result_per_step(
+            experiments=self.exp_assistants.keys(),
+            show_plot=False)
+
+        plots_to_write['result_per_step'] = result_per_step
+
+        #TODO in case there is new plots in this assistant add them here.
+
+        return plots_to_write
 
     def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None):
         """
@@ -377,6 +390,8 @@ class ValidationLabAssistant(PrettyLabAssistant):
             raise ValueError("No candidate given to the outside for that experiment.")
         self.exp_assistants[exp_name][self.exp_current[exp_name]].update(candidate, status)
         self.exp_current[exp_name] = None
+
+        self.write_out_plots_current_step()
 
     def get_next_candidate(self, exp_name):
         """
@@ -638,3 +653,28 @@ class ValidationLabAssistant(PrettyLabAssistant):
                 step_string += "_"
 
         return step_string, same_step
+
+    def generate_all_plots(self):
+        """
+        Fnction to generate all plots available.
+
+        Returns
+        -------
+        figures : dict of plt.figure
+            The hash contains all plots available by this assistant. Every
+            plot is keyed by an identifier.
+        """
+        #this hash will store all the plots to write
+        plots_to_write = {}
+
+        result_per_step = self.plot_result_per_step(
+            experiments=self.exp_assistants.keys(),
+            show_plot=False)
+
+        plots_to_write['result_per_step'] = result_per_step
+
+        plot_validation = self.plot_validation(
+            experiments=self.exp_assistants.keys(), show_plot=False)
+        plots_to_write['validation'] = plot_validation
+
+        return plots_to_write
