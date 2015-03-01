@@ -4,6 +4,7 @@ import logging
 import os
 from apsis.utilities.file_utils import ensure_directory_exists
 import logging.config
+import apsis
 
 logging_intitialized = False
 
@@ -49,7 +50,9 @@ def get_logger(module, specific_log_name=None):
     if not logging_intitialized:
         logging_intitialized = True
         #initialize the root logger.
-        logging.config.fileConfig('../config/logging.conf', defaults={'logfilename': os.path.join(LOG_ROOT, "log")})
+        project_dirname = os.path.dirname(apsis.__file__)
+        log_config_file = os.path.join(project_dirname, 'config/logging.conf')
+        logging.config.fileConfig(log_config_file, defaults={'logfilename': os.path.join(LOG_ROOT, "log")})
 
     logger_existed = False
     if new_logger_name in logging.Logger.manager.loggerDict:
