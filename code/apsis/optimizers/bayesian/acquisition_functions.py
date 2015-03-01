@@ -403,6 +403,7 @@ class ExpectedImprovement(AcquisitionFunction):
     def compute_proposals(self, gp, experiment, number_proposals=1):
         param_names = experiment.parameter_definitions.keys()
 
+
         #for bfgs random restarts we need to ensure having enough random
         #samples for initial guesses
         initial_rand = max(number_proposals, self.optimization_random_restarts)
@@ -410,24 +411,33 @@ class ExpectedImprovement(AcquisitionFunction):
         random_proposals = super(ExpectedImprovement, self).compute_proposals(
             gp=gp, experiment=experiment, number_proposals=initial_rand)
 
-        optimizer = self.params.get('optimization', 'BFGS')
+        optimizer = self.params.get('optimization', 'L-BFGS-B')
         if(optimizer == 'random'):
             return random_proposals[:number_proposals]
-        elif optimizer in ['BFGS', 'Nelder-Mead', 'Powell', 'CG', 'Newton-CG']:
+        elif optimizer in ['BFGS', 'Nelder-Mead', 'Powell', 'CG', 'Newton-CG',
+                           'L-BFGS-B']:
             #do a scipy minimize, allow only methods who need up to 1st
             #derivative since we have no second.
             logging.info("Using " + str(optimizer) + " for EI optimization.")
 
+            #0,1 bounded interval for optimization in every
+            #dimension as we are in the warped space
+            bounds = [(0.0,1.0) for x in experiment.parameter_definitions.keys()]
+
             #stores tuples (x_min, f_min) from the loop of random restarts
             scipy_optimizer_results = []
+            scipy_optimizer_results_out_of_range = []
             for i in range(self.optimization_random_restarts):
                 #initial guess is the best found by random search
                 initial_guess = self._translate_dict_vector(random_proposals[i][0])
+
+
 
                 result = scipy.optimize.minimize(self._compute_minimizing_evaluate,
                                                  x0=initial_guess, method=optimizer,
                                                  jac=self._compute_minimizing_gradient,
                                                  options={'disp': False},
+                                                 bounds=bounds,
                                                  args=tuple([gp, experiment]))
 
                 #track results
@@ -453,9 +463,14 @@ class ExpectedImprovement(AcquisitionFunction):
                 #find out if we want to keep the result
                 #when using scipy.optimize.minimize use the success flag
                 if success:
+                    #as not all of the optimization methods respect the bounds
+                    #we need to check if the params are in the bounds, if
+                    #they are not then don't use them
+                    x_min_dict = self._translate_vector_dict(x_min, param_names)
                     if experiment._check_param_dict(self._translate_vector_dict(x_min, param_names)):
-                        x_min_dict = self._translate_vector_dict(x_min, param_names)
                         scipy_optimizer_results.append((x_min_dict, f_min))
+                    else:
+                        scipy_optimizer_results_out_of_range.append((x_min_dict, f_min))
                 else:
                     self.logger.debug(str(optimizer) + " Optimization failed "
                                     "(random iteration: " + str(i) +
@@ -463,10 +478,21 @@ class ExpectedImprovement(AcquisitionFunction):
 
 
             #if there was no success at all give a warning
-            if len(scipy_optimizer_results) == 0:
-                self.logger.warning(str(optimizer) + " Optimization failed. "
+            if len(scipy_optimizer_results) == 0 and len(scipy_optimizer_results_out_of_range) == 0:
+                self.logger.warning(str(optimizer) + " Optimization failed on every retry. "
                                     "Using results from RandomSearch.")
                 return random_proposals[:number_proposals]
+
+            elif len(scipy_optimizer_results) == 0 and len(scipy_optimizer_results_out_of_range) > 0:
+                self.logger.warning(str(optimizer) + " Optimization produced "
+                    "only parameter values that"
+                    "do not match the defined parameter range. This indicates "
+                    "that increasing the parameter definition range might"
+                    "deliver better results."
+                    "Using results from RandomSearch.")
+
+                return random_proposals[:number_proposals]
+
             #otherwise merge the scipy.optimize results with the random ones
             else:
                 #add the random proposals to the bfgs result
