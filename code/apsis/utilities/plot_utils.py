@@ -59,9 +59,10 @@ def plot_lists(to_plot_list, fig=None, fig_options=None,
         fig = plot_single(p, fig)
 
     if plot_min is not None:
-        fig.axes[0].ylim(ymin=plot_min)
+        plt.ylim(ymin=plot_min)
+
     if plot_max is not None:
-        fig.axes[0].ylim(ymax=plot_max)
+        plt.ylim(ymax=plot_max)
 
     #if (plot_at_least[0] < 1) or plot_at_least[1] < 1:
     #    max_y = -float("inf")
