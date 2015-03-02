@@ -1,8 +1,11 @@
 from apsis.utilities.benchmark_functions import branin_func
 from apsis.assistants.lab_assistant import PrettyLabAssistant, ValidationLabAssistant
 from apsis.models.parameter_definition import *
-
+from apsis.utilities.randomization import check_random_state
 import logging
+from apsis.utilities.logging_utils import get_logger
+
+logger = get_logger("demos.demo_branin")
 
 def single_branin_evaluation_step(LAss, experiment_name):
     """
@@ -24,8 +27,13 @@ def single_branin_evaluation_step(LAss, experiment_name):
     to_eval.result = result
     LAss.update(experiment_name, to_eval)
 
-def demo_branin(steps=100):
+    return to_eval
+
+def demo_branin(steps=100, random_steps=10):
     logging.basicConfig(level=logging.DEBUG)
+
+    #produce the same random state
+    random_state_rs = check_random_state(42)
 
     param_defs = {
         "x": MinMaxNumericParamDef(-5, 10),
@@ -33,13 +41,23 @@ def demo_branin(steps=100):
     }
 
     LAss = ValidationLabAssistant()
-    LAss.init_experiment("Random_Branin", "RandomSearch", param_defs, minimization=True)
-    LAss.init_experiment("BayOpt_EI_Branin", "BayOpt", param_defs, minimization=True)
+    LAss.init_experiment("Random_Branin", "RandomSearch", param_defs, minimization=True, optimizer_arguments={"random_state": random_state_rs})
+    LAss.init_experiment("BayOpt_EI_Branin", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": random_steps})
 
     optimizers = ["Random_Branin", "BayOpt_EI_Branin"]
 
-    #evaluate by step for each mdoel.
-    for i in range(steps):
+    #evaluate random search for 10 steps use these steps as init value for bayesian
+    for i in range(random_steps):
+        evaluated_candidate = single_branin_evaluation_step(LAss, 'Random_Branin')
+
+        #for all optimizers that are not random search add the candidate as random sample
+        for j in range(1, len(optimizers)):
+                LAss.update(optimizers[j], evaluated_candidate)
+
+    logger.info("Random Initialization Finished.")
+
+    #from there on go step by step all models
+    for i in range(random_steps, steps):
         for optimizer in optimizers:
             single_branin_evaluation_step(LAss, optimizer)
 
