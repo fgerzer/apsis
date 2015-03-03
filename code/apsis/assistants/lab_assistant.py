@@ -177,6 +177,7 @@ class PrettyLabAssistant(BasicLabAssistant):
             are currently in the same step.
         """
         step_string, same_step = self._compute_current_step_overall()
+
         if same_steps_only and not same_step:
             return
 
@@ -290,6 +291,7 @@ class PrettyLabAssistant(BasicLabAssistant):
 
         for i, ex_assistant_name in enumerate(experiment_names_sorted):
             experiment = self.exp_assistants[ex_assistant_name].experiment
+
             curr_step = len(experiment.candidates_finished)
             if i == 0:
                 last_step = curr_step
@@ -376,6 +378,32 @@ class ValidationLabAssistant(PrettyLabAssistant):
                 write_directory_base=self.lab_run_directory,
                 csv_write_frequency=1))
         self.logger.info("Experiment initialized successfully.")
+
+    def clone_experiments_by_name(self, exp_name, new_exp_name, optimizer, optimizer_arguments):
+        # TODO comment
+        self.exp_assistants[new_exp_name] = []
+        self.exp_current[new_exp_name] = None
+
+        #every experiment has self.cv many assistants
+        for i in range(len(self.exp_assistants[exp_name])):
+            old_exp_assistant = self.exp_assistants[exp_name][i]
+            old_exp = old_exp_assistant.experiment
+
+            #clone and rename experiment
+            new_exp = old_exp.clone()
+            new_exp.name = new_exp_name
+
+            #recreate exp assistant
+            new_exp_assistant = PrettyExperimentAssistant(new_exp_name + "_" + str(i), optimizer,
+                new_exp.parameter_definitions, experiment=new_exp, optimizer_arguments=optimizer_arguments,
+                minimization=new_exp.minimization_problem,
+                write_directory_base=self.lab_run_directory,
+                csv_write_frequency=1)
+            self.exp_assistants[new_exp_name].append(new_exp_assistant)
+
+        self.logger.info("Experiment " + str(exp_name) + " cloned to " + str(new_exp_name) + " and successfully initialized.")
+
+
 
     def update(self, exp_name, candidate, status="finished"):
         """
@@ -640,6 +668,7 @@ class ValidationLabAssistant(PrettyLabAssistant):
         for i, ex_assistant_name in enumerate(experiment_names_sorted):
             exp_asss = self.exp_assistants[ex_assistant_name]
             curr_step = len(exp_asss[0].experiment.candidates_finished)
+
             for e in exp_asss:
                 curr_step = min(curr_step, e.experiment.candidates_finished)
             if i == 0:
