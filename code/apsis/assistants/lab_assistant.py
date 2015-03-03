@@ -422,10 +422,12 @@ class ValidationLabAssistant(PrettyLabAssistant):
 
             #clone and rename experiment
             new_exp = old_exp.clone()
-            new_exp.name = new_exp_name
+
+            new_name_cved = new_exp_name + "_" + str(i)
+            new_exp.name = new_name_cved
 
             #recreate exp assistant
-            new_exp_assistant = PrettyExperimentAssistant(new_exp_name + "_" + str(i), optimizer,
+            new_exp_assistant = PrettyExperimentAssistant(new_name_cved, optimizer,
                 new_exp.parameter_definitions, experiment=new_exp, optimizer_arguments=optimizer_arguments,
                 minimization=new_exp.minimization_problem,
                 write_directory_base=self.lab_run_directory,
@@ -433,6 +435,8 @@ class ValidationLabAssistant(PrettyLabAssistant):
             self.exp_assistants[new_exp_name].append(new_exp_assistant)
 
         self.logger.info("Experiment " + str(exp_name) + " cloned to " + str(new_exp_name) + " and successfully initialized.")
+
+
 
 
 
