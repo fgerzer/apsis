@@ -379,8 +379,39 @@ class ValidationLabAssistant(PrettyLabAssistant):
                 csv_write_frequency=1))
         self.logger.info("Experiment initialized successfully.")
 
-    def clone_experiments_by_name(self, exp_name, new_exp_name, optimizer, optimizer_arguments):
-        # TODO comment
+    def clone_experiments_by_name(self, exp_name, new_exp_name, optimizer,
+                                  optimizer_arguments):
+        """
+        Take an existing experiment managed by this lab assistant,
+        fully clone it and store it under a new name to use it with a new
+        optimizer. This functionality can be used to initialize several experiments
+        of several optimizers with the same points.
+
+        For the given exp_name all underlying experiment instances are cloned and renamed.
+        Then a new experiment assistant is instantiated given the cloned and renamed
+        experiment using the given optimizer. The new experiment assistants are stored
+        and managed inside this lab assistant. The old experiment is not touched
+        and continues to be part of this lab assistant.
+        The parameter definitions and other experiment specific configuration is
+        copied over from the old to the new experiment.
+
+        Parameters
+        ----------
+        exp_name : string
+            The name of the experiment to be cloned.
+        new_exp_name: string
+            The name the cloned experiment will have after creation. Needs to be unique
+            and not existant in current experiments running in this lab assistant.
+        optimizer : Optimizer instance or string
+            This is an optimizer implementing the corresponding functions: It
+            gets an experiment instance, and returns one or multiple candidates
+            which should be evaluated next.
+            Alternatively, it can be a string corresponding to the optimizer,
+            as defined by apsis.utilities.optimizer_utils.
+        optimizer_arguments : dict, optional
+            These are arguments for the optimizer. Refer to their documentation
+            as to which are available.
+        """
         self.exp_assistants[new_exp_name] = []
         self.exp_current[new_exp_name] = None
 

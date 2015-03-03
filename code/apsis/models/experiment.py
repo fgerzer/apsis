@@ -347,9 +347,16 @@ class Experiment(object):
 
     def clone(self):
         """
-        TODO commenting
+        Create a deep copy of this experiment and return it.
+
+        Returns
+        -------
+            copied_experiment : Experiment
+                A deep copy of this experiment.
         """
-        return copy.deepcopy(self)
+        copied_experiment = copy.deepcopy(self)
+
+        return copied_experiment
 
 
     def _check_candidate(self, candidate):
