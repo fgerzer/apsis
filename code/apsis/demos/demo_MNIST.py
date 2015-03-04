@@ -1,5 +1,3 @@
-__author__ = 'Frederik Diehl'
-
 from sklearn.datasets import fetch_mldata
 from sklearn.cross_validation import train_test_split
 from sklearn.svm import NuSVC, SVC
@@ -11,6 +9,7 @@ from sklearn.metrics import accuracy_score
 
 from apsis.models.parameter_definition import *
 from apsis.utilities.logging_utils import get_logger
+from apsis.utilities.randomization import check_random_state
 
 logger = get_logger("demos.demo_MNIST")
 
@@ -51,7 +50,7 @@ def do_evaluation(LAss, name, regressor, mnist_data_train, mnist_data_test, mnis
     LAss.update(name, to_eval)
 
 
-def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10, plot=True):
+def evaluate_on_mnist(optimizer_names, optimizers, param_defs, optimizer_args, regressor, cv=10, percentage=1., steps=50, random_steps=10, plot_at_end=True, disable_auto_plot=False):
     """
     This evaluates the (pre-initialized) optimizers on a percentage of mnist.
 
@@ -60,10 +59,11 @@ def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10, plot
     LAss : LabAssistant
         The LabAssistant containing all of the experiments.
     optimizers : list of strings
-        The optimizer names used.
+        The optimizer names used. The first has to be the random optimizer.
     percentage : float, between 0 and 1, optional
         The percentage of MNIST on which we want to evaluate.
     """
+    #TODO add args to comment.
     #We first use the sklearn function to get the MNIST dataset. If cached,
     #we use the cached variant.
     if percentage < 0 or percentage > 1:
@@ -82,39 +82,55 @@ def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10, plot
     mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test = \
         train_test_split(mnist.data, mnist.target, test_size=0.1, random_state=42)
 
+    LAss = ValidationLabAssistant(cv=cv, disable_auto_plot=disable_auto_plot)
 
+    #create random optimizer - assume this is the first one
+    LAss.init_experiment(optimizer_names[0], optimizers[0], param_defs, minimization=False, optimizer_arguments=optimizer_args[0])
 
-    #We do this for steps steps.
-    for i in range(steps):
+    #evaluate random search for 10 steps use these steps as init value for bayesian
+    for i in range(random_steps * cv):
+        #print("random step " + str(i))
+        do_evaluation(LAss, optimizer_names[0], regressor, mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test)
+
+    #now clone experiment for each optimizer
+    for j in range(1, len(optimizers)):
+        LAss.clone_experiments_by_name(exp_name=optimizer_names[0], new_exp_name=optimizer_names[j], optimizer=optimizers[j], optimizer_arguments=optimizer_args[j])
+
+    logger.info("Random Initialization Phase Finished.")
+    logger.info("Competitive Evaluation Phase starts now.")
+
+    #from there on go step by step all models
+    for i in range(random_steps * cv, steps * cv):
         logger.info("Doing step %i" %i)
-        for n in optimizers:
+        for n in optimizer_names:
+            #print("normal step " + str(i) +  " for " + str(n))
             do_evaluation(LAss, n, regressor, mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test)
 
     #finally do an evaluation
-    for n in optimizers:
+    for n in optimizer_names:
         logger.info("Best %s score:  %s" %(n, LAss.get_best_candidate(n).result))
 
-    if plot:
-        LAss.plot_result_per_step(optimizers)
+    if plot_at_end:
+        LAss.plot_result_per_step(optimizer_names)
+        LAss.plot_validation(optimizer_names)
 
-def demo_MNIST(steps, percentage, cv, plot=True):
+def demo_MNIST(steps, random_steps, percentage, cv, plot_at_end=True, disable_auto_plot=False):
     logging.basicConfig(level=logging.DEBUG)
     regressor = SVC(kernel="poly")
     param_defs = {
         "C": MinMaxNumericParamDef(0,10),
-        "degree": FixedValueParamDef([1, 2, 3]),
+        #"degree": FixedValueParamDef([1, 2, 3]),
         "gamma":MinMaxNumericParamDef(0, 1),
         "coef0": MinMaxNumericParamDef(0,1)
     }
-    LAss = ValidationLabAssistant(cv=cv)
 
-    LAss.init_experiment("random_mnist", "RandomSearch", param_defs, minimization=False)
-    LAss.init_experiment("bay_mnist_ei_rand", "BayOpt", param_defs, minimization=False)
-    LAss.init_experiment("bay_mnist_ei_bfgs", "BayOpt", param_defs,
-                         minimization=False, optimizer_arguments=
-        {"acquisition_hyperparams":{"optimization": "L-BFGS-B"}})
-    optimizers = ["random_mnist", "bay_mnist_ei_rand", "bay_mnist_ei_bfgs"]
-    evaluate_on_mnist(LAss, optimizers, regressor, percentage, steps=steps*cv, plot=plot)
+    random_state_rs=check_random_state(42)
+
+    optimizer_names = ["RandomSearch", "BayOpt_EI"]
+    optmizers = ["RandomSearch", "BayOpt"]
+    optimizer_args = [{"random_state": random_state_rs}, {"initial_random_runs": random_steps}]
+
+    evaluate_on_mnist(optimizer_names, optmizers, param_defs, optimizer_args, regressor, cv, percentage, steps=steps, random_steps=random_steps,  plot_at_end=plot_at_end, disable_auto_plot=disable_auto_plot)
 
 if __name__ == '__main__':
-    demo_MNIST(20, 0.01, 10)
+    demo_MNIST(20, 5, 0.001, 10, disable_auto_plot=True)
