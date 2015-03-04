@@ -97,7 +97,7 @@ def evaluate_on_mnist(LAss, optimizers, regressor, percentage=1., steps=10, plot
     if plot:
         LAss.plot_result_per_step(optimizers)
 
-def demo_MNIST(steps, percentage, plot=True):
+def demo_MNIST(steps, percentage, cv, plot=True):
     logging.basicConfig(level=logging.DEBUG)
     regressor = SVC(kernel="poly")
     param_defs = {
@@ -106,15 +106,15 @@ def demo_MNIST(steps, percentage, plot=True):
         "gamma":MinMaxNumericParamDef(0, 1),
         "coef0": MinMaxNumericParamDef(0,1)
     }
-    LAss = ValidationLabAssistant()
+    LAss = ValidationLabAssistant(cv=cv)
 
     LAss.init_experiment("random_mnist", "RandomSearch", param_defs, minimization=False)
     LAss.init_experiment("bay_mnist_ei_rand", "BayOpt", param_defs, minimization=False)
     LAss.init_experiment("bay_mnist_ei_bfgs", "BayOpt", param_defs,
                          minimization=False, optimizer_arguments=
-        {"acquisition_hyperparams":{"optimization": "BFGS"}})
+        {"acquisition_hyperparams":{"optimization": "L-BFGS-B"}})
     optimizers = ["random_mnist", "bay_mnist_ei_rand", "bay_mnist_ei_bfgs"]
-    evaluate_on_mnist(LAss, optimizers, regressor, percentage, steps=steps, plot=plot)
+    evaluate_on_mnist(LAss, optimizers, regressor, percentage, steps=steps*cv, plot=plot)
 
 if __name__ == '__main__':
-    demo_MNIST(20*5, 0.001)
+    demo_MNIST(20, 0.01, 10)
