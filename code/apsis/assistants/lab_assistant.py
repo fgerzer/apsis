@@ -322,11 +322,14 @@ class ValidationLabAssistant(PrettyLabAssistant):
         A dictionary of string keys and int or None values, which stores the
         last experiment for each experiment name from which a candidate has
         been returned.
+    disable_auto_plot: bool
+        To disable automatic plot writing functionality completely.
     """
     cv = None
     exp_current = None
+    disable_auto_plot = None
 
-    def __init__(self, cv=5):
+    def __init__(self, cv=5, disable_auto_plot=False):
         """
         Initializes the ValidationLabAssistant.
 
@@ -334,9 +337,12 @@ class ValidationLabAssistant(PrettyLabAssistant):
         ---------
         cv : int
             The number of crossvalidations used.
+        disable_auto_plot: bool, optional
+            To disable automatic plot writing functionality completely.
         """
         super(ValidationLabAssistant, self).__init__()
         self.cv = cv
+        self.disable_auto_plot = disable_auto_plot
         self.exp_current = {}
 
     def init_experiment(self, name, optimizer, param_defs,
@@ -457,7 +463,8 @@ class ValidationLabAssistant(PrettyLabAssistant):
         self.exp_assistants[exp_name][self.exp_current[exp_name]].update(candidate, status)
         self.exp_current[exp_name] = None
 
-        #self.write_out_plots_current_step()
+        if not self.disable_auto_plot:
+            self.write_out_plots_current_step()
 
     def get_next_candidate(self, exp_name):
         """
