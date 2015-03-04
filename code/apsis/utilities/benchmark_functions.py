@@ -129,7 +129,7 @@ def _calc_distance_grid(x_coords, y_indices, points):
     distance = 0
     for i in range(len(x_coords)):
         distance += (float(x_coords[i]) - float(y_indices[i])/points)**2
-    return distance
+    return distance**0.5
 
 def _gen_closest_index(x, points):
     """
