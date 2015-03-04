@@ -1,7 +1,7 @@
 __author__ = 'Frederik Diehl'
 
 from sklearn.svm import NuSVC, SVC
-from apsis.assistants.lab_assistant import PrettyLabAssistant
+from apsis.assistants.lab_assistant import PrettyLabAssistant, ValidationLabAssistant
 
 from apsis.models.parameter_definition import *
 from apsis.utilities.logging_utils import get_logger
@@ -15,8 +15,8 @@ from demo_MNIST import evaluate_on_mnist
 # This is in a different file compared to demo_MNIST because MCMC requires
 # quite a bit more time compared to non-MCMC.
 
-def demo_MNIST_MCMC(steps, percentage, plot=True):
-    LAss = PrettyLabAssistant()
+def demo_MNIST_MCMC(steps, percentage, cv, plot=True):
+    LAss = ValidationLabAssistant(cv=cv)
 
     regressor = SVC(kernel="poly")
     param_defs = {
@@ -30,7 +30,7 @@ def demo_MNIST_MCMC(steps, percentage, plot=True):
     LAss.init_experiment("bay_mcmc_mnist", "BayOpt", param_defs,
                          minimization=False, optimizer_arguments={"mcmc": True})
     optimizers = ["random_mnist", "bay_mnist", "bay_mcmc_mnist"]
-    evaluate_on_mnist(LAss, optimizers, regressor, percentage, steps=steps, plot=plot)
+    evaluate_on_mnist(LAss, optimizers, regressor, percentage, steps=steps*cv, plot=plot)
 
 if __name__ == '__main__':
-    demo_MNIST_MCMC(steps=50, 0.01)
+    demo_MNIST_MCMC(20, 0.01, 1)
