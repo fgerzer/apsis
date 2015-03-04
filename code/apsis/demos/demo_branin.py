@@ -29,7 +29,7 @@ def single_branin_evaluation_step(LAss, experiment_name):
 
     return to_eval
 
-def demo_branin(steps=100, random_steps=40):
+def demo_branin(steps=20, random_steps=10, cv=5):
     logging.basicConfig(level=logging.DEBUG)
 
     #produce the same random state
@@ -40,7 +40,7 @@ def demo_branin(steps=100, random_steps=40):
         "y": MinMaxNumericParamDef(0, 15)
     }
 
-    LAss = ValidationLabAssistant()
+    LAss = ValidationLabAssistant(cv=cv)
     LAss.init_experiment("Random_Branin", "RandomSearch", param_defs, minimization=True, optimizer_arguments={"random_state": random_state_rs})
     #LAss.init_experiment("BayOpt_EI_Branin", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": random_steps})
 
@@ -48,18 +48,17 @@ def demo_branin(steps=100, random_steps=40):
     optimizer_arguments= [{"random_state": random_state_rs}, {"initial_random_runs": random_steps} ]
 
     #evaluate random search for 10 steps use these steps as init value for bayesian
-    for i in range(random_steps):
+    for i in range(random_steps*cv):
         evaluated_candidate = single_branin_evaluation_step(LAss, 'Random_Branin')
 
     #now clone experiment for each optimizer
     for j in range(1, len(optimizers)):
         LAss.clone_experiments_by_name(exp_name=optimizers[0], new_exp_name=optimizers[j], optimizer="BayOpt", optimizer_arguments=optimizer_arguments[j])
-
     logger.info("Random Initialization Phase Finished.")
     logger.info("Competitive Evaluation Phase starts now.")
 
     #from there on go step by step all models
-    for i in range(random_steps, steps):
+    for i in range(random_steps*cv, steps*cv):
         for optimizer in optimizers:
             single_branin_evaluation_step(LAss, optimizer)
 
