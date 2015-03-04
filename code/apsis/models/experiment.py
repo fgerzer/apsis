@@ -2,6 +2,7 @@ __author__ = 'Frederik Diehl'
 
 from apsis.models.candidate import Candidate
 from apsis.models.parameter_definition import ParamDef
+import copy
 
 class Experiment(object):
     """
@@ -344,6 +345,20 @@ class Experiment(object):
 
         return csv_string, steps_included
 
+    def clone(self):
+        """
+        Create a deep copy of this experiment and return it.
+
+        Returns
+        -------
+            copied_experiment : Experiment
+                A deep copy of this experiment.
+        """
+        copied_experiment = copy.deepcopy(self)
+
+        return copied_experiment
+
+
     def _check_candidate(self, candidate):
         """
         Checks whether candidate is valid for this experiment.
@@ -393,3 +408,4 @@ class Experiment(object):
             if not self.parameter_definitions[k].is_in_parameter_domain(param_dict[k]):
                 return False
         return True
+

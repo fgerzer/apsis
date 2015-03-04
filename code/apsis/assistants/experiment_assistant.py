@@ -53,7 +53,7 @@ class BasicExperimentAssistant(object):
 
     logger = None
 
-    def __init__(self, name, optimizer, param_defs, optimizer_arguments=None,
+    def __init__(self, name, optimizer, param_defs, experiment=None, optimizer_arguments=None,
                  minimization=True, write_directory_base="/tmp/APSIS_WRITING",
                  experiment_directory_base=None, csv_write_frequency=1):
         """
@@ -72,6 +72,8 @@ class BasicExperimentAssistant(object):
             as defined by apsis.utilities.optimizer_utils.
         param_defs : dict of ParamDef.
             This is the parameter space defining the experiment.
+        experiment : Experiment
+            Preinitialize this assistant with an existing experiment.
         optimizer_arguments=None : dict
             These are arguments for the optimizer. Refer to their documentation
             as to which are available.
@@ -92,7 +94,11 @@ class BasicExperimentAssistant(object):
         self.logger.info("Initializing experiment assistant.")
         self.optimizer = optimizer
         self.optimizer_arguments = optimizer_arguments
-        self.experiment = Experiment(name, param_defs, minimization)
+
+        if experiment is None:
+            self.experiment = Experiment(name, param_defs, minimization)
+        else:
+            self.experiment = experiment
 
         self.csv_write_frequency = csv_write_frequency
 
@@ -143,7 +149,6 @@ class BasicExperimentAssistant(object):
             - working: The Candidate is now being worked on by a worker.
 
         """
-
         if status not in self.AVAILABLE_STATUS:
             message = ("status not in %s but %s."
                              %(str(self.AVAILABLE_STATUS), str(status)))
