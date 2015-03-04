@@ -29,7 +29,7 @@ def single_branin_evaluation_step(LAss, experiment_name):
 
     return to_eval
 
-def demo_branin(steps=20, random_steps=10, cv=5):
+def demo_branin(steps=50, random_steps=10, cv=5):
     logging.basicConfig(level=logging.DEBUG)
 
     #produce the same random state
@@ -71,4 +71,4 @@ def demo_branin(steps=20, random_steps=10, cv=5):
 
 
 if __name__ == '__main__':
-    demo_branin()
+    demo_branin(steps=50, random_steps=10, cv=10)
