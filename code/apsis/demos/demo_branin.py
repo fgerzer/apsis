@@ -43,7 +43,7 @@ def demo_branin(steps=50, random_steps=10, cv=5, disable_auto_plot=False):
     LAss = ValidationLabAssistant(cv=cv, disable_auto_plot=disable_auto_plot)
     LAss.init_experiment("RandomSearch", "RandomSearch", param_defs, minimization=True, optimizer_arguments={"random_state": random_state_rs})
 
-    optimizers = ["RandomSearch", "BayOpt"]
+    optimizers = ["RandomSearch", "BayOpt_EI"]
     optimizer_arguments= [{"random_state": random_state_rs}, {"initial_random_runs": random_steps} ]
 
     #evaluate random search for 10 steps use these steps as init value for bayesian
