@@ -116,8 +116,9 @@ def evaluate_performance(optimizers, dims, points, min_var, max_var, step_var, s
         print(o)
         performances[o], variances[o] = evaluate_one_opt(o, LAss, dims, points, min_var, max_var, step_var, steps*cv, noise_gen)
     var_space = np.arange(min_var, max_var, step_var)
-    plt.xlabel("noise variance")
+    plt.xlabel("smoothing gaussian variance")
     plt.ylabel("best result after %i steps" %steps)
+    plt.title("Performance of optimization in dependance on the smoothness.")
     plt.ylim((0, 1))
     for o in optimizers:
 
@@ -162,7 +163,7 @@ def learn_on_noise(optimizers, dims, points, var, steps, cv, show_plot=True):
 
 if __name__ == '__main__':
     optimizers = ["RandomSearch", "BayOpt"]
-    dims = 2
+    dims = 3
     points = 50
     evaluate_performance(optimizers, dims, points, min_var=0.001,
                                  max_var=0.016, step_var=0.001, steps=20, cv=10)
