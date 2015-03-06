@@ -100,8 +100,11 @@ class SimpleBayesianOptimizer(Optimizer):
             'acquisition_hyperparams', None)
         self.num_gp_restarts = optimizer_arguments.get(
             'num_gp_restarts', self.num_gp_restarts)
-        self.acquisition_function = optimizer_arguments.get(
-            'acquisition', ExpectedImprovement)(self.acquisition_hyperparams)
+        if not isinstance(optimizer_arguments.get('acquisition'), AcquisitionFunction):
+            self.acquisition_function = optimizer_arguments.get(
+                'acquisition', ExpectedImprovement)(self.acquisition_hyperparams)
+        else:
+            self.acquisition_function = optimizer_arguments.get("acquisition")
         self.kernel_params = optimizer_arguments.get("kernel_params", {})
         self.kernel = optimizer_arguments.get("kernel", "matern52")
         self.random_searcher = RandomSearch({"random_state": self.random_state})
