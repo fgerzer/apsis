@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 import random
+import math
 
 class ParamDef(object):
     """
@@ -208,7 +209,7 @@ class NumericParamDef(ParamDef, ComparableParamDef):
         """
         Uses the warp_out function for tests.
         """
-        if self.warp_out(0) <= value <= self.warp_out(1):
+        if 0 <= self.warp_in(value) <= 1:
             return True
         return False
 
@@ -370,3 +371,77 @@ class FixedValueParamDef(PositionParamDef):
             pos = v
             positions.append(pos)
         super(FixedValueParamDef, self).__init__(values, positions)
+
+class AsymptoticNumericParamDef(NumericParamDef):
+    """
+    This represents an asymptotic parameter definition.
+
+    It consists of a fixed border - represented at 1 - and an asymptotic
+    border - represented at 0.
+
+    In general, multiplying the input parameter by 1/10th means a multiplication
+    of the warped-in value by 1/2. This means that each interval between
+    10^-i and 10^-(i-1) is represented by an interval of length 1/2^i on the
+    hypercube.
+
+    Attributes
+    ----------
+    asymptotic_border : float
+        The asymptotic border.
+    border : float
+        The non-asymptotic border.
+    """
+    asymptotic_border = None
+    border = None
+
+    def __init__(self, asymptotic_border, border):
+        """
+        Initializes this parameter definition.
+
+        Parameters
+        ----------
+        asymptotic_border : float
+            The asymptotic border.
+        border : float
+            The non-asymptotic border.
+        """
+        self.asymptotic_border = float(asymptotic_border)
+        self.border = float(border)
+
+    def warp_in(self, value_in):
+        """
+        Warps value_in in.
+
+        Parameters
+        ----------
+        value_in : float
+            Should be between (including) asymptotic_border and border. If the
+            former, it is automatically translated to 0.
+
+        Returns
+        -------
+        value_in : float
+            The [0, 1]-translated value.
+        """
+        if value_in == self.asymptotic_border:
+            return 0
+        return 10**math.log(1-(value_in-self.border)/(self.asymptotic_border-self.border), 2)
+
+    def warp_out(self, value_out):
+        """
+        Warps value_in out.
+
+        Parameters
+        ----------
+        value_out : float
+            Should be between (including) 0 and 1. If the
+            former, it is automatically translated to asymptotic_border..
+
+        Returns
+        -------
+        value_in : float
+            The translated value.
+        """
+        if value_out == 0:
+            return self.asymptotic_border
+        return (1-2**(math.log(value_out, 10)))*(self.asymptotic_border-self.border)+self.border
