@@ -384,6 +384,14 @@ class AsymptoticNumericParamDef(NumericParamDef):
     10^-i and 10^-(i-1) is represented by an interval of length 1/2^i on the
     hypercube.
 
+    For example, assume that you want to optimize over a learning rate.
+    Generally, they are close to 0, with parameter values (and therefore
+    possible optimization values) like 10^-1, 10^-4 or 10^-6. This could be
+    done by initializing this class with asymptotic_border = 0 and border = 1.
+
+    Trying to optimize a learning rate decay - which normally is close to 1 -
+    one could initialize this class with asymptotic_border = 1 and border = 0.
+
     Attributes
     ----------
     asymptotic_border : float
