@@ -376,8 +376,8 @@ class AsymptoticNumericParamDef(NumericParamDef):
     """
     This represents an asymptotic parameter definition.
 
-    It consists of a fixed border - represented at 1 - and an asymptotic
-    border - represented at 0.
+    It consists of a fixed border - represented at 0 - and an asymptotic
+    border - represented at 1.
 
     In general, multiplying the input parameter by 1/10th means a multiplication
     of the warped-in value by 1/2. This means that each interval between
@@ -423,7 +423,7 @@ class AsymptoticNumericParamDef(NumericParamDef):
         Parameters
         ----------
         value_in : float
-            Should be between (including) asymptotic_border and border. If the
+            Should be between (including) border and asymptotic_border. If the
             former, it is automatically translated to 0.
 
         Returns
@@ -431,9 +431,10 @@ class AsymptoticNumericParamDef(NumericParamDef):
         value_in : float
             The [0, 1]-translated value.
         """
-        if value_in == self.asymptotic_border:
+        if value_in == self.border:
             return 0
-        return 10**math.log(1-(value_in-self.border)/(self.asymptotic_border-self.border), 2)
+        return (1-2**(math.log(value_in, 10)))*(self.border-self.asymptotic_border)+self.asymptotic_border
+
 
     def warp_out(self, value_out):
         """
@@ -443,7 +444,7 @@ class AsymptoticNumericParamDef(NumericParamDef):
         ----------
         value_out : float
             Should be between (including) 0 and 1. If the
-            former, it is automatically translated to asymptotic_border..
+            former, it is automatically translated to border.
 
         Returns
         -------
@@ -451,5 +452,5 @@ class AsymptoticNumericParamDef(NumericParamDef):
             The translated value.
         """
         if value_out == 0:
-            return self.asymptotic_border
-        return (1-2**(math.log(value_out, 10)))*(self.asymptotic_border-self.border)+self.border
+            return self.border
+        return 10**math.log(1-(value_out-self.asymptotic_border)/(self.border-self.asymptotic_border), 2)
