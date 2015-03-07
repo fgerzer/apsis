@@ -75,11 +75,11 @@ class TestParameterDefinitions(object):
         assert_equal(test.compare_values(1, 0), 1)
 
     def test_asymptotic_def(self):
-        asymptotic = 1
-        border = 0
+        asymptotic = 0
+        border = 1
         pd = AsymptoticNumericParamDef(asymptotic, border)
-        for i in range(0, 100):
+        for i in range(-100, 201):
             x=float(i)/100 * asymptotic + (1-float(i)/100)*border
             w_i = pd.warp_in(x)
             w_o = pd.warp_out(w_i)
-            assert_almost_equal(w_o, x)
+            assert_almost_equal(w_o, min(max(x, 0), 1))

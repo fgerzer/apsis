@@ -423,16 +423,23 @@ class AsymptoticNumericParamDef(NumericParamDef):
         Parameters
         ----------
         value_in : float
-            Should be between (including) border and asymptotic_border. If the
-            former, it is automatically translated to 0.
+            Should be between (including) border and asymptotic_border. If
+            outside the corresponding interval, it is automatically
+            translated to 0 and 1 respectively.
 
         Returns
         -------
         value_in : float
             The [0, 1]-translated value.
         """
+        if not min(self.asymptotic_border, self.border) <= value_in:
+            value_in = min(self.asymptotic_border, self.border)
+        if not value_in <= max(self.asymptotic_border, self.border):
+            value_in = max(self.asymptotic_border, self.border)
         if value_in == self.border:
             return 0
+        elif value_in == self.asymptotic_border:
+            return 1
         return (1-2**(math.log(value_in, 10)))*(self.border-self.asymptotic_border)+self.asymptotic_border
 
 
@@ -443,14 +450,21 @@ class AsymptoticNumericParamDef(NumericParamDef):
         Parameters
         ----------
         value_out : float
-            Should be between (including) 0 and 1. If the
-            former, it is automatically translated to border.
+            Should be between (including) 0 and 1. If bigger than 1, it is
+            translated to border. If smaller than 0, it is translated to
+            asymptotic_border.
 
         Returns
         -------
-        value_in : float
+        value_out : float
             The translated value.
         """
-        if value_out == 0:
+        if not 0 <= value_out:
+            value_out = 0
+        if not value_out <= 1:
+            value_out = 1
+        if value_out == 1:
+            return self.asymptotic_border
+        elif value_out == 0:
             return self.border
         return 10**math.log(1-(value_out-self.asymptotic_border)/(self.border-self.asymptotic_border), 2)
