@@ -1,6 +1,6 @@
 from sklearn.datasets import fetch_mldata
 from sklearn.cross_validation import train_test_split
-from sklearn.svm import NuSVC, SVC
+from sklearn.svm import NuSVC, SVC, libsvm
 import os
 import logging
 from apsis.assistants.lab_assistant import PrettyLabAssistant, ValidationLabAssistant
@@ -89,7 +89,7 @@ def evaluate_on_mnist(optimizer_names, optimizers, param_defs, optimizer_args, r
 
     #evaluate random search for 10 steps use these steps as init value for bayesian
     for i in range(random_steps * cv):
-        #print("random step " + str(i))
+        print("random step " + str(i))
         do_evaluation(LAss, optimizer_names[0], regressor, mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test)
 
     #now clone experiment for each optimizer
@@ -103,7 +103,7 @@ def evaluate_on_mnist(optimizer_names, optimizers, param_defs, optimizer_args, r
     for i in range(random_steps * cv, steps * cv):
         logger.info("Doing step %i" %i)
         for n in optimizer_names:
-            #print("normal step " + str(i) +  " for " + str(n))
+            print("normal step " + str(i) +  " for " + str(n))
             do_evaluation(LAss, n, regressor, mnist_data_train, mnist_data_test, mnist_target_train, mnist_target_test)
 
     #finally do an evaluation
@@ -132,5 +132,24 @@ def demo_MNIST(steps, random_steps, percentage, cv, plot_at_end=True, disable_au
 
     evaluate_on_mnist(optimizer_names, optmizers, param_defs, optimizer_args, regressor, cv, percentage, steps=steps, random_steps=random_steps,  plot_at_end=plot_at_end, disable_auto_plot=disable_auto_plot)
 
+def demo_MNIST_LibSVM(steps, random_steps, percentage, cv, plot_at_end=True, disable_auto_plot=False):
+    logging.basicConfig(level=logging.DEBUG)
+
+    param_defs = {
+        "C": MinMaxNumericParamDef(0,10),
+        "gamma":MinMaxNumericParamDef(0, 1),
+        "nu": MinMaxNumericParamDef(0,1)
+    }
+    random_state_rs=check_random_state(42)
+
+    regressor = libsvm()
+
+    optimizer_names = ["RandomSearch", "BayOpt_EI"]
+    optmizers = ["RandomSearch", "BayOpt"]
+    optimizer_args = [{"random_state": random_state_rs}, {"initial_random_runs": random_steps}]
+
+    evaluate_on_mnist(optimizer_names, optmizers, param_defs, optimizer_args, regressor, cv, percentage, steps=steps, random_steps=random_steps,  plot_at_end=plot_at_end, disable_auto_plot=disable_auto_plot)
+
+
 if __name__ == '__main__':
-    demo_MNIST(20, 5, 0.001, 10, disable_auto_plot=True)
+    demo_MNIST(20, 5, 0.01, 10, disable_auto_plot=True)
