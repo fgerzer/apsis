@@ -30,12 +30,25 @@ Apsis requires the following **python frameworks** and their dependencies to be 
     * most unix based operating systems for which the dependencies listed above are available should work.
     
     * no support for non-unix systems right now.
-    
+ 
+Installation using PIP
+======================
+
+apsis can easiest be installed using PIP by just executing ::
+
+    $ pip install apsis --pre
+
+If the installation fails then you most lieky do not have the appropriate non-python requirements for one of the packages above installed. See the corresponding section under Manual Installation.
+ 
+Manual Installation
+===================
+
 Installing Non-Python Requirements by Operating System
-======================================================
+------------------------------------------------------
     
 Installing Non-Python Prerequisites on Debian/Ubuntu
------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 The compilation of matplotlib and scipy have several non-python dependencies such as C and fortran compilers or linear algebra libraries. Also you should install ``pip`` to install the newest versions of the python dependencies.
 
@@ -50,7 +63,7 @@ following will do the trick. ::
 
     
 Installing Non-Python Prerequesites on Mac OS X
------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You need to update your python version to a later version than the one distributed with your OS.
 
@@ -72,7 +85,7 @@ When homebrew is installed follow these instructions.
         
     
 Installing Python Prerequisites with PIP
-====================================
+------------------------------------------------------
 
 1. Make sure you have ``pip`` and the non-python prerequisites for the libraries listed above installed on your system
 
@@ -97,7 +110,7 @@ Installing Python Prerequisites with PIP
     https://github.com/ebilionis/py-mcmc
 
 Installing and Running Apsis
-================
+-----------------------------
 
 Apsis doesn't have an installation routine yet. To be ready to use you need to
 
