@@ -19,6 +19,8 @@ Functionality has been implemented, but has not been used by many people, and th
 Documentation
 -------------
 
-Our docs are hosted at [apsis.readthedocs.org](http://apsis.readthedocs.org)
-We have a mailing list, at [apsis-users](https://groups.google.com/forum/#!forum/apsis-users)
+Our docs are hosted at [apsis.readthedocs.org](http://apsis.readthedocs.org).
+
+We have a mailing list, at [apsis-users](https://groups.google.com/forum/#!forum/apsis-users).
+
 We also have an IRC channel, at irc.freenode.net #apsis.
