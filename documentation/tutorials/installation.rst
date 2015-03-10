@@ -31,15 +31,6 @@ Apsis requires the following **python frameworks** and their dependencies to be 
     
     * no support for non-unix systems right now.
  
-Installation using PIP
-======================
-
-apsis can easiest be installed using PIP by just executing ::
-
-    $ pip install apsis --pre
-
-If the installation fails then you most lieky do not have the appropriate non-python requirements for one of the packages above installed. See the corresponding section under Manual Installation.
- 
 Manual Installation
 ===================
 
@@ -136,6 +127,17 @@ Which should print something like ::
     
     OK
     
+Installation using PIP
+======================
 
+.. note:: 
+
+    The installation using PIP is currently under creation. If you encounter problems please use manual installation.
+
+apsis can easiest be installed using PIP by just executing ::
+
+    $ pip install apsis --pre
+
+If the installation fails then you most lieky do not have the appropriate non-python requirements for one of the packages above installed. See the corresponding section under Manual Installation.
 
 
