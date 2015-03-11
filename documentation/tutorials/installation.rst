@@ -38,7 +38,17 @@ apsis can easiest be installed using PIP by just executing ::
 
     $ pip install apsis --pre
 
-If the installation fails then you most lieky do not have the appropriate non-python requirements for one of the packages above installed. See the corresponding section under Manual Installation.
+If the installation fails then you most likely do not have the appropriate non-python requirements for one of the packages installed above. These are a fortran compiler and a blas library (for scipy), libpng and libfreetpye (for matplotlib).
+
+On a newly installed Ubuntu system (tested with 15.04), execute ::
+
+    $ sudo apt-get install python-pip python-dev gfortran libpng12-dev libfreetype6-dev libopenblas-dev
+
+followed by the following pip commands: ::
+    
+    $ pip install numpy
+    $ pip install scipy
+    $ pip install --pre apsis
  
 Manual Installation
 ===================
