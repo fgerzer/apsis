@@ -50,6 +50,7 @@ followed by the following pip commands: ::
     $ pip install scipy
     $ pip install --pre apsis
  
+
 Manual Installation
 ===================
 
@@ -145,7 +146,3 @@ Which should print something like ::
     Ran XX tests in YYs
     
     OK
-    
-
-
-

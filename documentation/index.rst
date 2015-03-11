@@ -30,7 +30,7 @@ We have reached the beta state now. Documentation is ready, test covergae is at 
 Scientific Project Description
 ------------------------------
 
-If you want to learn more on the project and are interested in the theoretical background on hyperparameter optimization used in apsis you may want to check out the `scientific project documentation <https://github.com/FrederikDiehl/apsis/blob/master/paper.pdf>`_.
+If you want to learn more on the project and are interested in the theoretical background on hyperparameter optimization used in apsis you may want to check out the `scientific project documentation <https://github.com/FrederikDiehl/apsis/raw/master/paper.pdf>`_.
 
 Furthermore, a presentation slide deck is available at `slideshare <http://www.slideshare.net/andi1400/apsis-automatic-hyperparameter-optimization-framework-for-machine-learning>`_.
 
