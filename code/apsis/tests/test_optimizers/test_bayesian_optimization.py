@@ -7,6 +7,7 @@ from apsis.optimizers.bayesian.acquisition_functions import ExpectedImprovement,
 from apsis.models.experiment import Experiment
 from apsis.models.parameter_definition import MinMaxNumericParamDef
 from apsis.models.candidate import Candidate
+from apsis.utilities.import_utils import import_if_exists
 
 class testSimpleBayesianOptimization(object):
 
@@ -41,7 +42,11 @@ class testSimpleBayesianOptimization(object):
         assert_true(isinstance(opt.acquisition_function, ProbabilityOfImprovement))
         assert_dict_equal(opt.kernel_params, {})
         assert_equal(opt.kernel, "matern52")
-        assert_true(opt.mcmc)
+
+        if import_if_exists("pymcmc")[0]:
+            assert_true(opt.mcmc)
+        else:
+            assert_false(opt.mcmc)
         assert_equal(opt.num_precomputed, 5)
 
     def test_get_next_candidate(self):
