@@ -21,6 +21,7 @@ Contents
    ./tutorials/installation
    design
    modules
+   evaluation
 
 Project State
 -------------
