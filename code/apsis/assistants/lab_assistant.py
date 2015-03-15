@@ -2,7 +2,7 @@ __author__ = 'Frederik Diehl'
 
 from apsis.assistants.experiment_assistant import BasicExperimentAssistant, PrettyExperimentAssistant
 import matplotlib.pyplot as plt
-from apsis.utilities.plot_utils import _create_figure, _polish_figure, plot_lists, write_plot_to_file
+from apsis.utilities.plot_utils import create_figure, _polish_figure, plot_lists, write_plot_to_file
 from apsis.utilities.file_utils import ensure_directory_exists
 import time
 import datetime
@@ -195,15 +195,15 @@ class PrettyLabAssistant(BasicLabAssistant):
 
     def generate_all_plots(self):
         """
-        Fnction to generate all plots available.
+        Function to generate all plots available.
 
         Returns
         -------
         figures : dict of plt.figure
-            The hash contains all plots available by this assistant. Every
+            The dict contains all plots available by this assistant. Every
             plot is keyed by an identifier.
         """
-        #this hash will store all the plots to write
+        #this dict will store all the plots to write
         plots_to_write = {}
 
         result_per_step = self.plot_result_per_step(
@@ -262,7 +262,7 @@ class PrettyLabAssistant(BasicLabAssistant):
             "y_label": "result",
             "title": title
         }
-        fig = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
+        fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
         if show_plot:
             plt.show(True)
@@ -508,8 +508,6 @@ class ValidationLabAssistant(PrettyLabAssistant):
             The experiments to plot.
         show_plot : bool, optional
             Whether to show the plot after creation.
-        fig : None or pyplot figure, optional
-            The figure to update. If None, a new figure will be created.
         color : string, optional
             A string representing a pyplot color.
         plot_min : float, optional
@@ -529,7 +527,8 @@ class ValidationLabAssistant(PrettyLabAssistant):
         plots_list = []
         plots_list.extend(best_per_step_plots_list)
         plots_list.extend(step_plots_list)
-        fig = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
+
+        fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
         if show_plot:
             plt.show(True)
@@ -570,7 +569,8 @@ class ValidationLabAssistant(PrettyLabAssistant):
         best_per_step_plots_list, step_plots_list, plot_options = self._gen_plot_data(experiments)
         plots_list = []
         plots_list.extend(best_per_step_plots_list)
-        fig = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
+
+        fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
         if show_plot:
             plt.show(True)

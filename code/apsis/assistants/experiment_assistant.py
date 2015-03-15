@@ -5,7 +5,7 @@ from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer
 from apsis.utilities.file_utils import ensure_directory_exists
 import matplotlib.pyplot as plt
-from apsis.utilities.plot_utils import plot_lists
+from apsis.utilities.plot_utils import plot_lists, create_figure
 import datetime
 import os
 import time
@@ -233,7 +233,7 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
     A 'prettier' version of the experiment assistant, mostly through plots.
     """
 
-    def plot_result_per_step(self, show_plot=True, fig=None, color="b",
+    def plot_result_per_step(self, show_plot=True, ax=None, color="b",
                              plot_min=None, plot_max=None):
         """
         Returns (and plots) the plt.figure plotting the results over the steps.
@@ -242,8 +242,8 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
         ----------
         show_plot : bool, optional
             Whether to show the plot after creation.
-        fig : None or pyplot figure, optional
-            The figure to update. If None, a new figure will be created.
+        ax : None or matplotlib.Axes, optional
+            The ax to update. If None, a new figure will be created.
         color : string, optional
             A string representing a pyplot color.
         plot_min : float, optional
@@ -253,8 +253,8 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
 
         Returns
         -------
-        fig: plt.figure
-            The figure containing the results over the steps.
+        ax: plt.Axes
+            The Axes containing the results over the steps.
         """
 
 
@@ -271,18 +271,12 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
             "title": "Plot of %s result over the steps."
                      %(str(self.experiment.name))
         }
-        if fig is None:
-            fig = plot_lists(plots,
-                              fig_options=plot_options, plot_min=plot_min,
-                             plot_max=plot_max)
-        else:
-            fig = plot_lists(plots, fig=fig, plot_min=plot_min,
-                             plot_max=plot_max)
+        fig, ax = plot_lists(plots, ax=ax, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
         if show_plot:
             plt.show(True)
 
-        return fig
+        return ax
 
     def _best_result_per_step_dicts(self, color="b"):
         """
