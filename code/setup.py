@@ -8,7 +8,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0a4',
+    version='0.1.1',
 
     description='Toolkit for hyperparameter optimization for machine learning algorithms.',
     long_description='Our goal is to provide a flexible, simple and scaleable approach - parallel, on clusters and/or on your own machine. Check out our usage tutorials to get started or the design pages to understand how apsis works.',
