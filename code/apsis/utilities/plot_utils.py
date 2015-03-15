@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import os
 
-def plot_lists(to_plot_list, fig=None, fig_options=None,
+def plot_lists(to_plot_list, fig, fig_options=None,
                plot_min=None, plot_max=None):
     """
     Plots several functions.
@@ -12,31 +12,32 @@ def plot_lists(to_plot_list, fig=None, fig_options=None,
 
     Parameters
     ----------
-    to_plot_list: list of dicts
+    to_plot_list : list of dicts
         Defines the functions to plot.
         Each entry must contain at least values for "x" and
         "y", and can contain values for "type", "label" and "color".
-        x: list
+        x : list
             A list of x values
-        y: list
+        y : list
             A list of y values
-        type="line": string
+        type : string, optional
             Either "line", in which case a line will be plotted, or "scatter",
-            in which case a scatter plot will be made.
-        label="": string
-            The label for the function.
-        color=random colour: string
-            Which color the plot should have.
-    fig=None: pyplot.figure
+            in which case a scatter plot will be made. line is default.
+        label : string, optional
+            The label for the function. Default is ""
+        color : string, optional
+            Which color the plot should have. If None, a random colour is
+            chosen.
+    fig : pyplot.figure, optional
         A plot to continue, or None in which case a new plot is made using
-        plot_options.
-    fig_options=None: dict
+        plot_options. Default is None.
+    fig_options : dict, optional
         Options used when creating a new plot.
-        "legend_loc"="upper right": string
-            Location for the legend.
-        "x_label"="": string
+        "legend_loc" : string, optional
+            Location for the legend. Default is "upper right"
+        "x_label" : string, optional
             x label for the figure
-        "y_label"="": string
+        "y_label" : string, optional
             y label for the figure
     plot_at_least : 2-float tuple, optional
         How many percent of the values should be displayed, from above and from
@@ -48,7 +49,7 @@ def plot_lists(to_plot_list, fig=None, fig_options=None,
 
     Returns
     -------
-    fig: plt.figure
+    fig : plt.figure
         Either a new figure or fig, now containing the plots as specified.
     """
     newly_created = False
