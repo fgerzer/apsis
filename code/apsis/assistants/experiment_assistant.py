@@ -10,6 +10,10 @@ import datetime
 import os
 import time
 from apsis.utilities.logging_utils import get_logger
+import Queue
+import sys
+
+import multiprocessing
 
 class BasicExperimentAssistant(object):
     """
@@ -347,3 +351,43 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
             else:
                 step_best.append(best_candidate.result)
         return x, step_evaluation, step_best
+
+class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Process):
+
+    update_queue = None
+    next_queue = None
+
+    def __init__(self, name, optimizer, param_defs, update_queue, next_queue,
+                 experiment=None, optimizer_arguments=None, minimization=True,
+                 write_directory_base="/tmp/APSIS_WRITING",
+                 experiment_directory_base=None, csv_write_frequency=1):
+
+        self.update_queue = update_queue
+        self.next_queue = next_queue
+        super(ParallelExperimentAssistant, self).\
+            __init__(name, optimizer, param_defs, experiment=experiment,
+                     optimizer_arguments=optimizer_arguments, minimization=minimization,
+                     write_directory_base=write_directory_base, experiment_directory_base=experiment_directory_base,
+                     csv_write_frequency=csv_write_frequency)
+
+    def run(self):
+        while True:
+            if not self.update_queue.empty():
+                failed = False
+                try:
+                    rcv = self.update_queue.get()
+                    if rcv is None:
+                        sys.exit(0)
+                        #TODO add killing of optimizer.
+                    candidate, status = rcv
+                except Queue.Empty:
+                    failed = True
+                if not failed:
+                    self.update(candidate, status)
+            if self.next_queue.empty():
+                #TODO multiple candidates.
+                try:
+                    self.next_queue.append(self.get_next_candidate())
+                except Queue.Full:
+                    pass
+            time.sleep(0.5)
