@@ -6,6 +6,8 @@ from apsis.optimizers.bayesian_optimization import SimpleBayesianOptimizer
 
 AVAILABLE_OPTIMIZERS = {"RandomSearch": RandomSearch, "BayOpt": SimpleBayesianOptimizer}
 
+AVAILABLE_QUEUE_OPTIMIZERS = {}
+
 def check_optimizer(optimizer, optimizer_arguments=None):
     """
     Returns the optimizer corresponding to optimizer.
@@ -35,3 +37,10 @@ def check_optimizer(optimizer, optimizer_arguments=None):
 
     raise ValueError("No corresponding optimizer found for %s"
                      %str(optimizer))
+
+def build_queue_optimizer(optimizer_name, out_queue, exit_event, optimizer_arguments=None):
+    #TODO documentation
+    if isinstance(optimizer_name, str) and optimizer_name in AVAILABLE_QUEUE_OPTIMIZERS.keys():
+        return AVAILABLE_OPTIMIZERS[optimizer_name](optimizer_arguments, out_queue, exit_event)
+    raise ValueError("No corresponding optimizer found for %s"
+                     %str(optimizer_name))
