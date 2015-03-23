@@ -2,7 +2,7 @@ __author__ = 'Frederik Diehl'
 
 from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
-from apsis.utilities.optimizer_utils import check_optimizer
+from apsis.utilities.optimizer_utils import check_optimizer, build_queue_optimizer
 from apsis.utilities.file_utils import ensure_directory_exists
 import matplotlib.pyplot as plt
 from apsis.utilities.plot_utils import plot_lists, create_figure
@@ -357,6 +357,9 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
     update_queue = None
     next_queue = None
 
+    optimizer_queue = None
+    optimizer_exit = None
+
     def __init__(self, name, optimizer, param_defs, update_queue, next_queue,
                  experiment=None, optimizer_arguments=None, minimization=True,
                  write_directory_base="/tmp/APSIS_WRITING",
@@ -373,21 +376,69 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
     def run(self):
         while True:
             if not self.update_queue.empty():
-                failed = False
                 try:
                     rcv = self.update_queue.get()
                     if rcv is None:
+                        self.optimizer_exit.set()
                         sys.exit(0)
-                        #TODO add killing of optimizer.
                     candidate, status = rcv
+                    self.update(candidate, status) #TODO rework update.
                 except Queue.Empty:
-                    failed = True
-                if not failed:
-                    self.update(candidate, status)
+                    pass
             if self.next_queue.empty():
                 #TODO multiple candidates.
                 try:
-                    self.next_queue.append(self.get_next_candidate())
+                    self.next_queue.append(self.get_next_candidate()) #TODO rework get_next_candidate
                 except Queue.Full:
                     pass
             time.sleep(0.5)
+            #TODO add check for last update being too old.
+
+    def update(self, candidate, status="finished"):
+        if status not in self.AVAILABLE_STATUS:
+            message = ("status not in %s but %s."
+                             %(str(self.AVAILABLE_STATUS), str(status)))
+            self.logger.error(message)
+            raise ValueError(message)
+
+        if not isinstance(candidate, Candidate):
+            message = ("candidate %s not a Candidate instance."
+                             %str(candidate))
+            self.logger.error(message)
+            raise ValueError(message)
+
+        self.logger.info("Got new %s of candidate %s with parameters %s"
+                         " and result %s" %(status, candidate, candidate.params,
+                                            candidate.result))
+
+        if status == "finished":
+            self.experiment.add_finished(candidate)
+            #Also delete all pending candidates from the experiment - we have
+            #new data available.
+            self.experiment.candidates_pending = []
+
+            #invoke the writing to files
+            step = len(self.experiment.candidates_finished)
+            if self.csv_write_frequency != 0 and step != 0 \
+                    and step % self.csv_write_frequency == 0:
+                self._append_to_detailed_csv()
+            #and build a new optimizer.
+            self.optimizer_exit.set()
+            self.optimizer_queue.close()
+
+            self.optimizer_exit = multiprocessing.Event()
+            self.optimizer_queue = multiprocessing.Queue()
+
+            #TODO check the result of using check_optimizer to clone a new optimizer.
+            cur_optimizer = build_queue_optimizer(self.optimizer, self.optimizer_exit,
+                                self.optimizer_queue,
+                                optimizer_arguments=self.optimizer_arguments)
+            cur_optimizer.start()
+
+
+        elif status == "pausing":
+            #TODO rework
+            self.experiment.add_pausing(candidate)
+        elif status == "working":
+            #TODO rework.
+            self.experiment.add_working(candidate)
