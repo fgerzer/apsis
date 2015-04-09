@@ -118,6 +118,11 @@ class SimpleBayesianOptimizer(Optimizer):
         self.logger.info("Bayesian optimization initialized.")
 
     def get_next_candidates(self, experiment, num_candidates=None):
+        if not self._is_experiment_supported(experiment):
+            self.logger.error("Experiment not supported. Supported parameter"
+                              " types are: " + str(self.SUPPORTED_PARAM_TYPES))
+            raise ValueError("Experiment not supported. Supported parameter"
+                              " types are: " + str(self.SUPPORTED_PARAM_TYPES))
         if num_candidates is None:
             num_candidates = self.num_precomputed
         #check whether a random search is necessary.

@@ -4,6 +4,7 @@ from apsis.optimizers.optimizer import Optimizer
 from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
+from apsis.utilities.logging_utils import get_logger
 
 class RandomSearch(Optimizer):
     """
@@ -18,6 +19,7 @@ class RandomSearch(Optimizer):
     SUPPORTED_PARAM_TYPES = [NominalParamDef, NumericParamDef]
 
     random_state = None
+    logger = None
 
     def __init__(self, optimizer_arguments=None):
         """
@@ -35,8 +37,14 @@ class RandomSearch(Optimizer):
         if optimizer_arguments is None:
             optimizer_arguments = {}
         self.random_state = optimizer_arguments.get("random_state", None)
+        self.logger = get_logger(self)
 
     def get_next_candidates(self, experiment, num_candidates=1):
+        if not self._is_experiment_supported(experiment):
+            self.logger.error("Experiment not supported. Supported parameter"
+                              " types are: " + str(self.SUPPORTED_PARAM_TYPES))
+            raise ValueError("Experiment not supported. Supported parameter"
+                              " types are: " + str(self.SUPPORTED_PARAM_TYPES))
         list = []
         for i in range(num_candidates):
             list.append(self._get_one_candidate(experiment))
