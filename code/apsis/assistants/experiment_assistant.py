@@ -14,6 +14,7 @@ import Queue
 import sys
 
 import multiprocessing
+import signal
 
 class BasicExperimentAssistant(object):
     """
@@ -353,20 +354,44 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
         return x, step_evaluation, step_best
 
 class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Process):
+    """
+    This class implements a client/server architecture for the exp_assistant.
 
+    In general, this works as follows: The PEA contains two queues.
+    update_queue receives new (candidate, status) results from workers (via the
+    lab helper and REST interface). Update_queue also is able to stop this
+     assistant by adding a None value to it.
+    next_queue communicates with the lab helper/REST interface by keeping it
+    filled with new candidates to be evaluated.
+    Additionally, it keeps an optimizer_queue for communicating with the
+    optimizer. This is (ideally) kept filled with new candidates to be
+    evaluated.
+    Lastly, candidate_last_time is a dictionary where each candidate of this
+    experiment is assigned the time its worker last sent a status update. This
+    is used to find out when a worker (probably) has crashed.
+    """
     update_queue = None
     next_queue = None
 
     optimizer_queue = None
-    optimizer_exit = None
+    optimizer_process = None
+
+    # We'll leave this for now, as the first version should just support
+    # parallelism in general.
+    #candidate_last_time = None
+    #max_time_without_update = None
 
     def __init__(self, name, optimizer, param_defs, update_queue, next_queue,
                  experiment=None, optimizer_arguments=None, minimization=True,
                  write_directory_base="/tmp/APSIS_WRITING",
-                 experiment_directory_base=None, csv_write_frequency=1):
+                 experiment_directory_base=None, csv_write_frequency=1,
+                 max_time_without_update=None):
 
         self.update_queue = update_queue
         self.next_queue = next_queue
+        self.candidate_last_time = {}
+        #self.max_time_without_update = max_time_without_update
+        self._build_new_optimizer()
         super(ParallelExperimentAssistant, self).\
             __init__(name, optimizer, param_defs, experiment=experiment,
                      optimizer_arguments=optimizer_arguments, minimization=minimization,
@@ -375,24 +400,32 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
 
     def run(self):
         while True:
+            # if there are new examples, we stop the optimizer and
+            # begin a new one.
             if not self.update_queue.empty():
                 try:
                     rcv = self.update_queue.get()
                     if rcv is None:
+                        # we should stop this assistant.
                         self.optimizer_exit.set()
                         sys.exit(0)
                     candidate, status = rcv
-                    self.update(candidate, status) #TODO rework update.
+                    self.update(candidate, status)
                 except Queue.Empty:
                     pass
-            if self.next_queue.empty():
-                #TODO multiple candidates.
-                try:
-                    self.next_queue.append(self.get_next_candidate()) #TODO rework get_next_candidate
-                except Queue.Full:
-                    pass
-            time.sleep(0.5)
-            #TODO add check for last update being too old.
+            # if we have new possible examples, we add them to the next_queue.
+            if not self.optimizer_queue.empty():
+                while not self.optimizer_queue.empty():
+                    try:
+                        self.get_next_candidate()
+                    except Queue.Full:
+                        pass
+            # This, too, is part of the check for stopped candidates.
+            #if self.max_time_without_update is not None:
+            #    for cand, last_update in self.candidate_last_time:
+            #        if time.time() - last_update > self.max_time_without_update:
+            #            #candidate has not been heard from for too long.
+            time.sleep(1)
 
     def update(self, candidate, status="finished"):
         if status not in self.AVAILABLE_STATUS:
@@ -423,22 +456,47 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
                     and step % self.csv_write_frequency == 0:
                 self._append_to_detailed_csv()
             #and build a new optimizer.
-            self.optimizer_exit.set()
+            # This sends SIGINT to the optimizer process, which is used to
+            # terminate the process irrespective of its current computation.
+            # (But, since it will be catched, it can still do cleanup)
+            os.kill(self.optimizer_process.pid, signal.SIGINT)
             self.optimizer_queue.close()
 
-            self.optimizer_exit = multiprocessing.Event()
-            self.optimizer_queue = multiprocessing.Queue()
-
-            #TODO check the result of using check_optimizer to clone a new optimizer.
-            cur_optimizer = build_queue_optimizer(self.optimizer, self.optimizer_exit,
-                                self.optimizer_queue,
-                                optimizer_arguments=self.optimizer_arguments)
-            cur_optimizer.start()
-
+            # And we rebuild the new optimizer.
+            self._build_new_optimizer()
 
         elif status == "pausing":
-            #TODO rework
             self.experiment.add_pausing(candidate)
         elif status == "working":
-            #TODO rework.
             self.experiment.add_working(candidate)
+
+    def _build_new_optimizer(self):
+        self.optimizer_queue = multiprocessing.Queue()
+
+        self.optimizer = build_queue_optimizer(self.optimizer, self.experiment,
+                            self.optimizer_queue,
+                            optimizer_arguments=self.optimizer_arguments)
+        self.optimizer.start()
+
+    def get_next_candidate(self):
+        """
+        Returns the Candidate next to evaluate.
+
+        Returns
+        -------
+        next_candidate : Candidate or None
+            The Candidate object that should be evaluated next. May be None.
+        """
+        self.logger.info("Returning next candidate.")
+        if not self.experiment.candidates_pending:
+            next_candidate = self.experiment.candidates_pending.pop()
+        else:
+            if not self.optimizer_queue.empty():
+                next_candidate = self.optimizer_queue.get()
+            else:
+                next_candidate = None
+        if next_candidate is not None:
+            self.next_queue.append(next_candidate)
+            self.logger.info("next candidate found: %s" %next_candidate)
+        else:
+            self.logger.info("No current candidate available.")
