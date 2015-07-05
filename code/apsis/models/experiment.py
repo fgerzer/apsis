@@ -328,7 +328,7 @@ class Experiment(object):
             key_order = sorted(self.parameter_definitions.keys())
 
         if wHeader:
-            csv_string += "step" + delimiter
+            csv_string += "step" + delimiter + "id" + delimiter
             for k in key_order:
                 csv_string += k + delimiter
             csv_string += "cost" + delimiter + "result" + delimiter + \

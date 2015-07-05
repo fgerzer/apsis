@@ -1,5 +1,6 @@
 __author__ = 'Frederik Diehl'
 
+import uuid
 
 class Candidate(object):
     """
@@ -12,6 +13,10 @@ class Candidate(object):
 
     Attributes
     ----------
+
+    id : uuid.UUID
+        The uuid identifying this candidate. This is used to compare candidates
+        over server and client borders.
 
     params : dict of string keys
         A dictionary of parameter value. The keys must correspond to the
@@ -32,12 +37,13 @@ class Candidate(object):
         is never touched in apsis.
     """
 
+    id = None
     params = None
     result = None
     cost = None
     worker_information = None
 
-    def __init__(self, params, worker_information=None):
+    def __init__(self, params, id=None, worker_information=None):
         """
         Initializes the unevaluated candidate object.
 
@@ -47,6 +53,12 @@ class Candidate(object):
             A dictionary of parameter value. The keys must correspond to the
             problem definition.
             The dictionary requires one key - and value - per parameter defined.
+        id : uuid.UUID, optional
+            The uuid identifying this candidate. This is used to compare candidates
+            over server and client borders.
+            Note that this should only be set explicitly if you are instantiating
+             an already known candidate with its already known UUID. Do not
+             explicitely set the uuid for a new candidate!
         worker_information : string, optional
             This is worker-settable information which might be used for
             communicating things necessary for resuming evaluations et cetera.
@@ -56,6 +68,10 @@ class Candidate(object):
         ValueError
             Iff params is not a dictionary.
         """
+        if uuid is None:
+            self.id = uuid.uuid4()
+        else:
+            self.id = uuid.UUID(id)
         if not isinstance(params, dict):
             raise ValueError("No parameter dictionary given.")
         self.params = params
@@ -65,8 +81,8 @@ class Candidate(object):
         """
         Compares two Candidate instances.
 
-        Two Candidate instances are defined as being equal iff their params
-        vectors are equal. A non-Candidate instance is never equal to a
+        Two Candidate instances are defined as being equal iff their ids
+        are equal. A non-Candidate instance is never equal to a
         Candidate.
 
         Parameters
@@ -77,14 +93,13 @@ class Candidate(object):
         Returns
         -------
         equality : bool
-            True iff other is a Candidate instance and their params are
-            identical.
+            True iff other is a Candidate instance and their ids are equal.
         """
 
         if not isinstance(other, Candidate):
             return False
 
-        if self.params == other.params:
+        if self.id == other.id:
             return True
         return False
 
@@ -105,6 +120,7 @@ class Candidate(object):
 
         """
         string = "Candidate\n"
+        string += "id: %s\n" %self.id
         string += "params: " + str(self.params) + "\n"
         if self.cost is not None:
             string += "cost: " + str(self.cost) + "\n"
@@ -115,8 +131,9 @@ class Candidate(object):
         """
         Returns a csv entry representing this candidate.
 
-        It is delimited by `delimiter`, and first consists of all parameters
-        in the order defined by `key_order`, followed by the cost and result.
+        It is delimited by `delimiter`, and first consists of the id, followed
+        by all parameters in the order defined by `key_order`, followed by the
+        cost and result.
 
         Parameters
         ----------
@@ -134,6 +151,7 @@ class Candidate(object):
         if key_order is None:
             key_order = sorted(self.params.keys())
         string = ""
+        string += str(self.id) + delimiter
         for k in key_order:
             string += str(self.params[k]) + delimiter
         string += str(self.cost) + delimiter
