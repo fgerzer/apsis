@@ -121,10 +121,10 @@ class Candidate(object):
         """
         string = "Candidate\n"
         string += "id: %s\n" %self.id
-        string += "params: " + str(self.params) + "\n"
+        string += "params: %s\n" %str(self.params)
         if self.cost is not None:
-            string += "cost: " + str(self.cost) + "\n"
-        string += "result: " + str(self.result) + "\n"
+            string += "cost: %s\n" %self.cost
+        string += "result: %s\n" %str(self.result)
         return string
 
     def to_csv_entry(self, delimiter=",", key_order=None):
