@@ -378,8 +378,10 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
     def run(self):
         while True:
             msg = self.rcv_queue.get(block=True)
-            result = getattr(self, "_" + msg["action"])(msg)
-            self.return_queue.put(result, block=True)
+            try:
+                getattr(self, "_" + msg["action"])(msg)
+            except:
+                pass
 
     def get_next_candidate(self):
         conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
