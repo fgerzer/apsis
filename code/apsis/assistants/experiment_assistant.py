@@ -367,7 +367,6 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
                  max_time_without_update=None):
 
         self.rcv_queue = multiprocessing.Queue()
-        self.return_queue = multiprocessing.Queue()
 
         self._build_new_optimizer()
         super(ParallelExperimentAssistant, self).\
