@@ -1,5 +1,6 @@
 __author__ = 'Frederik Diehl'
 
+import threading.lock
 from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer, build_queue_optimizer
@@ -354,43 +355,20 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
         return x, step_evaluation, step_best
 
 class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Process):
-    """
-    This class implements a client/server architecture for the exp_assistant.
-
-    In general, this works as follows: The PEA contains two queues.
-    update_queue receives new (candidate, status) results from workers (via the
-    lab helper and REST interface). Update_queue also is able to stop this
-     assistant by adding a None value to it.
-    next_queue communicates with the lab helper/REST interface by keeping it
-    filled with new candidates to be evaluated.
-    Additionally, it keeps an optimizer_queue for communicating with the
-    optimizer. This is (ideally) kept filled with new candidates to be
-    evaluated.
-    Lastly, candidate_last_time is a dictionary where each candidate of this
-    experiment is assigned the time its worker last sent a status update. This
-    is used to find out when a worker (probably) has crashed.
-    """
-    update_queue = None
-    next_queue = None
+    rcv_queue = None
 
     optimizer_queue = None
     optimizer_process = None
 
-    # We'll leave this for now, as the first version should just support
-    # parallelism in general.
-    #candidate_last_time = None
-    #max_time_without_update = None
-
-    def __init__(self, name, optimizer, param_defs, update_queue, next_queue,
+    def __init__(self, name, optimizer, param_defs,
                  experiment=None, optimizer_arguments=None, minimization=True,
                  write_directory_base="/tmp/APSIS_WRITING",
                  experiment_directory_base=None, csv_write_frequency=1,
                  max_time_without_update=None):
 
-        self.update_queue = update_queue
-        self.next_queue = next_queue
-        self.candidate_last_time = {}
-        #self.max_time_without_update = max_time_without_update
+        self.rcv_queue = multiprocessing.Queue()
+        self.return_queue = multiprocessing.Queue()
+
         self._build_new_optimizer()
         super(ParallelExperimentAssistant, self).\
             __init__(name, optimizer, param_defs, experiment=experiment,
@@ -400,34 +378,41 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
 
     def run(self):
         while True:
-            # if there are new examples, we stop the optimizer and
-            # begin a new one.
-            if not self.update_queue.empty():
-                try:
-                    rcv = self.update_queue.get()
-                    if rcv is None:
-                        # we should stop this assistant.
-                        self.optimizer_exit.set()
-                        sys.exit(0)
-                    candidate, status = rcv
-                    self.update(candidate, status)
-                except Queue.Empty:
-                    pass
-            # if we have new possible examples, we add them to the next_queue.
-            if not self.optimizer_queue.empty():
-                while not self.optimizer_queue.empty():
-                    try:
-                        self.get_next_candidate()
-                    except Queue.Full:
-                        pass
-            # This, too, is part of the check for stopped candidates.
-            #if self.max_time_without_update is not None:
-            #    for cand, last_update in self.candidate_last_time:
-            #        if time.time() - last_update > self.max_time_without_update:
-            #            #candidate has not been heard from for too long.
-            time.sleep(1)
+            msg = self.rcv_queue.get(block=True)
+            result = getattr(self, "_" + msg["action"])(msg)
+            self.return_queue.put(result, block=True)
+
+    def get_next_candidate(self):
+        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        msg = {"action": "get_next_candidate",
+               "return_pipe": conn_send}
+        self.rcv_queue.put(msg)
+        next_candidate = conn_rcv.get(block=True)
+        conn_rcv.close()
+        return next_candidate
+
+    def _get_next_candidate(self, msg):
+        self.logger.info("Returning next candidate.")
+        next_candidate = None
+        while next_candidate is not None:
+            if not self.experiment.candidates_pending:
+                next_candidate = self.experiment.candidates_pending.pop()
+            else:
+                if not self.optimizer_queue.empty():
+                    next_candidate = self.optimizer_queue.get()
+        msg["return_pipe"].put(next_candidate)
 
     def update(self, candidate, status="finished"):
+        msg = {
+            "action": "update",
+            "candidate": candidate,
+            "status": status
+        }
+        self.rcv_queue.put(msg)
+
+    def _update(self, msg):
+        status = msg["status"]
+        candidate = msg["candidate"]
         if status not in self.AVAILABLE_STATUS:
             message = ("status not in %s but %s."
                              %(str(self.AVAILABLE_STATUS), str(status)))
@@ -470,6 +455,7 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         elif status == "working":
             self.experiment.add_working(candidate)
 
+
     def _build_new_optimizer(self):
         self.optimizer_queue = multiprocessing.Queue()
 
@@ -478,25 +464,16 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
                             optimizer_arguments=self.optimizer_arguments)
         self.optimizer.start()
 
-    def get_next_candidate(self):
-        """
-        Returns the Candidate next to evaluate.
+    def get_best_candidate(self):
+        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        msg = {
+            "action": "get_best_candidate",
+            "return_pipe": conn_send
+        }
+        self.rcv_queue.put(msg)
+        best_candidate = conn_rcv.get(block=True)
+        conn_rcv.close()
+        return best_candidate
 
-        Returns
-        -------
-        next_candidate : Candidate or None
-            The Candidate object that should be evaluated next. May be None.
-        """
-        self.logger.info("Returning next candidate.")
-        if not self.experiment.candidates_pending:
-            next_candidate = self.experiment.candidates_pending.pop()
-        else:
-            if not self.optimizer_queue.empty():
-                next_candidate = self.optimizer_queue.get()
-            else:
-                next_candidate = None
-        if next_candidate is not None:
-            self.next_queue.append(next_candidate)
-            self.logger.info("next candidate found: %s" %next_candidate)
-        else:
-            self.logger.info("No current candidate available.")
+    def _get_best_candidate(self, msg):
+        msg["return_pipe"].put(self.experiment.best_candidate)
