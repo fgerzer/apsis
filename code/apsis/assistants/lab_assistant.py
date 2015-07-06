@@ -9,6 +9,7 @@ import datetime
 import os
 from apsis.utilities.logging_utils import get_logger
 import numpy as np
+import multiprocessing
 
 class BasicLabAssistant(object):
     """
@@ -760,3 +761,74 @@ class ValidationLabAssistant(PrettyLabAssistant):
         plots_to_write['validation'] = plot_validation
 
         return plots_to_write
+
+class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
+    rcv_queue = None
+
+    def init(self, write_directory_base="/tmp/APSIS_WRITING"):
+        self.rcv_queue = multiprocessing.Queue()
+        super(ParallelLabAssistant).__init__(write_directory_base)
+
+    def run(self):
+        while True:
+            msg = self.rcv_queue.get(block=True)
+            try:
+                getattr(self, "_" + msg["action"])(msg)
+            except:
+                pass
+
+    def init_experiment(self, name, optimizer, param_defs,
+                        optimizer_arguments=None, minimization=True):
+        pass
+
+    def get_next_candidate(self, exp_name):
+        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        msg = {"action": "get_next_candidate",
+                   "exp_name": exp_name,
+                   "return_pipe": conn_send}
+        self.rcv_queue.put(msg)
+        next_candidate = conn_rcv.get(block=True)
+        conn_rcv.close()
+        return next_candidate
+
+    def _get_next_candidate(self, msg):
+        exp_assistant_name = msg["exp_name"]
+        conn_send = msg["return_pipe"]
+        next_candidate = self.exp_assistants[exp_assistant_name].get_next_candidate()
+        conn_send.put(next_candidate)
+
+    def update(self, exp_name, candidate, status="finished"):
+        message = {"action": "update",
+                   "exp_name": exp_name,
+                   "status": status,
+                   "candidate": candidate}
+        self.rcv_queue.put(message)
+
+    def _update(self, msg):
+        self.exp_assistants[msg["exp_name"]].update(candidate=msg["candidate"],
+                                                    status=msg["status"])
+
+    def get_best_candidate(self, exp_name):
+        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        msg = {
+            "action": "get_best_candidate",
+            "exp_name": exp_name,
+            "return_pipe": conn_send
+        }
+        self.rcv_queue.put(msg)
+        best_candidate = conn_rcv.get(block=True)
+        conn_rcv.close()
+        return best_candidate
+
+    def _get_best_candidate(self, msg):
+        best_candidate = self.exp_assistants[msg["exp_name"]].get_best_candidate()
+        msg["return_pipe"].put(best_candidate)
+
+    def write_out_plots_current_step(self, same_steps_only=True):
+        pass
+
+    def generate_all_plots(self):
+        pass
+
+    def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None, title=None):
+        pass
