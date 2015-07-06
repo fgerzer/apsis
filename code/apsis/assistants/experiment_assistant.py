@@ -355,18 +355,97 @@ class PrettyExperimentAssistant(BasicExperimentAssistant):
         return x, step_evaluation, step_best
 
 class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Process):
-    rcv_queue = None
+    """
+    This ExperimentAssistant is used to parallelize the experiment execution.
 
-    optimizer_queue = None
-    optimizer_process = None
+    In general, the experiment assistant allows external processes to access
+    several functions which are internally abstracted with a queue communication
+    structure. This means that this is thread safe, and can be used by more than
+    one thread or process at once.
+
+    In general, this class manages one QueueBasedOptimizer process, which can
+    communicate with it using the optimizer_queue Queue. In normal operation,
+    QueueBasedOptimizer keeps the optimizer_queue filled, and experiment_assistant
+    uses it to provide new candidates to evaluate. Once a new candidate has been
+    evaluated (that is, returned with the status "finished"), the optimizer
+    process is killed with a SIGINT signal (which allows it to terminate
+    gracefully) and a new optimizer process is started.
+
+    Communication with the outside happens via several available functions,
+    which all work with the same scheme.
+    This class instance keeps a _rcv_queue, on which the methods called from the
+    outside push messages. Each message is a dict and contains at least an
+    "action" field clarifying the action, plus additional fields depending on
+    the action. If a reply is needed, the "return_pipe" key has a
+    multiprocessing.Pipe object, onto which the answer is pushed.
+
+    Therefore, for each action Action, this class implements two functions.
+    Action(args) is called from the outside, initializes the message from the
+    args and - if necessary - adds a return_pipe. If a reply is needed, it
+    will wait for an answer to be pushed on its end of the return_pipe.
+    _Action(msg) is called from the inside, from run (where the conversion from
+    msg's "action" field to function name is done automatically; so please use
+    the scheme indicated above) and receives the information in msg. If a reply
+    is needed (which is function-dependant, not message-dependant) it must answer
+    on the return_pipe or risk the calling process to remain stuck.
+
+
+    Attributes
+    ----------
+    _rcv_queue : multiprocessing.queue
+        The queue used to communicate internally.
+
+    _optimizer_queue : multiprocessing.queue
+        The queue the optimizer appends its new candidates.
+
+    _optimizer_process : multiprocessing.Process
+        The process of the optimizer.
+
+    """
+    _rcv_queue = None
+
+    _optimizer_queue = None
+    _optimizer_process = None
 
     def __init__(self, name, optimizer, param_defs,
                  experiment=None, optimizer_arguments=None, minimization=True,
                  write_directory_base="/tmp/APSIS_WRITING",
-                 experiment_directory_base=None, csv_write_frequency=1,
-                 max_time_without_update=None):
+                 experiment_directory_base=None, csv_write_frequency=1):
+        """
+        Initializes the ParallelExperimentAssistant.
 
-        self.rcv_queue = multiprocessing.Queue()
+        Parameters
+        ----------
+        name : string
+            The name of the experiment. This does not have to be unique, but is
+            for human orientation.
+        optimizer : Optimizer instance or string
+            This is an optimizer implementing the corresponding functions: It
+            gets an experiment instance, and returns one or multiple candidates
+            which should be evaluated next.
+            Alternatively, it can be a string corresponding to the optimizer,
+            as defined by apsis.utilities.optimizer_utils.
+        param_defs : dict of ParamDef.
+            This is the parameter space defining the experiment.
+        experiment : Experiment
+            Preinitialize this assistant with an existing experiment.
+        optimizer_arguments=None : dict
+            These are arguments for the optimizer. Refer to their documentation
+            as to which are available.
+        minimization=True : bool
+            Whether the problem is one of minimization or maximization.
+        write_directory_base : string, optional
+            The global base directory for all writing. Will only be used
+            for creation of experiment_directory_base if this is not given.
+        experiment_directory_base : string or None, optional
+            The directory to write all the results to. If not
+            given a directory with timestamp will automatically be created
+            in write_directory_base
+        csv_write_frequency : int, optional
+            States how often the csv file should be written to.
+            If set to 0 no results will be written.
+        """
+        self._rcv_queue = multiprocessing.Queue()
 
         self._build_new_optimizer()
         super(ParallelExperimentAssistant, self).\
@@ -376,42 +455,129 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
                      csv_write_frequency=csv_write_frequency)
 
     def run(self):
+        """
+        The run method, used for receiving and parsing messages.
+
+        This method runs forever, waiting for self._rcv_queue to contain a
+        message. If this is the case, it calls the method defined by adding a
+        _ to the front of msg["action"] with msg as parameter.
+        For more details, see the documentation of this class.
+        """
         while True:
-            msg = self.rcv_queue.get(block=True)
+            msg = self._rcv_queue.get(block=True)
             try:
                 getattr(self, "_" + msg["action"])(msg)
             except:
                 pass
 
     def get_next_candidate(self):
+        """
+        Returns the Candidate next to evaluate.
+
+        Returns
+        -------
+        next_candidate : Candidate or None
+            The Candidate object that should be evaluated next. May be None,
+            which is to be interpreted as no candidate currently being
+            available.
+        """
         conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {"action": "get_next_candidate",
                "return_pipe": conn_send}
-        self.rcv_queue.put(msg)
+        self._rcv_queue.put(msg)
         next_candidate = conn_rcv.get(block=True)
         conn_rcv.close()
         return next_candidate
 
     def _get_next_candidate(self, msg):
+        """
+        INTERNAL USE ONLY
+
+        This method is called when a message with the action
+        "get_next_candidate" is received.
+        If pending candidates exists for the experiment (pending candidates
+        are candidates which have been paused in execution), it will return
+        one of them (the first one, though no guarantee will be made that this
+        remains that way in the future). Otherwise, it will try to return a
+        candidate from the _optimizer_queue. If this is empty, it will return
+        a None value.
+
+        Parameters
+        ----------
+            msg : dict
+                The message sent to the process. Includes the following keys:
+                "action" : string
+                    This will be "get_next_candidate".
+                "return_pipe" : multiprocessing.Pipe end point
+                    This is a pipe end point into which one can put an object.
+                    This is used to return the next candidate.
+                    One object will be sent into it, which is either the next
+                    Candidate or None, if no candidate is currently available.
+                All other keys will be ignored.
+        """
         self.logger.info("Returning next candidate.")
         next_candidate = None
         while next_candidate is not None:
             if not self.experiment.candidates_pending:
                 next_candidate = self.experiment.candidates_pending.pop()
             else:
-                if not self.optimizer_queue.empty():
-                    next_candidate = self.optimizer_queue.get()
+                try:
+                    next_candidate = self._optimizer_queue.get()
+                except:
+                    next_candidate = None
         msg["return_pipe"].put(next_candidate)
 
     def update(self, candidate, status="finished"):
+        """
+        Updates the experiment_assistant with the status of an experiment
+        evaluation.
+
+        Parameters
+        ----------
+        candidate : Candidate
+            The Candidate object whose status is updated.
+        status : {"finished", "pausing", "working"}
+            A string defining the status change. Can be one of the following:
+            - finished: The Candidate is now finished.
+            - pausing: The evaluation of Candidate has been paused and can be
+                resumed by another worker.
+            - working: The Candidate is now being worked on by a worker.
+
+        """
         msg = {
             "action": "update",
             "candidate": candidate,
             "status": status
         }
-        self.rcv_queue.put(msg)
+        self._rcv_queue.put(msg)
 
     def _update(self, msg):
+        """
+        INTERNAL USE ONLY
+
+        This method is called when a message with the action "update" is
+        received.
+        Depending on the status, three different actions will occur.
+        - finished: The candidate will be added to the experiments' finished
+        list. If necessary, the csv results will be written. The optimizer will
+        be killed, and a new one initialized.
+        - pausing: The candidate will be added to the pending list. It will be
+        resumed before any new candidates will be generated by the optimizer.
+        - working: The candidate will now be assumed to be worked on.
+
+        Parameters
+        ----------
+            msg : dict
+                The message sent to the process. Includes the following keys:
+                "action" : string
+                    This will be "update".
+                "candidate": Candidate
+                    The candidate whose status is updated.
+                "status": string
+                    The new status of the candidate. Can be one of "working",
+                    "pausing" and "finished".
+                All other keys will be ignored.
+        """
         status = msg["status"]
         candidate = msg["candidate"]
         if status not in self.AVAILABLE_STATUS:
@@ -432,9 +598,6 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
 
         if status == "finished":
             self.experiment.add_finished(candidate)
-            #Also delete all pending candidates from the experiment - we have
-            #new data available.
-            self.experiment.candidates_pending = []
 
             #invoke the writing to files
             step = len(self.experiment.candidates_finished)
@@ -445,8 +608,8 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
             # This sends SIGINT to the optimizer process, which is used to
             # terminate the process irrespective of its current computation.
             # (But, since it will be catched, it can still do cleanup)
-            os.kill(self.optimizer_process.pid, signal.SIGINT)
-            self.optimizer_queue.close()
+            os.kill(self._optimizer_process.pid, signal.SIGINT)
+            self._optimizer_queue.close()
 
             # And we rebuild the new optimizer.
             self._build_new_optimizer()
@@ -458,23 +621,61 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
 
 
     def _build_new_optimizer(self):
-        self.optimizer_queue = multiprocessing.Queue()
+        """
+        INTERNAL USE ONLY.
+
+        This function builds a new optimizer.
+
+        In general, it instantiates a new optimizer_queue, a new optimizer
+        (with the current experiment) and starts said optimizer.
+        """
+        self._optimizer_queue = multiprocessing.Queue()
 
         self.optimizer = build_queue_optimizer(self.optimizer, self.experiment,
-                            self.optimizer_queue,
+                            self._optimizer_queue,
                             optimizer_arguments=self.optimizer_arguments)
         self.optimizer.start()
 
     def get_best_candidate(self):
+        """
+        Returns the best candidate to date.
+
+        Returns
+        -------
+        best_candidate : candidate or None
+            Returns a candidate if there is a best one (which corresponds to
+            at least one candidate evaluated) or None if none exists.
+        """
         conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {
             "action": "get_best_candidate",
             "return_pipe": conn_send
         }
-        self.rcv_queue.put(msg)
+        self._rcv_queue.put(msg)
         best_candidate = conn_rcv.get(block=True)
         conn_rcv.close()
         return best_candidate
 
     def _get_best_candidate(self, msg):
+        """
+        INTERNAL USE ONLY
+
+        This method is called when a message with the action
+        "get_best_candidate" is received.
+        Unsurprisingly, it returns the best existing candidate (or None if no
+        such candidate exists).
+
+        Parameters
+        ----------
+            msg : dict
+                The message sent to the process. Includes the following keys:
+                "action" : string
+                    This will be "get_best_candidate".
+                "return_pipe" : multiprocessing.Pipe end point
+                    This is a pipe end point into which one can put an object.
+                    This is used to return the best candidate.
+                    One object will be sent into it, which is either the next
+                    Candidate or None, if no best candidate exists.
+                All other keys will be ignored.
+        """
         msg["return_pipe"].put(self.experiment.best_candidate)
