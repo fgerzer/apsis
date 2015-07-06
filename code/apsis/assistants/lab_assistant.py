@@ -823,12 +823,3 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
     def _get_best_candidate(self, msg):
         best_candidate = self.exp_assistants[msg["exp_name"]].get_best_candidate()
         msg["return_pipe"].put(best_candidate)
-
-    def write_out_plots_current_step(self, same_steps_only=True):
-        pass
-
-    def generate_all_plots(self):
-        pass
-
-    def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None, title=None):
-        pass
