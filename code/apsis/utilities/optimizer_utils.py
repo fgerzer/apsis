@@ -1,12 +1,12 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.optimizers.random_search import RandomSearch
+from apsis.optimizers.random_search import RandomSearch, QueueRandomSearch
 from apsis.optimizers.optimizer import Optimizer
 from apsis.optimizers.bayesian_optimization import SimpleBayesianOptimizer
 
 AVAILABLE_OPTIMIZERS = {"RandomSearch": RandomSearch, "BayOpt": SimpleBayesianOptimizer}
 
-AVAILABLE_QUEUE_OPTIMIZERS = {}
+AVAILABLE_QUEUE_OPTIMIZERS = {"RandomSearch": QueueRandomSearch}
 
 def check_optimizer(optimizer, optimizer_arguments=None):
     """
@@ -41,6 +41,6 @@ def check_optimizer(optimizer, optimizer_arguments=None):
 def build_queue_optimizer(optimizer_name, experiment, out_queue, optimizer_arguments=None):
     #TODO documentation
     if isinstance(optimizer_name, str) and optimizer_name in AVAILABLE_QUEUE_OPTIMIZERS.keys():
-        return AVAILABLE_OPTIMIZERS[optimizer_name](optimizer_arguments, experiment, out_queue)
+        return AVAILABLE_QUEUE_OPTIMIZERS[optimizer_name](optimizer_arguments, experiment, out_queue)
     raise ValueError("No corresponding optimizer found for %s"
                      %str(optimizer_name))
