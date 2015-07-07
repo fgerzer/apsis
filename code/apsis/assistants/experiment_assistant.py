@@ -14,7 +14,7 @@ import Queue
 import sys
 import signal
 import multiprocessing
-
+from multiprocessing import reduction
 
 class BasicExperimentAssistant(object):
     """
@@ -466,6 +466,8 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         exited = False
         while not exited:
             msg = self._rcv_queue.get(block=True)
+            if "return_pipe" in msg:
+                msg["return_pipe"] = msg["return_pipe"][0](*msg["return_pipe"][1])
             if msg.get("action", None) == "exit":
                 self._kill_optimizer()
                 exited = True
@@ -490,8 +492,8 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {"action": "get_next_candidate",
                "return_pipe": conn_send}
-        self._rcv_queue.put(msg)
-        next_candidate = conn_rcv.get(block=True)
+        self.send_msg(msg)
+        next_candidate = conn_rcv.recv()
         conn_rcv.close()
         return next_candidate
 
@@ -523,15 +525,15 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         """
         self.logger.info("Returning next candidate.")
         next_candidate = None
-        while next_candidate is not None:
-            if not self.experiment.candidates_pending:
+        while next_candidate is None:
+            if self.experiment.candidates_pending:
                 next_candidate = self.experiment.candidates_pending.pop()
             else:
                 try:
                     next_candidate = self._optimizer_queue.get()
                 except:
                     next_candidate = None
-        msg["return_pipe"].put(next_candidate)
+        msg["return_pipe"].send(next_candidate)
 
     def update(self, candidate, status="finished"):
         """
@@ -555,7 +557,7 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
             "candidate": candidate,
             "status": status
         }
-        self._rcv_queue.put(msg)
+        self.send_msg(msg)
 
     def _update(self, msg):
         """
@@ -642,10 +644,10 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
 
 
         self._optimizer_queue = multiprocessing.Queue()
-        self.optimizer = build_queue_optimizer(self.optimizer, self.experiment,
+        self._optimizer_process = build_queue_optimizer(self.optimizer, self.experiment,
                             self._optimizer_queue,
                             optimizer_arguments=self.optimizer_arguments)
-        self.optimizer.start()
+        self._optimizer_process.start()
 
     def get_best_candidate(self):
         """
@@ -662,8 +664,8 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
             "action": "get_best_candidate",
             "return_pipe": conn_send
         }
-        self._rcv_queue.put(msg)
-        best_candidate = conn_rcv.get(block=True)
+        self.send_msg(msg)
+        best_candidate = conn_rcv.recv()
         conn_rcv.close()
         return best_candidate
 
@@ -689,11 +691,13 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
                     Candidate or None, if no best candidate exists.
                 All other keys will be ignored.
         """
-        msg["return_pipe"].put(self.experiment.best_candidate)
+        msg["return_pipe"].send(self.experiment.best_candidate)
 
     def send_msg(self, msg):
+        if "return_pipe" in msg:
+            msg["return_pipe"] = reduction.reduce_connection(msg["return_pipe"])
         self._rcv_queue.put(msg)
 
     def exit(self):
         msg = {"action": "exit"}
-        self._rcv_queue.put(msg)
+        self.send_msg(msg)
