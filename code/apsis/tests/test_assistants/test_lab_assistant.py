@@ -7,7 +7,7 @@ from nose.tools import assert_equal, assert_items_equal, assert_dict_equal, \
 from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
 
-class TestAcquisition(object):
+class TestLabAssistant(object):
     """
     Tests the lab_assistants.
     """
