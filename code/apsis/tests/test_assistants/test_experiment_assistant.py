@@ -146,7 +146,7 @@ class TestParallelExperimentAssistant(object):
     EAss = None
     param_defs = None
 
-    def setup_exp_ass(self):
+    def setup(self):
         optimizer = "RandomSearch"
         name = "test_init_experiment"
         self.param_defs = {
@@ -158,11 +158,10 @@ class TestParallelExperimentAssistant(object):
                                            minimization=minimization)
         self.EAss.start()
 
-    def teardown_exp_ass(self):
+    def teardown(self):
         self.EAss.exit()
-        self.EAss.join()
 
-    @with_setup(setup_exp_ass, teardown_exp_ass)
+    #@with_setup(setup_exp_ass, teardown_exp_ass)
     def test_init_experiment(self):
         """
         Tests whether the initialization works correctly.
@@ -172,24 +171,52 @@ class TestParallelExperimentAssistant(object):
             - param_defs correct
         """
 
-        assert_equal(type(self.EAss.optimizer), QueueRandomSearch)
+        assert_equal(type(self.EAss._optimizer_process), QueueRandomSearch)
         assert_is_none(self.EAss.optimizer_arguments, None)
 
 
-    @with_setup(setup_exp_ass, teardown_exp_ass)
+    #@with_setup(setup_exp_ass, teardown_exp_ass)
     def test_get_next_candidate(self):
         """
-        Tests the get next candidate function.
+        Tests the get next candidate function in parallel.
         Tests:
             - The candidate's parameters are acceptable
         """
-        cand = self.EAss.get_next_candidate()
+        cand = None
+        counter = 0
+        while cand is None and counter < 20:
+            cand = self.EAss.get_next_candidate()
+            time.sleep(0.1)
+            counter += 1
+        if counter == 20:
+            raise Exception("Received no result in the first 2 seconds.")
         assert_is_none(cand.result)
         params = cand.params
         assert_less_equal(params["x"], 1)
         assert_greater_equal(params["x"], 0)
         assert_in(params["name"], self.param_defs["name"].values)
 
-if __name__ == "__main__":
-    test = TestParallelExperimentAssistant()
-    test.test_init_experiment()
+    #@with_setup(setup_exp_ass, teardown_exp_ass)
+    def test_get_best_candidate(self):
+        """
+        Tests whether get_best_candidate works in parallel.
+            - Whether the best of the two candidates is the one it should be.
+        """
+        cand_one = None
+        counter = 0
+        while cand_one is None and counter < 20:
+            cand_one = self.EAss.get_next_candidate()
+            time.sleep(0.1)
+            counter += 1
+        cand_one.result = 1
+        self.EAss.update(cand_one)
+
+        cand_two = None
+        while cand_two is None and counter < 20:
+            cand_two = self.EAss.get_next_candidate()
+            time.sleep(0.1)
+            counter += 1
+        cand_two.result = 0
+        self.EAss.update(cand_two)
+
+        assert_equal(cand_two, self.EAss.get_best_candidate())
