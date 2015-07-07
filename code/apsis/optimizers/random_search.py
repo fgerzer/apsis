@@ -1,6 +1,6 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.optimizers.optimizer import Optimizer
+from apsis.optimizers.optimizer import Optimizer, QueueOptimizer
 from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
@@ -70,3 +70,19 @@ class RandomSearch(Optimizer):
             return param_def.warp_out(self.random_state.uniform(0, 1))
         elif isinstance(param_def, NominalParamDef):
             return self.random_state.choice(param_def.values)
+
+
+class QueueRandomSearch(QueueOptimizer):
+    random_search = None
+
+    experiment = None
+
+    def __init__(self, optimizer_params, experiment, out_queue,
+                 min_candidates=1):
+        self.random_search = RandomSearch(optimizer_params)
+        self.experiment = experiment
+        super(QueueRandomSearch, self).__init__(optimizer_params, experiment,
+                                                out_queue, min_candidates)
+
+    def gen_candidates(self):
+        return self.random_search.get_next_candidates(self.experiment)
