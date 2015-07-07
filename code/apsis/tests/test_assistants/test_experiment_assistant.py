@@ -3,9 +3,10 @@ __author__ = 'Frederik Diehl'
 from apsis.assistants.experiment_assistant import *
 from nose.tools import assert_equal, assert_items_equal, assert_dict_equal, \
     assert_is_none, assert_raises, raises, assert_greater_equal, \
-    assert_less_equal, assert_in
+    assert_less_equal, assert_in, assert_true, assert_false, with_setup
 from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
+from apsis.optimizers.random_search import QueueRandomSearch
 
 class TestAcquisition(object):
     """
@@ -139,3 +140,56 @@ class TestAcquisition(object):
         cand.result = 2
 
         EAss.plot_result_per_step(show_plot=False)
+
+
+class TestParallelExperimentAssistant(object):
+    EAss = None
+    param_defs = None
+
+    def setup_exp_ass(self):
+        optimizer = "RandomSearch"
+        name = "test_init_experiment"
+        self.param_defs = {
+            "x": MinMaxNumericParamDef(0, 1),
+            "name": NominalParamDef(["A", "B", "C"])
+        }
+        minimization = True
+        self.EAss = ParallelExperimentAssistant(name, optimizer, self.param_defs,
+                                           minimization=minimization)
+        self.EAss.start()
+
+    def teardown_exp_ass(self):
+        self.EAss.exit()
+        self.EAss.join()
+
+    @with_setup(setup_exp_ass, teardown_exp_ass)
+    def test_init_experiment(self):
+        """
+        Tests whether the initialization works correctly.
+        Tests:
+            - optimizer correct
+            - minimization correct
+            - param_defs correct
+        """
+
+        assert_equal(type(self.EAss.optimizer), QueueRandomSearch)
+        assert_is_none(self.EAss.optimizer_arguments, None)
+
+
+    @with_setup(setup_exp_ass, teardown_exp_ass)
+    def test_get_next_candidate(self):
+        """
+        Tests the get next candidate function.
+        Tests:
+            - The candidate's parameters are acceptable
+        """
+        cand = self.EAss.get_next_candidate()
+        assert_is_none(cand.result)
+        params = cand.params
+        assert_less_equal(params["x"], 1)
+        assert_greater_equal(params["x"], 0)
+        assert_in(params["name"], self.param_defs["name"].values)
+
+if __name__ == "__main__":
+    test = TestParallelExperimentAssistant()
+    test.test_init_experiment()
