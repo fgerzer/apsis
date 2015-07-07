@@ -2,11 +2,11 @@ __author__ = 'Frederik Diehl'
 
 from apsis.models.experiment import Experiment
 from abc import ABCMeta, abstractmethod
-import multiprocessing
 import Queue
 import sys
 from time import sleep
 import signal
+import multiprocessing
 
 
 class Optimizer(object):
@@ -92,7 +92,7 @@ class Optimizer(object):
         return False
 
 
-class QueueOptimizer(object, multiprocessing.Process):
+class QueueOptimizer(multiprocessing.Process):
     """
     This defines a basic optimizer interface for server/client architecture.
 
@@ -152,6 +152,7 @@ class QueueOptimizer(object, multiprocessing.Process):
         self.out_queue = out_queue
         self.min_candidates = min_candidates
         signal.signal(signal.SIGINT, self.terminate_gracefully)
+        super(QueueOptimizer, self).__init__()
 
     def run(self):
         """
@@ -167,13 +168,13 @@ class QueueOptimizer(object, multiprocessing.Process):
                     if self.out_queue.empty() or \
                                     self.out_queue.qsize < self.min_candidates:
                         new_candidates = self.gen_candidates()
-                        self.out_queue.put(new_candidates, block=False)
+                        [self.out_queue.put(x, block=False) for x in new_candidates]
                 except Queue.Full:
                     pass
                 sleep(1)
 
 
-    def terminate_gracefully(_signo, _stack_frame):
+    def terminate_gracefully(self, _signo, _stack_frame):
         """
         This method allows a QueueOptimizer to exit gracefully.
 
