@@ -1,6 +1,5 @@
 __author__ = 'Frederik Diehl'
 
-import threading.lock
 from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer, build_queue_optimizer
@@ -13,9 +12,9 @@ import time
 from apsis.utilities.logging_utils import get_logger
 import Queue
 import sys
-
-import multiprocessing
 import signal
+import multiprocessing
+
 
 class BasicExperimentAssistant(object):
     """
@@ -447,12 +446,13 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         """
         self._rcv_queue = multiprocessing.Queue()
 
-        self._build_new_optimizer()
         super(ParallelExperimentAssistant, self).\
             __init__(name, optimizer, param_defs, experiment=experiment,
                      optimizer_arguments=optimizer_arguments, minimization=minimization,
                      write_directory_base=write_directory_base, experiment_directory_base=experiment_directory_base,
                      csv_write_frequency=csv_write_frequency)
+        self._build_new_optimizer()
+        multiprocessing.Process.__init__(self)
 
     def run(self):
         """
@@ -463,12 +463,18 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         _ to the front of msg["action"] with msg as parameter.
         For more details, see the documentation of this class.
         """
-        while True:
+        exited = False
+        while not exited:
             msg = self._rcv_queue.get(block=True)
-            try:
-                getattr(self, "_" + msg["action"])(msg)
-            except:
-                pass
+            if msg.get("action", None) == "exit":
+                self._kill_optimizer()
+                exited = True
+            else:
+                try:
+                    getattr(self, "_" + msg["action"])(msg)
+                except:
+                    pass
+
 
     def get_next_candidate(self):
         """
@@ -604,12 +610,6 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
             if self.csv_write_frequency != 0 and step != 0 \
                     and step % self.csv_write_frequency == 0:
                 self._append_to_detailed_csv()
-            #and build a new optimizer.
-            # This sends SIGINT to the optimizer process, which is used to
-            # terminate the process irrespective of its current computation.
-            # (But, since it will be catched, it can still do cleanup)
-            os.kill(self._optimizer_process.pid, signal.SIGINT)
-            self._optimizer_queue.close()
 
             # And we rebuild the new optimizer.
             self._build_new_optimizer()
@@ -620,6 +620,15 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
             self.experiment.add_working(candidate)
 
 
+    def _kill_optimizer(self):
+        if self._optimizer_process is not None:
+        # This sends SIGINT to the optimizer process, which is used to
+            # terminate the process irrespective of its current computation.
+            # (But, since it will be catched, it can still do cleanup)
+            os.kill(self._optimizer_process.pid, signal.SIGINT)
+        if self._optimizer_queue is not None:
+            self._optimizer_queue.close()
+
     def _build_new_optimizer(self):
         """
         INTERNAL USE ONLY.
@@ -629,8 +638,10 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         In general, it instantiates a new optimizer_queue, a new optimizer
         (with the current experiment) and starts said optimizer.
         """
-        self._optimizer_queue = multiprocessing.Queue()
+        self._kill_optimizer()
 
+
+        self._optimizer_queue = multiprocessing.Queue()
         self.optimizer = build_queue_optimizer(self.optimizer, self.experiment,
                             self._optimizer_queue,
                             optimizer_arguments=self.optimizer_arguments)
@@ -679,3 +690,10 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
                 All other keys will be ignored.
         """
         msg["return_pipe"].put(self.experiment.best_candidate)
+
+    def send_msg(self, msg):
+        self._rcv_queue.put(msg)
+
+    def exit(self):
+        msg = {"action": "exit"}
+        self._rcv_queue.put(msg)
