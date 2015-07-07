@@ -68,7 +68,7 @@ class Candidate(object):
         ValueError
             Iff params is not a dictionary.
         """
-        if uuid is None:
+        if id is None:
             self.id = uuid.uuid4()
         else:
             self.id = uuid.UUID(id)
