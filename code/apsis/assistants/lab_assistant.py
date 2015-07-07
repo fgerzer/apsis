@@ -1,6 +1,7 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.assistants.experiment_assistant import BasicExperimentAssistant, PrettyExperimentAssistant
+from apsis.assistants.experiment_assistant import BasicExperimentAssistant, \
+    PrettyExperimentAssistant, ParallelExperimentAssistant
 import matplotlib.pyplot as plt
 from apsis.utilities.plot_utils import create_figure, _polish_figure, plot_lists, write_plot_to_file
 from apsis.utilities.file_utils import ensure_directory_exists
@@ -10,6 +11,8 @@ import os
 from apsis.utilities.logging_utils import get_logger
 import numpy as np
 import multiprocessing
+from multiprocessing import reduction
+import sys
 
 class BasicLabAssistant(object):
     """
@@ -763,31 +766,75 @@ class ValidationLabAssistant(PrettyLabAssistant):
         return plots_to_write
 
 class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
-    rcv_queue = None
+    _rcv_queue = None
 
-    def init(self, write_directory_base="/tmp/APSIS_WRITING"):
-        self.rcv_queue = multiprocessing.Queue()
-        super(ParallelLabAssistant).__init__(write_directory_base)
+    def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
+        self._rcv_queue = multiprocessing.Queue()
+        super(ParallelLabAssistant, self).__init__(write_directory_base)
+        multiprocessing.Process.__init__(self)
 
     def run(self):
-        while True:
-            msg = self.rcv_queue.get(block=True)
-            try:
-                getattr(self, "_" + msg["action"])(msg)
-            except:
-                pass
+        """
+        The run method, used for receiving and parsing messages.
+
+        This method runs forever, waiting for self._rcv_queue to contain a
+        message. If this is the case, it calls the method defined by adding a
+        _ to the front of msg["action"] with msg as parameter.
+        For more details, see the documentation of this class.
+        """
+        exited = False
+        try:
+            while not exited:
+                msg = self._rcv_queue.get(block=True)
+                if "return_pipe" in msg:
+                    msg["return_pipe"] = msg["return_pipe"][0](*msg["return_pipe"][1])
+                if msg.get("action", None) == "exit":
+                    exited = True
+                else:
+                    try:
+                        getattr(self, "_" + msg["action"])(msg)
+                    except:
+                        pass
+        finally:
+            for exp_ass in self.exp_assistants.values():
+                exp_ass.exit()
 
     def init_experiment(self, name, optimizer, param_defs,
                         optimizer_arguments=None, minimization=True):
-        pass
+        msg = {
+            "action": "init_experiment",
+            "name": name,
+            "optimizer": optimizer,
+            "param_defs": param_defs,
+            "optimizer_arguments": optimizer_arguments,
+            "minimization": minimization
+        }
+        self.send_msg(msg)
+
+    def _init_experiment(self, msg):
+        name = msg["name"]
+        optimizer = msg["optimizer"]
+        param_defs = msg["param_defs"]
+        optimizer_arguments = msg["optimizer_arguments"]
+        minimization = msg["minimization"]
+        if name in self.exp_assistants:
+            raise ValueError("Already an experiment with name %s registered."
+                             %name)
+        self.exp_assistants[name] = ParallelExperimentAssistant(name, optimizer,
+                                param_defs, optimizer_arguments=optimizer_arguments,
+                                minimization=minimization,
+                                write_directory_base=self.lab_run_directory,
+                                csv_write_frequency=1)
+        self.exp_assistants[name].start()
+        self.logger.info("Experiment initialized successfully.")
 
     def get_next_candidate(self, exp_name):
         conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {"action": "get_next_candidate",
                    "exp_name": exp_name,
                    "return_pipe": conn_send}
-        self.rcv_queue.put(msg)
-        next_candidate = conn_rcv.get(block=True)
+        self.send_msg(msg)
+        next_candidate = conn_rcv.recv()
         conn_rcv.close()
         return next_candidate
 
@@ -798,11 +845,11 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
         conn_send.put(next_candidate)
 
     def update(self, exp_name, candidate, status="finished"):
-        message = {"action": "update",
+        msg = {"action": "update",
                    "exp_name": exp_name,
                    "status": status,
                    "candidate": candidate}
-        self.rcv_queue.put(message)
+        self.send_msg(msg)
 
     def _update(self, msg):
         self.exp_assistants[msg["exp_name"]].update(candidate=msg["candidate"],
@@ -815,11 +862,20 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
             "exp_name": exp_name,
             "return_pipe": conn_send
         }
-        self.rcv_queue.put(msg)
-        best_candidate = conn_rcv.get(block=True)
+        self.send_msg(msg)
+        best_candidate = conn_rcv.recv()
         conn_rcv.close()
         return best_candidate
 
     def _get_best_candidate(self, msg):
         best_candidate = self.exp_assistants[msg["exp_name"]].get_best_candidate()
         msg["return_pipe"].put(best_candidate)
+
+    def send_msg(self, msg):
+        if "return_pipe" in msg:
+            msg["return_pipe"] = reduction.reduce_connection(msg["return_pipe"])
+        self._rcv_queue.put(msg)
+
+    def exit(self):
+        msg = {"action": "exit"}
+        self.send_msg(msg)
