@@ -879,3 +879,45 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
     def exit(self):
         msg = {"action": "exit"}
         self.send_msg(msg)
+
+    def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None, title=None):
+        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        msg = {
+            "action": "plot_result_per_step",
+            "experiments": experiments,
+            "plot_min": plot_min,
+            "plot_max": plot_max,
+            "title": title,
+            "return_pipe": conn_send
+        }
+        self.send_msg(msg)
+        fig = conn_rcv.recv()
+        if show_plot:
+            plt.show(fig)
+        return fig
+
+    def _plot_result_per_step(self, msg):
+        experiments = msg["experiments"]
+        title = msg["title"]
+        if not isinstance(experiments, list):
+            experiments = [experiments]
+        if title is None:
+            title = "Comparison of %s." % experiments
+        plots_list = []
+        for i, ex_name in enumerate(experiments):
+            exp_ass = self.exp_assistants[ex_name]
+            plots_list.extend(exp_ass._best_result_per_step_dicts(color=self.COLORS[i % len(self.COLORS)]))
+
+        if self.exp_assistants[experiments[0]].experiment.minimization_problem:
+            legend_loc = 'upper right'
+        else:
+            legend_loc = 'upper left'
+        plot_options = {
+            "legend_loc": legend_loc,
+            "x_label": "steps",
+            "y_label": "result",
+            "title": title
+        }
+        fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=msg["plot_min"],
+                             plot_max=msg["plot_max"])
+        msg["return_pipe"].put(fig)

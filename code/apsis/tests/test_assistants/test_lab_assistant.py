@@ -245,3 +245,26 @@ class TestParallelLabAssistant(object):
         self.LAss.update(name, cand_two)
 
         assert_equal(cand_two, self.LAss.get_best_candidate(name))
+
+
+    def test_all_plots_working(self):
+        """
+        Tests whether all of the plot functions work. Does not test for correctness.
+        """
+        optimizer = "RandomSearch"
+        name = "test_init_experiment"
+        param_defs = {
+            "x": MinMaxNumericParamDef(0, 1),
+            "name": NominalParamDef(["A", "B", "C"])
+        }
+        minimization = True
+
+        self.LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
+        self.LAss.init_experiment(name + "2", optimizer, param_defs, minimization=minimization)
+        cand = self.LAss.get_next_candidate(name)
+        cand.result = 1
+        self.LAss.update(name, cand)
+        self.LAss.write_out_plots_current_step()
+        self.LAss.plot_result_per_step([name], show_plot=False)
+        self.LAss.exp_assistants[name].experiment.minimization_problem = False
+        self.LAss.plot_result_per_step(name, show_plot=False)
