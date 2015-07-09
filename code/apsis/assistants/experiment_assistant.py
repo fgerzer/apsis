@@ -378,6 +378,17 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
     the action. If a reply is needed, the "return_pipe" key has a
     multiprocessing.Pipe object, onto which the answer is pushed.
 
+    Note that, when programming new functions running in the same process as
+    this one (and extensions to this class) several things should be kept in
+    mind:
+    - It is necessary to send all messages through the send_msg function. This
+    enables easier changes later on and - more importantly - avoids a problem
+    with sending Connections via Connections (namely, it doesn't work).
+    - If a method is provided both internally (method_name) and externally
+    (_method_name), internal services must always use the internal method, and
+    external ones the external method. Otherwise, internal requests will possibly
+    hang indefinitely, and external ones will access a non-synchronized status.
+
     Therefore, for each action Action, this class implements two functions.
     Action(args) is called from the outside, initializes the message from the
     args and - if necessary - adds a return_pipe. If a reply is needed, it
@@ -462,6 +473,12 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         message. If this is the case, it calls the method defined by adding a
         _ to the front of msg["action"] with msg as parameter.
         For more details, see the documentation of this class.
+
+        It will automatically unreduce the connection received via
+        "return_pipe".
+
+        If it receives a message whose "action" is "exit", it will stop looking
+        for further actions, kill the optimizer, and stop.
         """
         exited = False
         while not exited:
@@ -476,7 +493,6 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
                     getattr(self, "_" + msg["action"])(msg)
                 except:
                     pass
-
 
     def get_next_candidate(self):
         """
@@ -621,8 +637,25 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         elif status == "working":
             self.experiment.add_working(candidate)
 
-
     def _kill_optimizer(self):
+        """
+        INTERNAL USE ONLY
+
+        Kills the currently running optimizer process (if available) and closes
+        the queue that optimizer is pushing to.
+
+        The first is done by sending the SIGINT signal to the process (which
+        has been defined as telling the optimizer it is supposed to start
+        cleanup operations). This is necessary because we cannot be sure that
+        the optimizer isn't currently refitting (in which case an event-based
+        solution would mean we'd be needlessly computing), and because it's
+        irresponsible to just terminate the process when we can't know whether
+        it has created sub-processes.
+
+        Closing the queue is necessary since, after killing the optimizer,
+        we can't be sure of its integrity and because we don't need any of the
+        old candidates anyways.
+        """
         if self._optimizer_process is not None:
         # This sends SIGINT to the optimizer process, which is used to
             # terminate the process irrespective of its current computation.
@@ -638,7 +671,8 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         This function builds a new optimizer.
 
         In general, it instantiates a new optimizer_queue, a new optimizer
-        (with the current experiment) and starts said optimizer.
+        (with the current experiment) and starts said optimizer. It also
+        ensures that the old optimizer has been properly killed before.
         """
         self._kill_optimizer()
 
@@ -694,10 +728,37 @@ class ParallelExperimentAssistant(PrettyExperimentAssistant, multiprocessing.Pro
         msg["return_pipe"].send(self.experiment.best_candidate)
 
     def send_msg(self, msg):
+        """
+        This method is used to send an arbitrary message to the process.
+
+        Care should be taken that msg is a message in an acceptable format.
+        This means a dict with string key, containing at least an "action" key
+        with a string corresponding to the function that should be called,
+        all parameters necessary for said function, and - if a return is
+        necessary - a connection object for the key "return_pipe".
+
+        Parameters
+        ----------
+            msg : dict
+                The message to be sent. Must include the following keys:
+                "action" : string
+                    String corresponding to the function to be called. If the
+                    string is "function", the function called will be
+                    _function.
+                "return_pipe" : Connection, optional
+                    A connection object into which the result will be put. It
+                    will be reduced (so that we are able to send it over a
+                    connection).
+                One entry per parameter of the function.
+                All other entries will be ignored.
+        """
         if "return_pipe" in msg:
             msg["return_pipe"] = reduction.reduce_connection(msg["return_pipe"])
         self._rcv_queue.put(msg)
 
     def exit(self):
+        """
+        Exits this experiment assistant's process.
+        """
         msg = {"action": "exit"}
         self.send_msg(msg)

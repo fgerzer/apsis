@@ -766,9 +766,62 @@ class ValidationLabAssistant(PrettyLabAssistant):
         return plots_to_write
 
 class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
+    """
+    This LabAssistant is used to parallelize the experiment execution.
+
+    In general, the lab assistant allows external processes to access
+    several functions which are internally abstracted with a queue communication
+    structure. This means that this is thread safe, and can be used by more than
+    one thread or process at once.
+
+    In general, this class manages several ParallelExperimentAssistant
+    processes, with which it communicates via their methods.
+
+    Communication with the outside happens via several available functions,
+    which all work with the same scheme.
+    This class instance keeps a _rcv_queue, on which the methods called from the
+    outside push messages. Each message is a dict and contains at least an
+    "action" field clarifying the action, plus additional fields depending on
+    the action. If a reply is needed, the "return_pipe" key has a
+    multiprocessing.Pipe object, onto which the answer is pushed.
+
+    Note that, when programming new functions running in the same process as
+    this one (and extensions to this class) several things should be kept in
+    mind:
+    - It is necessary to send all messages through the send_msg function. This
+    enables easier changes later on and - more importantly - avoids a problem
+    with sending Connections via Connections (namely, it doesn't work).
+    - If a method is provided both internally (method_name) and externally
+    (_method_name), internal services must always use the internal method, and
+    external ones the external method. Otherwise, internal requests will possibly
+    hang indefinitely, and external ones will access a non-synchronized status.
+
+    Therefore, for each action Action, this class implements two functions.
+    Action(args) is called from the outside, initializes the message from the
+    args and - if necessary - adds a return_pipe. If a reply is needed, it
+    will wait for an answer to be pushed on its end of the return_pipe.
+    _Action(msg) is called from the inside, from run (where the conversion from
+    msg's "action" field to function name is done automatically; so please use
+    the scheme indicated above) and receives the information in msg. If a reply
+    is needed (which is function-dependant, not message-dependant) it must answer
+    on the return_pipe or risk the calling process to remain stuck.
+
+
+    Attributes
+    ----------
+    _rcv_queue : multiprocessing.queue
+        The queue used to communicate internally.
+    """
     _rcv_queue = None
 
     def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
+        """
+        Initializes the LabAssistant.
+
+        This is identical to the PrettyLabAssistant's init method (and calls
+        it) except for also initializing _rcv_queue and (hardcoded)
+        initializing Process.
+        """
         self._rcv_queue = multiprocessing.Queue()
         super(ParallelLabAssistant, self).__init__(write_directory_base)
         multiprocessing.Process.__init__(self)
@@ -781,6 +834,12 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
         message. If this is the case, it calls the method defined by adding a
         _ to the front of msg["action"] with msg as parameter.
         For more details, see the documentation of this class.
+
+        It will automatically unreduce the connection received via
+        "return_pipe".
+
+        If it receives a message whose "action" is "exit", it will stop looking
+        for further actions, kill the optimizer, and stop.
         """
         exited = False
         try:
@@ -801,6 +860,27 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
 
     def init_experiment(self, name, optimizer, param_defs,
                         optimizer_arguments=None, minimization=True):
+        """
+        Initializes a new experiment.
+
+        Parameters
+        ----------
+        name : string
+            The name of the experiment. This has to be unique.
+        optimizer : Optimizer instance or string
+            This is an optimizer implementing the corresponding functions: It
+            gets an experiment instance, and returns one or multiple candidates
+            which should be evaluated next.
+            Alternatively, it can be a string corresponding to the optimizer,
+            as defined by apsis.utilities.optimizer_utils.
+        param_defs : dict of ParamDef.
+            This is the parameter space defining the experiment.
+        optimizer_arguments : dict, optional
+            These are arguments for the optimizer. Refer to their documentation
+            as to which are available.
+        minimization : bool, optional
+            Whether the problem is one of minimization or maximization.
+        """
         msg = {
             "action": "init_experiment",
             "name": name,
@@ -812,6 +892,31 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
         self.send_msg(msg)
 
     def _init_experiment(self, msg):
+        """
+        INTERNAL USE ONLY
+
+        Initializes a new experiment.
+
+        This is done by checking whether the proposed name is in the available
+        names, and if not, initializing and starting it.
+
+        Parameters
+        ----------
+        msg : dict
+            The message encoding the parameters. Includes the following keys:
+            "action" : string
+                This will be "init_experiment"
+            "optimizer" : string
+                This encodes the optimizer.
+            "param_defs" : list
+                This is a list of parameter definitions for the experiment.
+            "optimizer_arguments" : dict
+                A dict of optimizer parameters.
+            "minimization" : bool
+                Whether this experiment's goal is to minimize or maximize the
+                candidate results.
+            All other parameter will be ignored.
+        """
         name = msg["name"]
         optimizer = msg["optimizer"]
         param_defs = msg["param_defs"]
@@ -829,6 +934,19 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
         self.logger.info("Experiment initialized successfully.")
 
     def get_next_candidate(self, exp_name):
+        """
+        Returns the Candidate next to evaluate for a specific experiment.
+
+        Parameters
+        ----------
+        exp_name : string
+            Has to be in experiment_assistants.
+
+        Returns
+        -------
+        next_candidate : Candidate or None:
+            The Candidate object that should be evaluated next. May be None.
+        """
         conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {"action": "get_next_candidate",
                    "exp_name": exp_name,
@@ -839,12 +957,35 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
         return next_candidate
 
     def _get_next_candidate(self, msg):
+        """
+        INTERNAL USE ONLY
+
+        This simply multiplexes the function to the corresponding
+        exp_assistant.
+        """
         exp_assistant_name = msg["exp_name"]
         conn_send = msg["return_pipe"]
         next_candidate = self.exp_assistants[exp_assistant_name].get_next_candidate()
         conn_send.put(next_candidate)
 
     def update(self, exp_name, candidate, status="finished"):
+        """
+        Updates the experiment with the status of an experiment
+        evaluation.
+
+        Parameters
+        ----------
+        exp_name : string
+            Has to be in experiment_assistants
+        candidate : Candidate
+            The Candidate object whose status is updated.
+        status : {"finished", "pausing", "working"}, optional
+            A string defining the status change. Can be one of the following:
+            - finished: The Candidate is now finished.
+            - pausing: The evaluation of Candidate has been paused and can be
+                resumed by another worker.
+            - working: The Candidate is now being worked on by a worker.
+        """
         msg = {"action": "update",
                    "exp_name": exp_name,
                    "status": status,
@@ -852,10 +993,30 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
         self.send_msg(msg)
 
     def _update(self, msg):
+        """
+        INTERNAL USE ONLY
+
+        This simply multiplexes the function to the corresponding
+        exp_assistant.
+        """
         self.exp_assistants[msg["exp_name"]].update(candidate=msg["candidate"],
                                                     status=msg["status"])
 
     def get_best_candidate(self, exp_name):
+        """
+        Returns the best candidate to date for a specific experiment.
+
+        Parameters
+        ----------
+        exp_name : string
+            Has to be in experiment_assistants.
+
+        Returns
+        -------
+        best_candidate : candidate or None
+            Returns a candidate if there is a best one (which corresponds to
+            at least one candidate evaluated) or None if none exists.
+        """
         conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {
             "action": "get_best_candidate",
@@ -868,56 +1029,89 @@ class ParallelLabAssistant(PrettyLabAssistant, multiprocessing.Process):
         return best_candidate
 
     def _get_best_candidate(self, msg):
+        """
+        INTERNAL USE ONLY
+
+        This simply multiplexes the function to the corresponding
+        exp_assistant.
+        """
         best_candidate = self.exp_assistants[msg["exp_name"]].get_best_candidate()
         msg["return_pipe"].put(best_candidate)
 
     def send_msg(self, msg):
+        """
+        This method is used to send an arbitrary message to the process.
+
+        Care should be taken that msg is a message in an acceptable format.
+        This means a dict with string key, containing at least an "action" key
+        with a string corresponding to the function that should be called,
+        all parameters necessary for said function, and - if a return is
+        necessary - a connection object for the key "return_pipe".
+
+        Parameters
+        ----------
+            msg : dict
+                The message to be sent. Must include the following keys:
+                "action" : string
+                    String corresponding to the function to be called. If the
+                    string is "function", the function called will be
+                    _function.
+                "return_pipe" : Connection, optional
+                    A connection object into which the result will be put. It
+                    will be reduced (so that we are able to send it over a
+                    connection).
+                One entry per parameter of the function.
+                All other entries will be ignored.
+        """
         if "return_pipe" in msg:
             msg["return_pipe"] = reduction.reduce_connection(msg["return_pipe"])
         self._rcv_queue.put(msg)
 
     def exit(self):
+        """
+        Exits this experiment assistant's process.
+        """
         msg = {"action": "exit"}
         self.send_msg(msg)
-
-    def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None, title=None):
-        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
-        msg = {
-            "action": "plot_result_per_step",
-            "experiments": experiments,
-            "plot_min": plot_min,
-            "plot_max": plot_max,
-            "title": title,
-            "return_pipe": conn_send
-        }
-        self.send_msg(msg)
-        fig = conn_rcv.recv()
-        if show_plot:
-            plt.show(fig)
-        return fig
-
-    def _plot_result_per_step(self, msg):
-        experiments = msg["experiments"]
-        title = msg["title"]
-        if not isinstance(experiments, list):
-            experiments = [experiments]
-        if title is None:
-            title = "Comparison of %s." % experiments
-        plots_list = []
-        for i, ex_name in enumerate(experiments):
-            exp_ass = self.exp_assistants[ex_name]
-            plots_list.extend(exp_ass._best_result_per_step_dicts(color=self.COLORS[i % len(self.COLORS)]))
-
-        if self.exp_assistants[experiments[0]].experiment.minimization_problem:
-            legend_loc = 'upper right'
-        else:
-            legend_loc = 'upper left'
-        plot_options = {
-            "legend_loc": legend_loc,
-            "x_label": "steps",
-            "y_label": "result",
-            "title": title
-        }
-        fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=msg["plot_min"],
-                             plot_max=msg["plot_max"])
-        msg["return_pipe"].put(fig)
+    #
+    # def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None, title=None):
+    #     conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+    #     msg = {
+    #         "action": "plot_result_per_step",
+    #         "experiments": experiments,
+    #         "plot_min": plot_min,
+    #         "plot_max": plot_max,
+    #         "title": title,
+    #         "return_pipe": conn_send
+    #     }
+    #     self.send_msg(msg)
+    #     fig = conn_rcv.recv()
+    #     if show_plot:
+    #         plt.show(fig)
+    #     return fig
+    #
+    # def _plot_result_per_step(self, msg):
+    #     experiments = msg["experiments"]
+    #     title = msg["title"]
+    #     if not isinstance(experiments, list):
+    #         experiments = [experiments]
+    #     if title is None:
+    #         title = "Comparison of %s." % experiments
+    #     plots_list = []
+    #     for i, ex_name in enumerate(experiments):
+    #         exp_ass = self.exp_assistants[ex_name]
+    #         plots_list.extend(exp_ass._best_result_per_step_dicts(color=self.COLORS[i % len(self.COLORS)]))
+    #
+    #     if self.exp_assistants[experiments[0]].experiment.minimization_problem:
+    #         legend_loc = 'upper right'
+    #     else:
+    #         legend_loc = 'upper left'
+    #     plot_options = {
+    #         "legend_loc": legend_loc,
+    #         "x_label": "steps",
+    #         "y_label": "result",
+    #         "title": title
+    #     }
+    #     fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=msg["plot_min"],
+    #                          plot_max=msg["plot_max"])
+    #     msg["return_pipe"].put(fig)
