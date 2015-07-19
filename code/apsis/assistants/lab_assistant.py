@@ -15,7 +15,7 @@ import multiprocessing
 from multiprocessing import reduction
 import sys
 
-class LabAssistant(object, multiprocessing.Process):
+class LabAssistant(multiprocessing.Process):
     """
     This LabAssistant is used to parallelize the experiment execution.
 
@@ -64,7 +64,7 @@ class LabAssistant(object, multiprocessing.Process):
     """
 
     _rcv_queue = None
-    exp_assistants = None
+    _exp_assistants = None
 
     write_directory_base = None
     lab_run_directory = None
@@ -83,7 +83,7 @@ class LabAssistant(object, multiprocessing.Process):
         self.logger.info("Initializing laboratory assistant.")
 
         self._rcv_queue = multiprocessing.Queue()
-        self.exp_assistants = {}
+        self._exp_assistants = {}
 
         self.write_directory_base = write_directory_base
         self.global_start_date = time.time()
@@ -91,6 +91,21 @@ class LabAssistant(object, multiprocessing.Process):
         self._init_directory_structure()
         self.logger.info("laboratory assistant successfully initialized.")
         multiprocessing.Process.__init__(self)
+
+
+    def _init_directory_structure(self):
+        """
+        Method to create the directory structure if not exists
+        for results and plots writing
+        """
+        if self.lab_run_directory is None:
+            date_name = datetime.datetime.utcfromtimestamp(
+                self.global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
+
+            self.lab_run_directory = os.path.join(self.write_directory_base,
+                                                  date_name)
+
+            ensure_directory_exists(self.lab_run_directory)
 
     def run(self):
         """
@@ -111,8 +126,10 @@ class LabAssistant(object, multiprocessing.Process):
         try:
             while not exited:
                 msg = self._rcv_queue.get(block=True)
+                print("\tLAss run received msg %s" %msg)
                 if "return_pipe" in msg:
                     msg["return_pipe"] = msg["return_pipe"][0](*msg["return_pipe"][1])
+                    print("\tLAss unpacked msg %s" %msg)
                 if msg.get("action", None) == "exit":
                     exited = True
                 else:
@@ -121,7 +138,7 @@ class LabAssistant(object, multiprocessing.Process):
                     except:
                         pass
         finally:
-            for exp_ass in self.exp_assistants.values():
+            for exp_ass in self._exp_assistants.values():
                 exp_ass.exit()
 
 
@@ -190,18 +207,18 @@ class LabAssistant(object, multiprocessing.Process):
         param_defs = msg["param_defs"]
         optimizer_arguments = msg["optimizer_arguments"]
         minimization = msg["minimization"]
-        if name in self.exp_assistants:
+        if name in self._exp_assistants:
             raise ValueError("Already an experiment with name %s registered."
                              %name)
-        self.exp_assistants[name] = ExperimentAssistant(name, optimizer,
+        self._exp_assistants[name] = ExperimentAssistant(name, optimizer,
                                 param_defs, optimizer_arguments=optimizer_arguments,
                                 minimization=minimization,
                                 write_directory_base=self.lab_run_directory,
                                 csv_write_frequency=1)
-        self.exp_assistants[name].start()
+        self._exp_assistants[name].start()
         self.logger.info("Experiment initialized successfully.")
 
-    def get_next_candidate(self, exp_name):
+    def get_next_candidate(self, exp_name, conn_send=None):
         """
         Returns the Candidate next to evaluate for a specific experiment.
 
@@ -215,14 +232,19 @@ class LabAssistant(object, multiprocessing.Process):
         next_candidate : Candidate or None:
             The Candidate object that should be evaluated next. May be None.
         """
-        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        return_value = False
+        if conn_send is None:
+            return_value = True
+            conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {"action": "get_next_candidate",
                    "exp_name": exp_name,
                    "return_pipe": conn_send}
+
         self.send_msg(msg)
-        next_candidate = conn_rcv.recv()
-        conn_rcv.close()
-        return next_candidate
+        if return_value:
+            next_candidate = conn_rcv.recv()
+            conn_rcv.close()
+            return next_candidate
 
     def _get_next_candidate(self, msg):
         """
@@ -233,8 +255,7 @@ class LabAssistant(object, multiprocessing.Process):
         """
         exp_assistant_name = msg["exp_name"]
         conn_send = msg["return_pipe"]
-        next_candidate = self.exp_assistants[exp_assistant_name].get_next_candidate()
-        conn_send.put(next_candidate)
+        self._exp_assistants[exp_assistant_name].get_next_candidate(conn_send)
 
     def update(self, exp_name, candidate, status="finished"):
         """
@@ -267,11 +288,11 @@ class LabAssistant(object, multiprocessing.Process):
         This simply multiplexes the function to the corresponding
         exp_assistant.
         """
-        self.exp_assistants[msg["exp_name"]].update(candidate=msg["candidate"],
+        self._exp_assistants[msg["exp_name"]].update(candidate=msg["candidate"],
                                                     status=msg["status"])
 
 
-    def get_best_candidate(self, exp_name):
+    def get_best_candidate(self, exp_name, conn_send=None):
         """
         Returns the best candidate to date for a specific experiment.
 
@@ -286,16 +307,20 @@ class LabAssistant(object, multiprocessing.Process):
             Returns a candidate if there is a best one (which corresponds to
             at least one candidate evaluated) or None if none exists.
         """
-        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        return_value = False
+        if conn_send is None:
+            return_value = True
+            conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {
             "action": "get_best_candidate",
             "exp_name": exp_name,
             "return_pipe": conn_send
         }
         self.send_msg(msg)
-        best_candidate = conn_rcv.recv()
-        conn_rcv.close()
-        return best_candidate
+        if return_value:
+            best_candidate = conn_rcv.recv()
+            conn_rcv.close()
+            return best_candidate
 
     def _get_best_candidate(self, msg):
         """
@@ -304,8 +329,7 @@ class LabAssistant(object, multiprocessing.Process):
         This simply multiplexes the function to the corresponding
         exp_assistant.
         """
-        best_candidate = self.exp_assistants[msg["exp_name"]].get_best_candidate()
-        msg["return_pipe"].put(best_candidate)
+        best_candidate = self._exp_assistants[msg["exp_name"]].get_best_candidate(msg["return_pipe"])
 
     def send_msg(self, msg):
         """
@@ -343,18 +367,51 @@ class LabAssistant(object, multiprocessing.Process):
         msg = {"action": "exit"}
         self.send_msg(msg)
 
-    def get_all_candidates(self, exp_name):
-        conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+    def get_all_candidates(self, exp_name, conn_send):
+        return_value = False
+        if conn_send is None:
+            return_value = True
+            conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
         msg = {
             "action": "get_all_candidates",
             "exp_name": exp_name,
             "return_pipe": conn_send
         }
         self.send_msg(msg)
-        all_candidates = conn_rcv.recv()
-        conn_rcv.close()
-        return all_candidates
+        if return_value:
+            all_candidates = conn_rcv.recv()
+            conn_rcv.close()
+            return all_candidates
 
     def _get_all_candidates(self, msg):
-        all_candidates = self.exp_assistants[msg["exp_name"]].get_all_candidates()
-        msg["return_pipe"].put(all_candidates)
+        all_candidates = self._exp_assistants[msg["exp_name"]].get_all_candidates(msg["return_pipe"])
+
+    def get_all_experiments(self, conn_send=None):
+        return_value = False
+        if conn_send is None:
+            return_value = True
+            conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        msg = {
+            "action": "get_all_experiments",
+            "return_pipe": conn_send
+        }
+        self.send_msg(msg)
+        if return_value:
+            all_experiments = conn_rcv.recv()
+            conn_rcv.close()
+            return all_experiments
+
+    def _get_all_experiments(self, msg):
+        send_conn = msg["return_pipe"]
+        all_exps = {}
+        print("bla 0")
+        for exp_ass_name, exp_ass in self._exp_assistants:
+            print(exp_ass_name)
+            conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+            exp_ass.get_experiment(conn_rcv)
+            print("bla 0.5")
+            exp = conn_rcv.recv()
+            all_exps[exp_ass_name] = exp
+        print("bla 1")
+        send_conn.send(all_exps)
+        print("bla2")
