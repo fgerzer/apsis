@@ -15,6 +15,7 @@ import sys
 import signal
 import multiprocessing
 from multiprocessing import reduction
+import traceback
 
 AVAILABLE_STATUS = ["finished", "pausing", "working"]
 
@@ -70,12 +71,13 @@ class ExperimentAssistant(multiprocessing.Process):
                 if msg.get("action", None) == "exit":
                     exited = True
                     continue
-                if "result_conn" in msg:
-                    msg["result_conn"] = msg["result_conn"][0](*msg["result_conn"][1])
+
                 try:
                     getattr(self, "_" + msg["action"])(msg)
-                except:
-                    pass
+                except Exception as e:
+                    print(msg["result_conn"])
+                    print(traceback.print_exc())
+                    print("EXCEPTION in exp ass: %s" %e)
         finally:
             self._kill_optimizer()
 
@@ -116,8 +118,7 @@ class ExperimentAssistant(multiprocessing.Process):
                     next_candidate = self._optimizer_queue.get()
                 except:
                     next_candidate = None
-        msg["result_conn"].send(next_candidate)
-
+        msg["result_queue"].put(next_candidate)
 
     def _update(self, msg):
         """
@@ -203,10 +204,10 @@ class ExperimentAssistant(multiprocessing.Process):
                     Candidate or None, if no best candidate exists.
                 All other keys will be ignored.
         """
-        msg["result_conn"].send(self._experiment.best_candidate)
+        msg["result_queue"].put(self._experiment.best_candidate)
 
     def _get_experiment(self, msg):
-        msg["result_conn"].send(self._experiment)
+        msg["result_queue"].put(self._experiment)
 
     def _get_all_candidates(self, msg):
         return_msg = {
@@ -214,7 +215,7 @@ class ExperimentAssistant(multiprocessing.Process):
             "candidates_pending": self._experiment.candidates_pending,
             "candidates_working": self._experiment.candidates_working
         }
-        msg["result_conn"].send(return_msg)
+        msg["result_queue"].put(return_msg)
 
     def _create_experiment_directory(self):
         global_start_date = time.time()
@@ -242,7 +243,7 @@ class ExperimentAssistant(multiprocessing.Process):
             "label": "%s, best result" %(str(self._experiment.name))
         }
 
-        msg["result_conn"].send([step_eval_dict, step_best_dict])
+        msg["result_queue"].put([step_eval_dict, step_best_dict])
 
     def _best_result_per_step_data(self):
         """
@@ -292,6 +293,7 @@ class ExperimentAssistant(multiprocessing.Process):
         we can't be sure of its integrity and because we don't need any of the
         old candidates anyways.
         """
+        return #TODO
         if self._optimizer_process is not None:
         # This sends SIGINT to the optimizer process, which is used to
             # terminate the process irrespective of its current computation.
@@ -299,6 +301,7 @@ class ExperimentAssistant(multiprocessing.Process):
             os.kill(self._optimizer_process.pid, signal.SIGINT)
         if self._optimizer_queue is not None:
             self._optimizer_queue.close()
+
 
 
     def _build_new_optimizer(self):
