@@ -54,12 +54,11 @@ class LabAssistant(multiprocessing.Process):
                 if "exp_name" in msg and msg.get("action", None) in ACTIONS_FOR_EXP:
                     self._exp_ass_queues[msg["exp_name"]].put(msg)
                 else:
-                    if "result_conn" in msg:
-                        msg["result_conn"] = msg["result_conn"][0](*msg["result_conn"][1])
                     try:
                         getattr(self, "_" + msg["action"])(msg)
-                    #except:
-                     #   pass
+                    except Exception as e:
+                        print("EXCEPTION in lab ass: %s" %e)
+                        pass
                     finally:
                         pass
         finally:
@@ -98,7 +97,7 @@ class LabAssistant(multiprocessing.Process):
             self._send_msg_exp(exp_ass_name, msg_exp)
             exp = conn_rcv.recv()
             all_exps[exp_ass_name] = exp
-        msg["result_conn"].send(all_exps)
+        msg["result_queue"].put(all_exps)
 
     def _send_msg_exp(self, exp_name, msg):
         msg["result_conn"] = reduction.reduce_connection(msg["result_conn"])
