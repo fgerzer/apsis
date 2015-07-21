@@ -1,51 +1,31 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.optimizers.optimizer import Optimizer, QueueOptimizer
+from apsis.optimizers.optimizer import Optimizer
 from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 
 class RandomSearch(Optimizer):
-    """
-    Implements a random searcher for parameter optimization.
-
-    Attributes
-    ----------
-    random_state : None, int or random_state
-        The random_state used to generate random numbers.
-    """
-
     SUPPORTED_PARAM_TYPES = [NominalParamDef, NumericParamDef]
 
     random_state = None
 
-    def __init__(self, optimizer_arguments=None):
-        """
-        Initializes the RandomSearch.
+    def __init__(self, optimizer_params, out_queue, in_queue, min_candidates=1):
+        if optimizer_params is None:
+            optimizer_params = {}
+        self.random_state = optimizer_params.get("random_state", None)
+        Optimizer.__init__(self, optimizer_params, out_queue, in_queue, min_candidates)
 
-        Parameters
-        ----------
-        optimizer_arguments : dict or None, optional
-            A dictionary of parameters for the optimizer. The following keys
-            are used:
-            "random_state" : random_state, None or int, optional
-                A numpy random_state (after which it is modelled). Can be used
-                for repeatability.
-        """
-        if optimizer_arguments is None:
-            optimizer_arguments = {}
-        self.random_state = optimizer_arguments.get("random_state", None)
-
-    def get_next_candidates(self, experiment, num_candidates=1):
+    def _gen_candidates(self, num_candidates=1):
         list = []
         for i in range(num_candidates):
-            list.append(self._get_one_candidate(experiment))
+            list.append(self._gen_one_candidate())
         return list
 
-    def _get_one_candidate(self, experiment):
+    def _gen_one_candidate(self):
         self.random_state = check_random_state(self.random_state)
         value_dict = {}
-        for key, param_def in experiment.parameter_definitions.iteritems():
+        for key, param_def in self._experiment.parameter_definitions.iteritems():
             value_dict[key] = self._gen_param_val(param_def)
         return Candidate(value_dict)
 
@@ -71,18 +51,5 @@ class RandomSearch(Optimizer):
         elif isinstance(param_def, NominalParamDef):
             return self.random_state.choice(param_def.values)
 
-
-class QueueRandomSearch(QueueOptimizer):
-    random_search = None
-
-    experiment = None
-
-    def __init__(self, optimizer_params, experiment, out_queue,
-                 min_candidates=1):
-        self.random_search = RandomSearch(optimizer_params)
-        self.experiment = experiment
-        super(QueueRandomSearch, self).__init__(optimizer_params, experiment,
-                                                out_queue, min_candidates)
-
-    def gen_candidates(self):
-        return self.random_search.get_next_candidates(self.experiment)
+    def _refit(self):
+        pass

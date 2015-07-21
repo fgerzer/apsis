@@ -9,45 +9,84 @@ import signal
 import multiprocessing
 
 
-class Optimizer(object):
-    """
-    This defines a basic optimizer interface.
-    """
+class Optimizer(multiprocessing.Process):
     __metaclass__ = ABCMeta
-
     SUPPORTED_PARAM_TYPES = []
 
-    @abstractmethod
-    def __init__(self, optimizer_params):
-        """
-        Initializes the optimizer with the arguments under optimizer_params.
+    _out_queue = None
+    _experiment = None
 
-        Parameters
-        ----------
-        optimizer_arguments : dict
-            The parameters for the optimization. Depending on the optimizer,
-            different arguments are needed.
+    _in_queue = None
+
+    _min_candidates = None
+
+    _exited = None
+
+    @abstractmethod
+    def __init__(self, optimizer_params, experiment, out_queue, in_queue, min_candidates=1):
+        self._out_queue = out_queue
+        self._in_queue = in_queue
+        self._min_candidates = min_candidates
+        signal.signal(signal.SIGINT, self._update_and_recheck)
+        self._exited = False
+        multiprocessing.Process.__init__(self)
+        self._experiment = experiment
+
+    def run(self):
+        """
+        Runs the QueueOptimizer.
+
+        The inner working is such that, once per second, the out_queue is
+        checked on whether it is empty or contains less than min_candidates
+        candidates. If so, new candidates are generated and appended.
+        """
+        try:
+            while not self._exited:
+                if not self._out_queue.full():
+                    try:
+                        if self._out_queue.empty() or \
+                                        self._out_queue.qsize < self._min_candidates:
+                            new_candidates = self._gen_candidates(num_candidates=self._min_candidates)
+                            [self._out_queue.put(x, block=False) for x in new_candidates]
+                    except Queue.Full:
+                        pass
+                    sleep(1)
+        finally:
+            if self._in_queue is not None:
+                self._in_queue.close()
+            if self._out_queue is not None:
+                self._out_queue.close()
+
+    def _update_and_recheck(self, _signo, _stack_frame):
+        new_update = None
+        while not self._in_queue.empty():
+            new_update = self._in_queue.get()
+            if new_update == "exit":
+                self._exited = True
+                return
+        if new_update is not None:
+            self._experiment = new_update
+            self._refit()
+
+    @abstractmethod
+    def _refit(self):
+        pass
+
+
+    @abstractmethod
+    def _gen_candidates(self, num_candidates=1):
+        """
+        Generates new candidates to add to the out_queue.
+
+        This is the heart of the QueueOptimizer, and the implementation point
+         for each new one. Generally, this function should behave as follows:
+         On being called, returns a list of candidates next to evaluate.
+         Note that, if you don't return enough candidates to bring the queue
+         to more than min_candidates, it's probable that this function will be
+         called again directly afterwards.
         """
         pass
 
-    @abstractmethod
-    def get_next_candidates(self, experiment):
-        """
-        Returns several Candidate objects given an experiment.
-
-        It is the free choice of the optimizer how many Candidates to provide,
-        but it will provide at least one.
-        Parameters
-        ----------
-        experiment : Experiment
-            The experiment to form the base of the next candidate.
-
-        Returns
-        -------
-        next_candidate : list of Candidate
-            The Candidate to next evaluate.
-        """
-        pass
 
     def _is_experiment_supported(self, experiment):
         """
@@ -90,109 +129,3 @@ class Optimizer(object):
                     return True
 
         return False
-
-
-class QueueOptimizer(multiprocessing.Process):
-    """
-    This defines a basic optimizer interface for server/client architecture.
-
-    The main difference for the developer is the usage of gen_candidates,
-    which each optimizer has to implement.
-
-    In general, a QueueOptimizer possesses an out_queue, which it keeps filled
-    with candidates up to a specified size. To kill such a QueueOptimizer, the
-    experiment_helper kills it with a SIGINT signal (which triggers the
-    cleanup method). To use new examples, the QueueOptimizer has to be killed
-    and newly initiated.
-
-    Attributes
-    ----------
-    SUPPORTED_PARAM_TYPES : List of ParamDefs
-        Which parameter types this optimizer supports. This must be set by
-        each optimizer class, and is used to test whether an experiment is
-        supported.
-    out_queue : multiprocessing.Queue
-        The queue used to communicate with the experiment_helper. This will
-        always be attempted to keep full with at least min_candidates
-        candidates. However, it cannot be guaranteed it won't be empty.
-    min_candidates : int
-        The minimum number of candidates out_queue should contain at any point.
-    experiment : experiment
-        The experiment used to generate new candidates.
-    """
-    __metaclass__ = ABCMeta
-
-    SUPPORTED_PARAM_TYPES = []
-    out_queue = None
-    min_candidates = None
-    experiment = None
-
-    @abstractmethod
-    def __init__(self, optimizer_params, experiment, out_queue,
-                 min_candidates=1):
-        """
-        Initializes the optimizer with the arguments under optimizer_params.
-
-        Parameters
-        ----------
-        optimizer_arguments : dict
-            The parameters for the optimization. Depending on the optimizer,
-            different arguments are needed.
-        experiment : experiment
-            The experiment used to generate new candidates.
-        out_queue : multiprocessing.Queue
-            The queue used to communicate with the experiment_helper. This will
-            always be attempted to keep full with at least min_candidates
-            candidates. However, it cannot be guaranteed it won't be empty.
-        min_candidates : int
-            The minimum number of candidates out_queue should contain at any
-            point. Note that no matter this value, candidates will be
-            appended whenever the queue is empty.
-        """
-        self.out_queue = out_queue
-        self.min_candidates = min_candidates
-        signal.signal(signal.SIGINT, self.terminate_gracefully)
-        super(QueueOptimizer, self).__init__()
-
-    def run(self):
-        """
-        Runs the QueueOptimizer.
-
-        The inner working is such that, once per second, the out_queue is
-        checked on whether it is empty or contains less than min_candidates
-        candidates. If so, new candidates are generated and appended.
-        """
-        while True:
-            if not self.out_queue.full():
-                try:
-                    if self.out_queue.empty() or \
-                                    self.out_queue.qsize < self.min_candidates:
-                        new_candidates = self.gen_candidates()
-                        [self.out_queue.put(x, block=False) for x in new_candidates]
-                except Queue.Full:
-                    pass
-                sleep(1)
-
-
-    def terminate_gracefully(self, _signo, _stack_frame):
-        """
-        This method allows a QueueOptimizer to exit gracefully.
-
-        It can be reimplemented to terminate subprocesses and similar stuff.
-        """
-        # Raises SystemExit(0):
-        sys.exit(0)
-
-    @abstractmethod
-    def gen_candidates(self):
-        """
-        Generates new candidates to add to the out_queue.
-
-        This is the heart of the QueueOptimizer, and the implementation point
-         for each new one. Generally, this function should behave as follows:
-         On being called, returns a list of candidates next to evaluate.
-         Note that, if you don't return enough candidates to bring the queue
-         to more than min_candidates, it's probable that this function will be
-         called again directly afterwards.
-        """
-        pass

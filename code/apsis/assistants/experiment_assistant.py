@@ -29,6 +29,7 @@ class ExperimentAssistant(multiprocessing.Process):
     _rcv_queue = None
 
     _optimizer_queue = None
+    _optimizer_in_queue = None
     _optimizer_process = None
 
     _write_directory_base = None
@@ -175,7 +176,8 @@ class ExperimentAssistant(multiprocessing.Process):
                 self._append_to_detailed_csv()
 
             # And we rebuild the new optimizer.
-            self._build_new_optimizer()
+            self._optimizer_in_queue.put(self._experiment)
+            os.kill(self._optimizer_process.pid, signal.SIGINT)
 
         elif status == "pausing":
             self._experiment.add_pausing(candidate)
@@ -293,15 +295,13 @@ class ExperimentAssistant(multiprocessing.Process):
         we can't be sure of its integrity and because we don't need any of the
         old candidates anyways.
         """
-        return #TODO
-        if self._optimizer_process is not None:
-        # This sends SIGINT to the optimizer process, which is used to
-            # terminate the process irrespective of its current computation.
-            # (But, since it will be catched, it can still do cleanup)
+        if self._optimizer_in_queue is not None:
+            self._optimizer_in_queue.put("exit")
             os.kill(self._optimizer_process.pid, signal.SIGINT)
+        if self._optimizer_in_queue is not None:
+            self._optimizer_in_queue.close()
         if self._optimizer_queue is not None:
             self._optimizer_queue.close()
-
 
 
     def _build_new_optimizer(self):
@@ -317,8 +317,9 @@ class ExperimentAssistant(multiprocessing.Process):
         self._kill_optimizer()
 
         self._optimizer_queue = multiprocessing.Queue()
+        self._optimizer_in_queue = multiprocessing.Queue()
         self._optimizer_process = build_queue_optimizer(self._optimizer, self._experiment,
-                            self._optimizer_queue,
+                            self._optimizer_queue, self._optimizer_in_queue,
                             optimizer_arguments=self._optimizer_arguments)
         self._optimizer_process.start()
 
