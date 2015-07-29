@@ -2,6 +2,7 @@
 
 __author__ = 'Frederik Diehl'
 
+import traceback
 from apsis.assistants.experiment_assistant import ExperimentAssistant
 import matplotlib.pyplot as plt
 from apsis.utilities.plot_utils import create_figure, _polish_figure, plot_lists, write_plot_to_file
@@ -29,6 +30,8 @@ class LabAssistant(multiprocessing.Process):
     _global_start_date = None
     _logger = None
 
+    _man = None
+
 
 
     def __init__(self, rcv_queue, write_directory_base="/tmp/APSIS_WRITING"):
@@ -41,6 +44,7 @@ class LabAssistant(multiprocessing.Process):
         self._global_start_date = time.time()
         self._init_directory_structure() #TODO
         multiprocessing.Process.__init__(self)
+        self._man = multiprocessing.Manager()
         self._logger.info("lab assistant successfully initialized.")
 
     def run(self):
@@ -57,6 +61,7 @@ class LabAssistant(multiprocessing.Process):
                     try:
                         getattr(self, "_" + msg["action"])(msg)
                     except Exception as e:
+                        print(traceback.print_exc())
                         print("EXCEPTION in lab ass: %s" %e)
                         pass
                     finally:
@@ -88,20 +93,20 @@ class LabAssistant(multiprocessing.Process):
 
     def _get_all_experiments(self, msg):
         all_exps = {}
-        for exp_ass_name, exp_ass_queue in self._exp_ass_queues:
-            conn_rcv, conn_send = multiprocessing.Pipe(duplex=False)
+        for exp_ass_name in self._exp_ass_queues:
+            result_queue = self._man.Queue()
             msg_exp = {
                 "action": "get_experiment",
-                "result_conn": conn_send
+                "result_queue": result_queue
             }
             self._send_msg_exp(exp_ass_name, msg_exp)
-            exp = conn_rcv.recv()
+            exp = result_queue.get()
             all_exps[exp_ass_name] = exp
         msg["result_queue"].put(all_exps)
 
     def _send_msg_exp(self, exp_name, msg):
-        msg["result_conn"] = reduction.reduce_connection(msg["result_conn"])
-        self._exp_ass_queues[exp_name].send(msg)
+        #msg["result_conn"] = reduction.reduce_connection(msg["result_conn"])
+        self._exp_ass_queues[exp_name].put(msg)
 
 
     def _init_directory_structure(self):
