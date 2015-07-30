@@ -124,17 +124,7 @@ class AcquisitionFunction(object):
             param_dict_eval = {}
             for pn in param_names:
                 pdef = param_defs[pn]
-                if isinstance(pdef, NumericParamDef) \
-                        or isinstance(pdef, PositionParamDef):
-                    param_dict_eval[pn] = random.random()
-                else:
-                    message = ("Tried using an acquisition function on "
-                               "%s, which is an object of type %s."
-                               "Only "
-                               "NumericParamDef are supported."
-                               %(str(pdef), str(type(pdef))))
-                    self.logger.exception(message)
-                    raise TypeError(message)
+                param_dict_eval[pn] = np.random.uniform(0, 1, pdef.warped_size())
 
             score = self._compute_minimizing_evaluate(param_dict_eval, gp, experiment)
 
@@ -181,7 +171,7 @@ class AcquisitionFunction(object):
 
         return param_to_eval
 
-    def _translate_vector_dict(self, x_vector, param_names):
+    def _translate_vector_dict(self, x_vector, experiment):
         """
         We translate from a vector format to a dictionary of a point's params.
 
@@ -198,9 +188,14 @@ class AcquisitionFunction(object):
         """
         x_dict = {}
 
-        param_names_sorted = sorted(param_names)
+        param_names_sorted = sorted(experiment.parameter_definitions.keys())
+        warped_lengths = []
+        for pn in param_names_sorted:
+            warped_lengths.append(experiment.parameter_definitions[pn].warped_size())
+        index = 0
         for i, pn in enumerate(param_names_sorted):
-            x_dict[pn] = x_vector[i]
+            x_dict[pn] = x_vector[index:index+warped_lengths[i]]
+            index += warped_lengths[i]
 
         return x_dict
 
@@ -222,7 +217,6 @@ class AcquisitionFunction(object):
         """
         param_nd_array = np.zeros((1, len(x_vec)))
         for i in range(len(x_vec)):
-            #print (x_vec)
             param_nd_array[0,i] = x_vec[i]
 
         return param_nd_array
@@ -472,7 +466,7 @@ class ExpectedImprovement(AcquisitionFunction):
                     #as not all of the optimization methods respect the bounds
                     #we need to check if the params are in the bounds, if
                     #they are not then don't use them
-                    x_min_dict = self._translate_vector_dict(x_min, param_names)
+                    x_min_dict = self._translate_vector_dict(x_min, experiment)
 
                     #This uses the fact that warp_in is defined to warp in all
                     # parameters into the same [0, 1] hypercube. This means that
