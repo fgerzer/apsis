@@ -74,7 +74,4 @@ class RandomSearch(Optimizer):
         param_val:
             The generated parameter value.
         """
-        if isinstance(param_def, NumericParamDef):
-            return param_def.warp_out(self.random_state.uniform(0, 1))
-        elif isinstance(param_def, NominalParamDef):
-            return self.random_state.choice(param_def.values)
+        return param_def.warp_out(self.random_state.uniform(0, 1, param_def.warped_size()))
