@@ -18,6 +18,9 @@ class ParamDef(object):
         Should test whether a certain value is in the parameter domain as
         defined by this class.
 
+        Note that you have to test a value that is not warped in here. A
+        warped-in value can be tested by checking whether it is in [0, 1].
+
         Parameters
         ----------
         value : object
