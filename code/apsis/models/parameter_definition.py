@@ -372,6 +372,20 @@ class FixedValueParamDef(PositionParamDef):
             positions.append(pos)
         super(FixedValueParamDef, self).__init__(values, positions)
 
+
+class EquidistantPositionParamDef(PositionParamDef):
+    """
+    Extension of PositionParamDef, in which the position of each value is
+    equidistant from its neighbours and their order is determined by their
+    order in values.
+    """
+    def __init__(self, values):
+        positions = []
+        for i, v in enumerate(values):
+            pos = float(i)/(len(values)-1)
+            positions.append(pos)
+        super(EquidistantPositionParamDef, self).__init__(values, positions)
+
 class AsymptoticNumericParamDef(NumericParamDef):
     """
     This represents an asymptotic parameter definition.
