@@ -44,7 +44,7 @@ class SimpleBayesianOptimizer(Optimizer):
     logger: logger
         The logger instance for this object.
     """
-    SUPPORTED_PARAM_TYPES = [NumericParamDef, PositionParamDef]
+    SUPPORTED_PARAM_TYPES = [NumericParamDef, NominalParamDef]
 
     kernel = None
     kernel_params = None
@@ -152,8 +152,12 @@ class SimpleBayesianOptimizer(Optimizer):
         experiment : experiment
             The experiment on which to refit this gp.
         """
+        parameter_warped_size = 0
+        for p in experiment.parameter_definitions.values():
+            parameter_warped_size += p.warped_size()
+
         candidate_matrix = np.zeros((len(experiment.candidates_finished),
-                                     len(experiment.parameter_definitions)))
+                                     parameter_warped_size))
         results_vector = np.zeros((len(experiment.candidates_finished), 1))
 
         param_names = sorted(experiment.parameter_definitions.keys())
@@ -163,7 +167,7 @@ class SimpleBayesianOptimizer(Optimizer):
             warped_in = experiment.warp_pt_in(c.params)
             param_values = []
             for pn in param_names:
-                param_values.append(warped_in[pn])
+                param_values.extend(warped_in[pn])
             candidate_matrix[i, :] = param_values
             results_vector[i] = c.result
 
