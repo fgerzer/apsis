@@ -178,6 +178,7 @@ class NominalParamDef(ParamDef):
         return warped_value
 
     def warp_out(self, warped_value):
+        warped_value = list(warped_value)
         return self.values[warped_value.index(max(warped_value))]
 
     def warped_size(self):
@@ -471,9 +472,9 @@ class AsymptoticNumericParamDef(NumericParamDef):
         if not unwarped_value <= max(self.asymptotic_border, self.border):
             value_in = max(self.asymptotic_border, self.border)
         if unwarped_value == self.border:
-            return 0
+            return [0]
         elif unwarped_value == self.asymptotic_border:
-            return 1
+            return [1]
         return [(1-2**(math.log(unwarped_value, 10)))*(self.border-self.asymptotic_border)+self.asymptotic_border]
 
     def warp_out(self, warped_value):
