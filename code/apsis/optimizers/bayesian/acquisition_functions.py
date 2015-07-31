@@ -167,7 +167,7 @@ class AcquisitionFunction(object):
         param_to_eval = []
         param_names = sorted(x.keys())
         for pn in param_names:
-            param_to_eval.append(x[pn])
+            param_to_eval.extend(x[pn])
 
         return param_to_eval
 
@@ -422,7 +422,9 @@ class ExpectedImprovement(AcquisitionFunction):
 
             #0,1 bounded interval for optimization in every
             #dimension as we are in the warped space
-            bounds = [(0.0,1.0) for x in experiment.parameter_definitions.keys()]
+            bounds = []
+            for pd in experiment.parameter_definitions.values():
+                bounds.extend([(0.0, 1.0) for x in range(pd.warped_size())])
 
             #stores tuples (x_min, f_min) from the loop of random restarts
             scipy_optimizer_results = []
