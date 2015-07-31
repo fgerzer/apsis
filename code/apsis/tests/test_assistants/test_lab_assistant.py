@@ -152,7 +152,7 @@ class TestAcquisition(object):
         """
         Just a short test on whether validation lab assistant does not crash.
         """
-        optimizer = "RandomSearch"
+        optimizer = "BayOpt"
         name = "test_init_experiment"
         param_defs = {
             "x": MinMaxNumericParamDef(0, 1),
