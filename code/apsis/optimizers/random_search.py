@@ -74,4 +74,4 @@ class RandomSearch(Optimizer):
         param_val:
             The generated parameter value.
         """
-        return param_def.warp_out(self.random_state.uniform(0, 1, param_def.warped_size()))
+        return param_def.warp_out(list(self.random_state.uniform(0, 1, param_def.warped_size())))
