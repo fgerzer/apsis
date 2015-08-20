@@ -40,6 +40,8 @@ class ParamDef(object):
             return 0
         return 1
 
+    def to_dict(self):
+        return self.__dict__
 
 class ComparableParamDef(object):
     """
@@ -273,8 +275,8 @@ class MinMaxNumericParamDef(NumericParamDef):
     """
     Defines a numeric parameter definition defined by a lower and upper bound.
     """
-    x_min = None
-    x_max = None
+    lower_bound = None
+    upper_bound = None
 
     def __init__(self, lower_bound, upper_bound):
         """
@@ -293,17 +295,17 @@ class MinMaxNumericParamDef(NumericParamDef):
             upper_bound = float(upper_bound)
         except:
             raise ValueError("Bounds are not floats.")
-        self.x_min = lower_bound
-        self.x_max = upper_bound
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
 
     def warp_in(self, value_in):
-        return (value_in - self.x_min)/(self.x_max-self.x_min)
+        return (value_in - self.lower_bound)/(self.upper_bound-self.lower_bound)
 
     def warp_out(self, value_out):
-        return value_out*(self.x_max - self.x_min) + self.x_min
+        return value_out*(self.upper_bound - self.lower_bound) + self.lower_bound
 
     def is_in_parameter_domain(self, value):
-        return self.x_min <= value <= self.x_max
+        return self.lower_bound <= value <= self.upper_bound
 
 
 class PositionParamDef(OrdinalParamDef):
@@ -371,6 +373,9 @@ class FixedValueParamDef(PositionParamDef):
             pos = v
             positions.append(pos)
         super(FixedValueParamDef, self).__init__(values, positions)
+
+    def to_dict(self):
+        return {"values": self.values}
 
 
 class EquidistantPositionParamDef(PositionParamDef):
