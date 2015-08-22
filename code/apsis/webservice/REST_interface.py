@@ -5,8 +5,9 @@ from apsis.assistants.lab_assistant import LabAssistant
 #from apsis.models.candidate import Candidate
 #from apsis.models.experiment import Experiment
 import multiprocessing
+from multiprocessing import reduction
 import traceback
-from apsis.utilities.param_def_utilities import convert_param_defs
+from apsis.utilities.param_def_utilities import dict_to_param_defs
 #import json
 
 import logging
@@ -23,6 +24,16 @@ man = multiprocessing.Manager()
 #currently has to be set from the outside.
 lqueue = None
 
+def start_apsis():
+    global lqueue
+    lqueue = man.Queue()
+    print(lqueue)
+    lAss = LabAssistant(lqueue)
+    app.run(debug=True)
+    print("Started app. Starting LAss. Send queue is %s" %lqueue)
+    lAss.start()
+    print("started lass")
+
 @app.route(CONTEXT_ROOT + "/", methods=["GET"])
 #@produces('application/json')
 def overview_page():
@@ -34,8 +45,8 @@ def overview_page():
 
 
 @app.route(CONTEXT_ROOT + "/experiments", methods=["POST"])
-@consumes('application/json')
-@produces('application/json')
+#@consumes('application/json')
+#@produces('application/json')
 def init_experiment():
     """
     This initializes a single experiment.
@@ -62,17 +73,20 @@ def init_experiment():
         is minimization.
     }
     """
+    print("Received rqst")
     try:
         data_received = request.get_json()
         name = data_received.get("name", None)
+        print("got exps")
         experiments = _get_all_experiments()
         if name in experiments:
-            return "Error"
+            return "Error: %s already exists." %name
+        print("checked existence.")
         optimizer = data_received.get("optimizer", None)
         optimizer_arguments = data_received.get("optimizer_arguments", None)
         minimization = data_received.get("minimization", True)
         param_defs = data_received.get("param_defs", None)
-        param_defs = convert_param_defs(param_defs)
+        param_defs = dict_to_param_defs(param_defs)
 
         msg = {
             "action": "init_experiment",
@@ -81,7 +95,7 @@ def init_experiment():
             "optimizer_arguments": optimizer_arguments,
             "minimization": minimization
         }
-
+        print("put in queue")
         lqueue.put(msg)
         return "Experiment initialized successfully."
     except:
@@ -124,9 +138,17 @@ def _get_all_candidates(experiment_id):
 def _get_all_experiments():
     result_queue = man.Queue()
     msg_cand = {"action": "get_all_experiments", "result_queue": result_queue}
-    lqueue.put(msg_cand)
+    print("put %s in %s" %(msg_cand, lqueue))
+    _send_msg_lab(msg_cand)
+    print("Waiting for answers.")
     experiments = result_queue.get()
+    print("Got answer.")
     return experiments
+
+
+def _send_msg_lab(msg):
+    #msg["result_queue"] = reduction.reduce_connection(msg["result_queue"])
+    lqueue.put(msg)
 #
 # @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/working", methods=["POST"])
 # @consumes('application/json')

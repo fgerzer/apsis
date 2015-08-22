@@ -48,13 +48,19 @@ class LabAssistant(multiprocessing.Process):
         self._logger.info("lab assistant successfully initialized.")
 
     def run(self):
+        print("Lass run called.")
         exited = False
         try:
             while not exited:
+                print("Waiting for rcv on %s" %self._rcv_queue)
                 msg = self._rcv_queue.get(block=True)
+                print("LAss received %s" %msg)
                 if msg.get("action", None) == "exit":
                     exited = True
                     continue
+                if "receive_queue" in msg:
+                    msg["receive_queue"] = reduction.rebuild_connection(msg["receive_queue"], False, True)
+                    print("msg recieve queue changed to %s" %msg["receive_queue"])
                 if "exp_name" in msg and msg.get("action", None) in ACTIONS_FOR_EXP:
                     self._exp_ass_queues[msg["exp_name"]].put(msg)
                 else:
@@ -92,6 +98,7 @@ class LabAssistant(multiprocessing.Process):
         self._logger.info("Experiment initialized successfully.")
 
     def _get_all_experiments(self, msg):
+        print("LAss get all exps.")
         all_exps = {}
         for exp_ass_name in self._exp_ass_queues:
             result_queue = self._man.Queue()
