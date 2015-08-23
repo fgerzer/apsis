@@ -163,6 +163,7 @@ class Candidate(object):
         EXPERIMENTAL
         """
         d = {}
+        d["id"] = self.id
         d["params"] = self._param_defs_to_dict()
         d["result"] = self.result
         d["cost"] = self.cost
@@ -183,7 +184,10 @@ def from_dict(dict):
     """
     EXPERIMENTAL
     """
-    c = Candidate(dict["params"])
+    id = None
+    if "id" in dict:
+        id = dict["id"]
+    c = Candidate(dict["params"], id=id)
     c.result = dict.get("result", None)
     c.cost = dict.get("cost", None)
     c.worker_information = dict.get("worker_information", None)
