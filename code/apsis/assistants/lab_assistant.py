@@ -2,24 +2,17 @@
 
 __author__ = 'Frederik Diehl'
 
-import traceback
 from apsis.assistants.experiment_assistant import ExperimentAssistant
-import matplotlib.pyplot as plt
-from apsis.utilities.plot_utils import create_figure, _polish_figure, plot_lists, write_plot_to_file
 from apsis.utilities.file_utils import ensure_directory_exists
 import time
 import datetime
 import os
 from apsis.utilities.logging_utils import get_logger
-import numpy as np
-import multiprocessing
-from multiprocessing import reduction
-import sys
 
-timeout_answer = 1
 
 ACTIONS_FOR_EXP = ["get_next_candidate", "update", "get_best_candidate",
                    "get_all_candidates"]
+
 
 class LabAssistant():
     exp_assistants = None
@@ -31,13 +24,18 @@ class LabAssistant():
 
 
 
-    def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
-        #TODO add check for windows for directory name in here, via os.name=="nt"
+    def __init__(self, write_directory_base=None):
         self._logger = get_logger(self)
+        if write_directory_base is None:
+            if os.name == "nt":
+                write_directory_base = os.path.relpath("APSIS_WRITING")
+            else:
+                write_directory_base = "/tmp/APSIS_WRITING"
         self._logger.info("Initializing lab assistant.")
+        self._logger.info("Writing results to %s" %write_directory_base)
         self._write_directory_base = write_directory_base
         self._global_start_date = time.time()
-        self._init_directory_structure() #TODO
+        self._init_directory_structure()
         self.exp_assistants = {}
         self._logger.info("lab assistant successfully initialized.")
 
