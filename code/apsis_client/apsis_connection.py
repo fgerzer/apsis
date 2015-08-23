@@ -37,22 +37,16 @@ class Connection(object):
             "minimization": minimization
         }
         url = self.server_address + "/experiments"
-        r = requests.post(url=url, json=msg)
+        requests.post(url=url, json=msg)
         #TODO add error parsing
 
-    def get_all_experiment_names(self):
+    def get_all_experiment_names(self, blocking=True, timeout=0):
         url = self.server_address + "/experiments"
-        r = requests.get(url=url)
-        return r.json()["result"]
+        return self.request(requests.get, url, blocking=blocking, timeout=timeout)
 
-
-    def get_next_candidate(self, exp_name):
+    def get_next_candidate(self, exp_name, blocking=True, timeout=0):
         url = self.server_address + "/experiments/%s/get_next_candidate" %exp_name
-        return self.request(requests.get, url=url, blocking=True)
-        #r = requests.get(url=url)
-        #if r.json()["result"] == "None":
-        #    return None
-        #return r.json()["result"]
+        return self.request(requests.get, url=url, blocking=blocking, timeout=timeout)
 
     def update(self, exp_name, candidate, status):
         #TODO candidate currently as a dict.
@@ -62,20 +56,12 @@ class Connection(object):
             "status": status,
             "candidate": candidate
         }
-        r = requests.post(url, json=msg)
-        print(r)
+        requests.post(url, json=msg)
 
-    def get_best_candidate(self, exp_name):
+    def get_best_candidate(self, exp_name, blocking=True, timeout=0):
         url = self.server_address + "/experiments/%s/get_best_candidate" %exp_name
-        r = requests.get(url)
-        print(r)
-        if r.json()["result"] == "None":
-            return None
-        return r.json()["result"]
+        return self.request(requests.get, url, blocking=blocking, timeout=timeout)
 
-    def get_all_candidates(self, exp_name):
+    def get_all_candidates(self, exp_name, blocking=True, timeout=0):
         url = self.server_address + "/experiments/%s/candidates" %exp_name
-        r = requests.get(url)
-        if r.json()["result"] == "None":
-            return None
-        return r.json()["result"]
+        return self.request(requests.get, url, blocking=blocking, timeout=timeout)
