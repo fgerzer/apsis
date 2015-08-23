@@ -7,7 +7,7 @@ import sys
 from time import sleep
 import signal
 import multiprocessing
-
+import Queue
 
 class Optimizer(multiprocessing.Process):
     __metaclass__ = ABCMeta
@@ -23,11 +23,14 @@ class Optimizer(multiprocessing.Process):
     _exited = None
 
     @abstractmethod
-    def __init__(self, optimizer_params, experiment, out_queue, in_queue, min_candidates=1):
+    def __init__(self, optimizer_params, experiment, out_queue, in_queue, min_candidates=5):
         self._out_queue = out_queue
         self._in_queue = in_queue
         self._min_candidates = min_candidates
-        signal.signal(signal.SIGINT, self._update_and_recheck)
+        #TODO By commenting this out, we risk not inefficiencies. However,
+        # due to the inability to catch signals outside the main thread,
+        # it is currently necessary.
+        #signal.signal(signal.SIGINT, self._update_and_recheck)
         self._exited = False
         multiprocessing.Process.__init__(self)
         self._experiment = experiment
@@ -42,6 +45,7 @@ class Optimizer(multiprocessing.Process):
         """
         try:
             while not self._exited:
+                self._update_and_recheck(None, None)
                 if not self._out_queue.full():
                     try:
                         if self._out_queue.empty() or \
@@ -50,7 +54,7 @@ class Optimizer(multiprocessing.Process):
                             [self._out_queue.put(x, block=False) for x in new_candidates]
                     except Queue.Full:
                         pass
-                    sleep(1)
+                    sleep(0.1)
         finally:
             if self._in_queue is not None:
                 self._in_queue.close()
@@ -60,7 +64,10 @@ class Optimizer(multiprocessing.Process):
     def _update_and_recheck(self, _signo, _stack_frame):
         new_update = None
         while not self._in_queue.empty():
-            new_update = self._in_queue.get()
+            try:
+                new_update = self._in_queue.get_nowait()
+            except Queue.Empty:
+                return
             if new_update == "exit":
                 self._exited = True
                 return
