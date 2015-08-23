@@ -123,12 +123,16 @@ def update(experiment_id):
     lAss.exp_assistants[experiment_id].update(status=status, candidate=candidate)
     return "Success"
 
+@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/candidates",
+           methods=["GET"])
 def _get_all_candidates(experiment_id):
-    result_queue = man.Queue()
-    msg_cand = {"action": "get_all_candidates", "exp_name": experiment_id, "result_queue": result_queue}
-    lqueue.put(msg_cand)
-    candidates = result_queue.get()
-    return candidates
+    candidates = lAss.get_candidates(experiment_id)
+    result = {}
+    for r in ["finished", "working", "pending"]:
+        result[r] = []
+        for i, x in enumerate(candidates[r]):
+            result[r].append(x.to_dict())
+    return jsonify(result=result)
 
 
 def _send_msg_lab(msg):
