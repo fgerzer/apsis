@@ -273,3 +273,10 @@ class ExperimentAssistant():
             detailed_file.write(csv_string)
 
         self._csv_steps_written += steps_included
+
+    def get_candidates(self):
+        result = {}
+        result["finished"] = self._experiment.candidates_finished
+        result["pending"] = self._experiment.candidates_pending
+        result["working"] = self._experiment.candidates_working
+        return result

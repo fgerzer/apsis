@@ -69,3 +69,6 @@ class LabAssistant():
                                                   date_name)
 
             ensure_directory_exists(self._lab_run_directory)
+
+    def get_candidates(self, experiment_id):
+        return self.exp_assistants[experiment_id].get_candidates()
