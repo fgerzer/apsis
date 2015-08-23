@@ -11,6 +11,7 @@ from apsis.utilities.logging_utils import get_logger
 import signal
 import multiprocessing
 import Queue
+from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
 
 AVAILABLE_STATUS = ["finished", "pausing", "working"]
 
@@ -118,7 +119,7 @@ class ExperimentAssistant():
             if self._csv_write_frequency != 0 and step != 0 \
                     and step % self._csv_write_frequency == 0:
                 self._append_to_detailed_csv()
-
+                self.write_plots()
             # And we rebuild the new optimizer.
             self._optimizer_in_queue.put(self._experiment)
             #TODO Commenting out the below means we cannot kill the optimizer
@@ -147,29 +148,45 @@ class ExperimentAssistant():
         global_start_date = time.time()
         date_name = datetime.datetime.utcfromtimestamp(
                 global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
-        self.experiment_directory_base = os.path.join(self._write_directory_base,
+        self._experiment_directory_base = os.path.join(self._write_directory_base,
                                     self._experiment.name + "_" + date_name)
-        ensure_directory_exists(self.experiment_directory_base)
+        ensure_directory_exists(self._experiment_directory_base)
 
-    def _best_result_per_step_dicts(self, msg):
+    def _best_result_per_step_dicts(self, color="b"):
+        """
+        Returns a dict to use with plot_utils.
+        Parameters
+        ----------
+        color="b": string
+            A pyplot-color representing string. Both plots will have that
+            color.
+        Returns
+        -------
+        dicts: list of dicts
+            Two dicts, one for step_eval, one for step_best, and their
+            corresponding definitions.
+        """
         x, step_eval, step_best = self._best_result_per_step_data()
+
         step_eval_dict = {
             "x": x,
             "y": step_eval,
             "type": "scatter",
             "label": "%s, current result" %(str(self._experiment.name)),
-            "color": msg["color"]
+            "color": color
         }
 
         step_best_dict = {
             "x": x,
             "y": step_best,
             "type": "line",
-            "color": msg["color"],
+            "color": color,
             "label": "%s, best result" %(str(self._experiment.name))
         }
 
-        msg["result_queue"].put([step_eval_dict, step_best_dict])
+        #print [step_eval_dict, step_best_dict]
+
+        return [step_eval_dict, step_best_dict]
 
     def _best_result_per_step_data(self):
         """
@@ -265,7 +282,7 @@ class ExperimentAssistant():
                                             fromIndex=self._csv_steps_written)
 
         #write
-        filename = os.path.join(self.experiment_directory_base,
+        filename = os.path.join(self._experiment_directory_base,
                                 self._experiment.name + "_results.csv")
 
         with open(filename, 'a+') as detailed_file:
@@ -279,3 +296,51 @@ class ExperimentAssistant():
         result["pending"] = self._experiment.candidates_pending
         result["working"] = self._experiment.candidates_working
         return result
+
+
+    def plot_result_per_step(self, ax=None, color="b",
+                             plot_min=None, plot_max=None):
+        """
+        Returns (and plots) the plt.figure plotting the results over the steps.
+        Parameters
+        ----------
+        show_plot : bool, optional
+            Whether to show the plot after creation.
+        ax : None or matplotlib.Axes, optional
+            The ax to update. If None, a new figure will be created.
+        color : string, optional
+            A string representing a pyplot color.
+        plot_min : float, optional
+            The smallest value to plot on the y axis.
+        plot_max : float, optional
+            The biggest value to plot on the y axis.
+        Returns
+        -------
+        ax: plt.Axes
+            The Axes containing the results over the steps.
+        """
+
+
+        plots = self._best_result_per_step_dicts(color)
+        if self._experiment.minimization_problem:
+            legend_loc = 'upper right'
+        else:
+            legend_loc = 'upper left'
+
+        plot_options = {
+            "legend_loc": legend_loc,
+            "x_label": "steps",
+            "y_label": "result",
+            "title": "Plot of %s result over the steps."
+                     %(str(self._experiment.name))
+        }
+        fig, ax = plot_lists(plots, ax=ax, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
+
+        return fig
+
+    def write_plots(self):
+        fig = self.plot_result_per_step()
+        filename = "result_per_step_%i" %len(self._experiment.candidates_finished)
+        path = self._experiment_directory_base + "/plots"
+        ensure_directory_exists(path)
+        write_plot_to_file(fig, filename, path)
