@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_negotiate import consumes, produces
 from apsis.assistants.lab_assistant import LabAssistant
 #from apsis.models.parameter_definition import *
-#from apsis.models.candidate import Candidate
+from apsis.models.candidate import Candidate, from_dict
 #from apsis.models.experiment import Experiment
 import multiprocessing
 from multiprocessing import reduction
@@ -19,20 +19,13 @@ logging.basicConfig(level=logging.DEBUG)
 
 app = Flask('apsis')
 
-man = multiprocessing.Manager()
-
-#currently has to be set from the outside.
-lqueue = None
+lAss = None
 
 def start_apsis():
-    global lqueue
-    lqueue = man.Queue()
-    print(lqueue)
-    lAss = LabAssistant(lqueue)
+    global lAss
+    lAss = LabAssistant()
     app.run(debug=True)
-    print("Started app. Starting LAss. Send queue is %s" %lqueue)
-    lAss.start()
-    print("started lass")
+    print("Started app. Initialized LAss.")
 
 @app.route(CONTEXT_ROOT + "/", methods=["GET"])
 #@produces('application/json')
@@ -40,8 +33,8 @@ def overview_page():
     """
     This will, later, become an overview over the experiment.
     """
-    experiments = _get_all_experiments()
-    return str(experiments)
+    experiments = lAss.exp_assistants.keys()
+    str(experiments)
 
 
 @app.route(CONTEXT_ROOT + "/experiments", methods=["POST"])
@@ -73,60 +66,62 @@ def init_experiment():
         is minimization.
     }
     """
-    print("Received rqst")
     try:
         data_received = request.get_json()
+        data_received = _filter_data(data_received)
         name = data_received.get("name", None)
-        print("got exps")
-        experiments = _get_all_experiments()
-        if name in experiments:
+        if name in lAss.exp_assistants:
             return "Error: %s already exists." %name
-        print("checked existence.")
         optimizer = data_received.get("optimizer", None)
         optimizer_arguments = data_received.get("optimizer_arguments", None)
         minimization = data_received.get("minimization", True)
         param_defs = data_received.get("param_defs", None)
         param_defs = dict_to_param_defs(param_defs)
-
-        msg = {
-            "action": "init_experiment",
-            "optimizer": optimizer,
-            "param_defs": param_defs,
-            "optimizer_arguments": optimizer_arguments,
-            "minimization": minimization
-        }
-        print("put in queue")
-        lqueue.put(msg)
+        lAss.init_experiment(name, optimizer, param_defs, optimizer_arguments,
+                             minimization)
         return "Experiment initialized successfully."
     except:
-
         return str(traceback.print_exc() + "\nInitialization failed.")
 
 @app.route(CONTEXT_ROOT + "/experiments", methods=["GET"])
 def get_all_experiments():
-    return str(_get_all_experiments())
+    print("Got get all exps")
+    return jsonify(result=lAss.exp_assistants.keys())
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
 def get_experiment(experiment_id):
-    string = ""
-    candidates = _get_all_candidates(experiment_id)
-    for l in candidates:
-        string += l + "\n"
-        for c in candidates[l]:
-            string += "\t" + str(c) + "\n"
-    return string
+   pass
+    #TODO
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
                           "/get_next_candidate", methods=["GET"])
 def get_next_candidate(experiment_id):
-    return "Get next candidate for experiment %s currently not implemented.\n" %experiment_id
+    result_cand = lAss.exp_assistants[experiment_id].get_next_candidate()
+    if result_cand is None:
+        result = "None"
+    else:
+        result = result_cand.to_dict()
+    return jsonify(result=result)
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
-                          "/update", methods=["GET"])
+                          "/get_best_candidate", methods=["GET"])
+def get_best_candidate(experiment_id):
+    result_cand = lAss.exp_assistants[experiment_id].get_best_candidate()
+    if result_cand is None:
+        result = "None"
+    else:
+        result = result_cand.to_dict()
+    return jsonify(result=result)
+
+@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
+                          "/update", methods=["POST"])
 def update(experiment_id):
     data_received = request.get_json()
-    status, candidate = data_received
-    return "update for %s currently not implemented.\n" %experiment_id
+    status = data_received["status"]
+    candidate = from_dict(data_received["candidate"])
+    #lAss.update(status=status, candidate=candidate)
+    lAss.exp_assistants[experiment_id].update(status=status, candidate=candidate)
+    return "Success"
 
 def _get_all_candidates(experiment_id):
     result_queue = man.Queue()
@@ -135,20 +130,16 @@ def _get_all_candidates(experiment_id):
     candidates = result_queue.get()
     return candidates
 
-def _get_all_experiments():
-    result_queue = man.Queue()
-    msg_cand = {"action": "get_all_experiments", "result_queue": result_queue}
-    print("put %s in %s" %(msg_cand, lqueue))
-    _send_msg_lab(msg_cand)
-    print("Waiting for answers.")
-    experiments = result_queue.get()
-    print("Got answer.")
-    return experiments
-
 
 def _send_msg_lab(msg):
     #msg["result_queue"] = reduction.reduce_connection(msg["result_queue"])
     lqueue.put(msg)
+
+def _filter_data(json):
+    for k in json:
+        if isinstance(json[k], unicode):
+            json[k] = str(json[k])
+    return json
 #
 # @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/working", methods=["POST"])
 # @consumes('application/json')
