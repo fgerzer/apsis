@@ -4,10 +4,12 @@ from apsis.assistants.lab_assistant import LabAssistant
 #from apsis.models.parameter_definition import *
 from apsis.models.candidate import Candidate, from_dict
 #from apsis.models.experiment import Experiment
+from functools import wraps
 import multiprocessing
 from multiprocessing import reduction
 import traceback
 from apsis.utilities.param_def_utilities import dict_to_param_defs
+from apsis.utilities.logging_utils import get_logger
 #import json
 
 import logging
@@ -15,17 +17,29 @@ import logging
 WS_PORT = 5000
 CONTEXT_ROOT = ""
 
-logging.basicConfig(level=logging.DEBUG)
-
 app = Flask('apsis')
+
+_logger = None
 
 lAss = None
 
 def start_apsis():
-    global lAss
+    global lAss, _logger
+    _logger = get_logger("REST_interface")
     lAss = LabAssistant()
     app.run(debug=True)
     print("Started app. Initialized LAss.")
+
+def exception_handler(func):
+    @wraps(func)
+    def handle_exception(*args, **kwargs):
+        try:
+            return jsonify(result=func(*args, **kwargs))
+        except:
+            _logger.exception("Exception while handling the answer. Catching "
+                              "to prevent server crash.")
+            return jsonify(result="failed")
+    return handle_exception
 
 @app.route(CONTEXT_ROOT + "/", methods=["GET"])
 #@produces('application/json')
@@ -35,9 +49,11 @@ def overview_page():
     """
     experiments = lAss.exp_assistants.keys()
     str(experiments)
+    #TODO
 
 
 @app.route(CONTEXT_ROOT + "/experiments", methods=["POST"])
+@exception_handler
 #@consumes('application/json')
 #@produces('application/json')
 def init_experiment():
@@ -66,27 +82,25 @@ def init_experiment():
         is minimization.
     }
     """
-    try:
-        data_received = request.get_json()
-        data_received = _filter_data(data_received)
-        name = data_received.get("name", None)
-        if name in lAss.exp_assistants:
-            return "Error: %s already exists." %name
-        optimizer = data_received.get("optimizer", None)
-        optimizer_arguments = data_received.get("optimizer_arguments", None)
-        minimization = data_received.get("minimization", True)
-        param_defs = data_received.get("param_defs", None)
-        param_defs = dict_to_param_defs(param_defs)
-        lAss.init_experiment(name, optimizer, param_defs, optimizer_arguments,
-                             minimization)
-        return "Experiment initialized successfully."
-    except:
-        return str(traceback.print_exc() + "\nInitialization failed.")
+
+    data_received = request.get_json()
+    data_received = _filter_data(data_received)
+    name = data_received.get("name", None)
+    if name in lAss.exp_assistants:
+        return "failed"
+    optimizer = data_received.get("optimizer", None)
+    optimizer_arguments = data_received.get("optimizer_arguments", None)
+    minimization = data_received.get("minimization", True)
+    param_defs = data_received.get("param_defs", None)
+    param_defs = dict_to_param_defs(param_defs)
+    lAss.init_experiment(name, optimizer, param_defs, optimizer_arguments,
+                         minimization)
+    return "success"
 
 @app.route(CONTEXT_ROOT + "/experiments", methods=["GET"])
+@exception_handler
 def get_all_experiments():
-    print("Got get all exps")
-    return jsonify(result=lAss.exp_assistants.keys())
+    return lAss.exp_assistants.keys()
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
 def get_experiment(experiment_id):
@@ -95,36 +109,40 @@ def get_experiment(experiment_id):
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
                           "/get_next_candidate", methods=["GET"])
+@exception_handler
 def get_next_candidate(experiment_id):
-    result_cand = lAss.exp_assistants[experiment_id].get_next_candidate()
+    result_cand = lAss.get_next_candidate(experiment_id)
     if result_cand is None:
-        result = None#"None"
+        result = "failed"#"None"
     else:
         result = result_cand.to_dict()
-    return jsonify(result=result)
+    return result
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
                           "/get_best_candidate", methods=["GET"])
+@exception_handler
 def get_best_candidate(experiment_id):
-    result_cand = lAss.exp_assistants[experiment_id].get_best_candidate()
+    result_cand = lAss.get_best_candidate(experiment_id)
     if result_cand is None:
-        result = None#"None"
+        result = "failed"
     else:
         result = result_cand.to_dict()
-    return jsonify(result=result)
+    return result
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
                           "/update", methods=["POST"])
+@exception_handler
 def update(experiment_id):
     data_received = request.get_json()
     status = data_received["status"]
     candidate = from_dict(data_received["candidate"])
     #lAss.update(status=status, candidate=candidate)
-    lAss.exp_assistants[experiment_id].update(status=status, candidate=candidate)
-    return "Success"
+    lAss.update(experiment_id, status=status, candidate=candidate)
+    return "success"
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/candidates",
            methods=["GET"])
+@exception_handler
 def _get_all_candidates(experiment_id):
     candidates = lAss.get_candidates(experiment_id)
     result = {}
@@ -132,7 +150,7 @@ def _get_all_candidates(experiment_id):
         result[r] = []
         for i, x in enumerate(candidates[r]):
             result[r].append(x.to_dict())
-    return jsonify(result=result)
+    return result
 
 
 def _send_msg_lab(msg):
