@@ -98,7 +98,7 @@ def get_experiment(experiment_id):
 def get_next_candidate(experiment_id):
     result_cand = lAss.exp_assistants[experiment_id].get_next_candidate()
     if result_cand is None:
-        result = "None"
+        result = None#"None"
     else:
         result = result_cand.to_dict()
     return jsonify(result=result)
@@ -108,7 +108,7 @@ def get_next_candidate(experiment_id):
 def get_best_candidate(experiment_id):
     result_cand = lAss.exp_assistants[experiment_id].get_best_candidate()
     if result_cand is None:
-        result = "None"
+        result = None#"None"
     else:
         result = result_cand.to_dict()
     return jsonify(result=result)
