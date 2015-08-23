@@ -32,20 +32,20 @@ pd_dict = param_defs_to_dict(param_defs)
 #print("Looking ofr exps")
 #print conn.get_all_experiments()
 #print("Finished looking")
-conn.init_experiment(
+init_res = conn.init_experiment(
     name="test_exp",
     param_defs=pd_dict,
     optimizer="RandomSearch",
     optimizer_arguments=None,
-    minimization=True
+    minimization=True,
+    blocking=False
 )
+print("Init exp successful: %s" %init_res)
 
 print(conn.get_all_experiment_names())
 
 for i in range(10):
-    cand = None
     cand = conn.get_next_candidate("test_exp", True, timeout=0)
-    print(cand)
     cand["result"] = (cand["params"]["z"]+1)*\
                      (cand["params"]["x"] ** 2 + (cand["params"]["y"] - 1) ** 2)
     time.sleep(1)
