@@ -72,3 +72,13 @@ class LabAssistant():
 
     def get_candidates(self, experiment_id):
         return self.exp_assistants[experiment_id].get_candidates()
+
+    def get_next_candidate(self, experiment_id):
+        return self.exp_assistants[experiment_id].get_next_candidate()
+
+    def get_best_candidate(self, experiment_id):
+        return self.exp_assistants[experiment_id].get_next_candidate()
+
+    def update(self, experiment_id, status, candidate):
+        return self.exp_assistants[experiment_id].update(status=status,
+                                                         candidate=candidate)
