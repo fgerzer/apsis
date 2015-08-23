@@ -16,7 +16,7 @@ def _param_def_to_dict(param_def):
 def dict_to_param_defs(dict):
     param_defs = {}
     for k in dict:
-        param_defs[k] = _param_def_to_dict(dict[k])
+        param_defs[k] = _dict_to_param_def(dict[k])
     return param_defs
 
 def _dict_to_param_def(dict):
