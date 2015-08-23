@@ -72,6 +72,12 @@ class Optimizer(multiprocessing.Process):
                 self._exited = True
                 return
         if new_update is not None:
+            # clear the out queue. We'll soon have new information.
+            try:
+                while not self._out_queue.empty():
+                    self._out_queue.get_nowait()
+            except Queue.Empty:
+                pass
             self._experiment = new_update
             self._refit()
 
