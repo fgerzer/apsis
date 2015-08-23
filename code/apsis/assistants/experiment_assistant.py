@@ -4,18 +4,12 @@ from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer
 from apsis.utilities.file_utils import ensure_directory_exists
-import matplotlib.pyplot as plt
-from apsis.utilities.plot_utils import plot_lists, create_figure
 import datetime
 import os
 import time
 from apsis.utilities.logging_utils import get_logger
-import Queue
-import sys
 import signal
 import multiprocessing
-from multiprocessing import reduction
-import traceback
 import Queue
 
 AVAILABLE_STATUS = ["finished", "pausing", "working"]
@@ -73,11 +67,10 @@ class ExperimentAssistant():
         self._logger.info("Returning next candidate.")
         if not self._experiment.candidates_pending:
             try:
-                while not self._optimizer_queue.empty():
-                    new_candidate = self._optimizer_queue.get_nowait()
-                    self._experiment.candidates_pending.append(
-                        new_candidate
-                    )
+                new_candidate = self._optimizer_queue.get_nowait()
+                self._experiment.candidates_pending.append(
+                    new_candidate
+                )
             except Queue.Empty:
                 return None
         else:
@@ -128,6 +121,9 @@ class ExperimentAssistant():
 
             # And we rebuild the new optimizer.
             self._optimizer_in_queue.put(self._experiment)
+            #TODO Commenting out the below means we cannot kill the optimizer
+            # during optimization, even when we have new information. On the
+            # other hand, it now works.
             #os.kill(self._optimizer_process.pid, signal.SIGINT)
 
         elif status == "pausing":
@@ -225,7 +221,10 @@ class ExperimentAssistant():
         """
         if self._optimizer_in_queue is not None:
             self._optimizer_in_queue.put("exit")
-            os.kill(self._optimizer_process.pid, signal.SIGINT)
+            #TODO Commenting out the below means we cannot kill the optimizer
+            # during optimization, even when we have new information. On the
+            # other hand, it now works.
+            #os.kill(self._optimizer_process.pid, signal.SIGINT)
         if self._optimizer_in_queue is not None:
             self._optimizer_in_queue.close()
         if self._optimizer_queue is not None:
