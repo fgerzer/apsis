@@ -154,3 +154,9 @@ def _filter_data(json):
         if isinstance(json[k], unicode):
             json[k] = str(json[k])
     return json
+
+@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/fig_results_per_step",
+           methods=["GET"])
+@exception_handler
+def _get_fig_results_per_step(experiment_id):
+    return lAss.exp_assistants[experiment_id]._best_result_per_step_dicts(color="b")

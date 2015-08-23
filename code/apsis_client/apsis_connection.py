@@ -2,6 +2,7 @@ __author__ = 'Frederik Diehl'
 
 import requests
 import time
+from apsis.utilities.plot_utils import plot_lists
 
 class Connection(object):
     server_address = None
@@ -20,9 +21,6 @@ class Connection(object):
                 if r.json()["result"] is None or r.json()["result"] == "failed":
                     time.sleep(0.1)
                     continue
-            #if not blocking:
-            #    if r.json()["result"] is None:
-            #        return None
             return r.json()["result"]
 
 
@@ -67,3 +65,16 @@ class Connection(object):
     def get_all_candidates(self, exp_name, blocking=True, timeout=0):
         url = self.server_address + "/experiments/%s/candidates" %exp_name
         return self.request(requests.get, url, blocking=blocking, timeout=timeout)
+
+    def get_figure_results_per_step(self, exp_name, title=None, blocking=True, timeout=0):
+        url = self.server_address + "/experiments/%s/fig_results_per_step" %exp_name
+        list = self.request(requests.get, url, blocking=blocking, timeout=timeout)
+        if title is None:
+            title = "Result for %s" %exp_name
+        plot_options = {
+            "legend_loc": "upper left",
+            "x_label": "steps",
+            "y_label": "result",
+            "title": title
+        }
+        return plot_lists(list, plot_options)
