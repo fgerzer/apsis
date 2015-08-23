@@ -42,16 +42,19 @@ conn.init_experiment(
 
 print(conn.get_all_experiment_names())
 
-for i in range(20):
+for i in range(10):
     cand = None
-    while cand is None:
-        cand = conn.get_next_candidate("test_exp")
-        print(cand)
+    cand = conn.get_next_candidate("test_exp", True, timeout=0)
+    print(cand)
     cand["result"] = (cand["params"]["z"]+1)*\
                      (cand["params"]["x"] ** 2 + (cand["params"]["y"] - 1) ** 2)
     time.sleep(1)
+    cand["worker_information"] = "Worker info changed."
     conn.update("test_exp", cand, "finished")
+
     print("Best: %s" %conn.get_best_candidate("test_exp"))
+    print("All: %s" %conn.get_all_candidates("test_exp"))
+    print("\n\n\n")
 print("Finished.")
 end_time = time.time()
 print("Duration: %f" %(end_time-start_time))
