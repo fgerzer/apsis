@@ -74,7 +74,7 @@ class AcquisitionFunction(object):
         value = self.evaluate(x, gp, experiment)
         return value
 
-    def compute_proposals(self, gp, experiment, number_proposals=1):
+    def compute_proposals(self, gp, experiment, number_proposals=1, return_max=True):
         """
         This computes a number of proposals for candidates next to evaluate.
 
@@ -149,7 +149,8 @@ class AcquisitionFunction(object):
                 sum_acq.append(score)
 
         proposals = []
-        proposals.append((evaluated_params[best_param_idx], evaluated_acq_scores[best_param_idx]))
+        if return_max:
+            proposals.append((evaluated_params[best_param_idx], evaluated_acq_scores[best_param_idx]))
         while len(proposals) < number_proposals:
             next_prop_idx = 0
             sum_rand = random.uniform(0, sum_acq[-1])
@@ -400,7 +401,7 @@ class ExpectedImprovement(AcquisitionFunction):
         return value
 
 
-    def compute_proposals(self, gp, experiment, number_proposals=1):
+    def compute_proposals_old(self, gp, experiment, number_proposals=1, return_max=True):
         param_names = experiment.parameter_definitions.keys()
 
 
