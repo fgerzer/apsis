@@ -78,6 +78,7 @@ class LabAssistant():
         return self.exp_assistants[experiment_id].get_next_candidate()
 
     def update(self, experiment_id, status, candidate):
+        self.write_out_plots_current_step(self.exp_assistants.keys())
         return self.exp_assistants[experiment_id].update(status=status,
                                                          candidate=candidate)
 
