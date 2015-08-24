@@ -2,9 +2,9 @@ __author__ = 'Frederik Diehl'
 
 from apsis.optimizers.random_search import RandomSearch
 from apsis.optimizers.optimizer import Optimizer
-from apsis.optimizers.bayesian_optimization import SimpleBayesianOptimizer
+from apsis.optimizers.bayesian_optimization import BayesianOptimizer
 
-AVAILABLE_OPTIMIZERS = {"RandomSearch": RandomSearch}#, "BayOpt": SimpleBayesianOptimizer}
+AVAILABLE_OPTIMIZERS = {"RandomSearch": RandomSearch, "BayOpt": BayesianOptimizer}
 
 def check_optimizer(optimizer, experiment, out_queue, in_queue, optimizer_arguments=None):
     #TODO documentation
