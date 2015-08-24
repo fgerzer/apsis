@@ -12,6 +12,7 @@ import signal
 import multiprocessing
 import Queue
 from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
+import matplotlib.pyplot as plt
 
 AVAILABLE_STATUS = ["finished", "pausing", "working"]
 
@@ -344,3 +345,4 @@ class ExperimentAssistant():
         path = self._experiment_directory_base + "/plots"
         ensure_directory_exists(path)
         write_plot_to_file(fig, filename, path)
+        plt.close(fig)
