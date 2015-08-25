@@ -153,7 +153,7 @@ class ExperimentAssistant():
                                     self._experiment.name + "_" + date_name)
         ensure_directory_exists(self._experiment_directory_base)
 
-    def _best_result_per_step_dicts(self, color="b"):
+    def _best_result_per_step_dicts(self, color="b", plot_up_to=None):
         """
         Returns a dict to use with plot_utils.
         Parameters
@@ -167,7 +167,7 @@ class ExperimentAssistant():
             Two dicts, one for step_eval, one for step_best, and their
             corresponding definitions.
         """
-        x, step_eval, step_best = self._best_result_per_step_data()
+        x, step_eval, step_best = self._best_result_per_step_data(plot_up_to=plot_up_to)
 
         step_eval_dict = {
             "x": x,
@@ -189,7 +189,7 @@ class ExperimentAssistant():
 
         return [step_eval_dict, step_best_dict]
 
-    def _best_result_per_step_data(self):
+    def _best_result_per_step_data(self, plot_up_to=None):
         """
         This internal function returns goodness of the results by step.
         This returns an x coordinate, and for each of them a value for the
@@ -207,7 +207,9 @@ class ExperimentAssistant():
         step_evaluation = []
         step_best = []
         best_candidate = None
-        for i, e in enumerate(self._experiment.candidates_finished):
+        if plot_up_to is None:
+            plot_up_to = len(self._experiment.candidates_finished)
+        for i, e in enumerate(self._experiment.candidates_finished[:plot_up_to]):
             x.append(i)
             step_evaluation.append(e.result)
             if self._experiment.better_cand(e, best_candidate):

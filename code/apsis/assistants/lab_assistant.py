@@ -84,7 +84,7 @@ class LabAssistant():
 
 
     def plot_result_per_step(self, experiments, plot_min=None,
-                             plot_max=None, title=None):
+                             plot_max=None, title=None, plot_up_to=None):
         """
         Returns (and plots) the plt.figure plotting the results over the steps
         for the specified experiments.
@@ -116,7 +116,8 @@ class LabAssistant():
         plots_list = []
         for i, ex_name in enumerate(experiments):
             exp_ass = self.exp_assistants[ex_name]
-            plots_list.extend(exp_ass._best_result_per_step_dicts(color=COLORS[i % len(COLORS)]))
+            plots_list.extend(exp_ass._best_result_per_step_dicts(color=COLORS[i % len(COLORS)],
+                                                                  plot_up_to=plot_up_to))
 
         if self.exp_assistants[experiments[0]]._experiment.minimization_problem:
             legend_loc = 'upper right'
@@ -133,7 +134,7 @@ class LabAssistant():
         return fig
 
 
-    def generate_all_plots(self, exp_ass=None):
+    def generate_all_plots(self, exp_ass=None, plot_up_to=None):
         """
         Function to generate all plots available.
         Returns
@@ -149,7 +150,7 @@ class LabAssistant():
             exp_ass = self.exp_assistants.keys()
 
         result_per_step = self.plot_result_per_step(
-            experiments=exp_ass)
+            experiments=exp_ass, plot_up_to=plot_up_to)
 
         plots_to_write['result_per_step'] = result_per_step
 
@@ -171,26 +172,27 @@ class LabAssistant():
             Write only if all experiment assistants in this lab assistant
             are currently in the same step.
         """
-        step_string, same_step = self._compute_current_step_overall()
-
-        if same_steps_only and not same_step:
-            return
+        min_step = min([len(x._experiment.candidates_finished) for x in self.exp_assistants.values()])
+        if same_steps_only:
+            plot_up_to = min_step
+        else:
+            plot_up_to = None
 
         plot_base = os.path.join(self._lab_run_directory, "plots")
-        plot_step_base = os.path.join(plot_base, step_string)
+        plot_step_base = os.path.join(plot_base, "step_" + str(min_step))
         ensure_directory_exists(plot_step_base)
 
         if exp_ass is None:
             exp_ass = self.exp_assistants.keys()
 
-        plots_to_write = self.generate_all_plots(exp_ass)
+        plots_to_write = self.generate_all_plots(exp_ass, plot_up_to)
 
 
         #finally write out all plots created above to their files
         for plot_name in plots_to_write.keys():
             plot_fig = plots_to_write[plot_name]
 
-            write_plot_to_file(plot_fig, plot_name + "_" + step_string, plot_step_base)
+            write_plot_to_file(plot_fig, plot_name + "_step" + str(min_step), plot_step_base)
             plt.close(plot_fig)
 
 
