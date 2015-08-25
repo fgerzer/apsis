@@ -6,9 +6,11 @@ from apsis.utilities.plot_utils import plot_lists
 
 class Connection(object):
     server_address = None
+    repeat_time = None
 
-    def __init__(self, server_address):
+    def __init__(self, server_address, repeat_time=0.1):
         self.server_address = server_address
+        self.repeat_time = repeat_time
 
     def request(self, request, url, json=None, blocking=True, timeout=0):
         start_time = time.time()
@@ -19,7 +21,7 @@ class Connection(object):
                 r = request(url=url, json=json)
             if blocking:
                 if r.json()["result"] is None or r.json()["result"] == "failed":
-                    time.sleep(0.1)
+                    time.sleep(self.repeat_time)
                     continue
             return r.json()["result"]
 
