@@ -4,6 +4,7 @@ from apsis.models.candidate import Candidate, from_dict
 from functools import wraps
 from apsis.utilities.param_def_utilities import dict_to_param_defs
 from apsis.utilities.logging_utils import get_logger
+import os
 
 WS_PORT = 5000
 CONTEXT_ROOT = ""
@@ -78,6 +79,8 @@ def init_experiment():
     data_received = _filter_data(data_received)
     name = data_received.get("name", None)
     if name in lAss.exp_assistants:
+        _logger.warning("%s already in names (is %s. Failing the initialization."
+                        %(name, lAss.exp_assistants.keys()))
         return "failed"
     optimizer = data_received.get("optimizer", None)
     optimizer_arguments = data_received.get("optimizer_arguments", None)
