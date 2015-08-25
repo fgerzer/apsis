@@ -182,7 +182,7 @@ class ExperimentAssistant():
             "y": step_best,
             "type": "line",
             "color": color,
-            "label": "%s, best result" %(str(self._experiment.name))
+            #"label": "%s, best result" %(str(self._experiment.name))
         }
 
         #print [step_eval_dict, step_best_dict]
@@ -348,3 +348,6 @@ class ExperimentAssistant():
         ensure_directory_exists(path)
         write_plot_to_file(fig, filename, path)
         plt.close(fig)
+
+    def set_exit(self):
+        self._kill_optimizer()

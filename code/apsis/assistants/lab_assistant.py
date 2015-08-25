@@ -231,3 +231,8 @@ class LabAssistant():
                 step_string += "_"
 
         return step_string, same_step
+
+
+    def set_exit(self):
+        for exp in self.exp_assistants.values():
+            exp.set_exit()
