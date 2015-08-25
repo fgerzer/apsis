@@ -1,16 +1,12 @@
 __author__ = 'Frederik Diehl'
 
 from apsis.optimizers.optimizer import Optimizer
-from apsis.optimizers.random_search import RandomSearch
 from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 from apsis.optimizers.bayesian.acquisition_functions import *
-from apsis.utilities.import_utils import import_if_exists
 import GPy
-import logging
 
-mcmc_imported, pm = import_if_exists("pymcmc")
 
 class BayesianOptimizer(Optimizer):
     SUPPORTED_PARAM_TYPES = [NumericParamDef, PositionParamDef]
@@ -55,7 +51,6 @@ class BayesianOptimizer(Optimizer):
         Optimizer.__init__(self, optimizer_params, out_queue, in_queue, min_candidates)
 
     def _gen_candidates(self, num_candidates=1):
-
         if len(self._experiment.candidates_finished) < self.initial_random_runs:
             #we do a random search.
             return self._gen_candidates_randomly(num_candidates)
@@ -108,8 +103,9 @@ class BayesianOptimizer(Optimizer):
             return self.random_state.choice(param_def.values)
 
     def _refit(self):
+        if len(self._experiment.candidates_finished) < self.initial_random_runs:
+            return
         self.return_max = True
-
 
         candidate_matrix = np.zeros((len(self._experiment.candidates_finished),
                                      len(self._experiment.parameter_definitions)))
