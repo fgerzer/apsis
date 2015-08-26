@@ -150,7 +150,7 @@ class QueueBackend(multiprocessing.Process):
             try:
                 new_update = self._in_queue.get_nowait()
             except Queue.Empty:
-                return
+                pass
             if new_update == "exit":
                 self._exited = True
                 return
@@ -166,7 +166,7 @@ class QueueBackend(multiprocessing.Process):
 
     def _check_generation(self):
         try:
-            while (self._out_queue.empty() or
+            if (self._out_queue.empty() or
                            self._out_queue.qsize < self._min_candidates):
                 new_candidates = self._optimizer.get_next_candidates(num_candidates=self._min_candidates)
                 if new_candidates is None:
