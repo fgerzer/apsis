@@ -1,6 +1,7 @@
 __author__ = 'Frederik Diehl'
 
 from apsis.optimizers.optimizer import Optimizer
+from apsis.optimizers.random_search import RandomSearch
 from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
@@ -49,14 +50,14 @@ class BayesianOptimizer(Optimizer):
             self.acquisition_function = optimizer_params.get("acquisition")
         self.kernel_params = optimizer_params.get("kernel_params", {})
         self.kernel = optimizer_params.get("kernel", "matern52")
+        self.random_searcher = RandomSearch(optimizer_params, experiment)
         Optimizer.__init__(self, optimizer_params, experiment)
 
 
     def get_next_candidates(self, num_candidates=1):
         if len(self._experiment.candidates_finished) < self.initial_random_runs:
             #we do a random search.
-            #TODO add real random search here.
-            return self._gen_candidates_randomly(num_candidates)
+            return self.random_searcher.get_next_candidates(num_candidates)
         candidates = []
         new_candidate_points = self.acquisition_function.compute_proposals(
             self.gp, self._experiment, number_proposals=num_candidates,
@@ -68,42 +69,6 @@ class BayesianOptimizer(Optimizer):
             point_candidate = Candidate(self._experiment.warp_pt_out(point_and_value[0]))
             candidates.append(point_candidate)
         return candidates
-
-    def _gen_candidates_randomly(self, num_candidates=1):
-        list = []
-        for i in range(num_candidates):
-            list.append(self._gen_one_candidate_randomly())
-        return list
-
-
-    def _gen_one_candidate_randomly(self):
-        self.random_state = check_random_state(self.random_state)
-        value_dict = {}
-        for key, param_def in self._experiment.parameter_definitions.iteritems():
-            value_dict[key] = self._gen_param_val_randomly(param_def)
-        return Candidate(value_dict)
-
-    def _gen_param_val_randomly(self, param_def):
-        """
-        Returns a random parameter value for param_def.
-
-        Parameters
-        ----------
-        param_def : ParamDef
-            The parameter definition from which to choose one at random. The
-            following may happen:
-            NumericParamDef: warps_out a uniform 0-1 chosen value.
-            NominalParamDef: chooses one of the values at random.
-
-        Returns
-        -------
-        param_val:
-            The generated parameter value.
-        """
-        if isinstance(param_def, NumericParamDef):
-            return param_def.warp_out(self.random_state.uniform(0, 1))
-        elif isinstance(param_def, NominalParamDef):
-            return self.random_state.choice(param_def.values)
 
     def update(self, experiment):
         self._experiment = experiment
@@ -137,8 +102,6 @@ class BayesianOptimizer(Optimizer):
         self.gp.constrain_bounded(0.1, 1, warning=False)
         self.gp.optimize_restarts(num_restarts=self.num_gp_restarts,
                                   verbose=False)
-
-
 
     def _check_kernel(self, kernel, dimension, kernel_params):
         """
