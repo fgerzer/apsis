@@ -19,12 +19,7 @@ AVAILABLE_STATUS = ["finished", "pausing", "working"]
 class ExperimentAssistant():
 
     _optimizer = None
-    _optimizer_arguments = None
     _experiment = None
-
-    _optimizer_queue = None
-    _optimizer_in_queue = None
-    _optimizer_process = None
 
     _write_directory_base = None
     _csv_write_frequency = None
@@ -33,17 +28,18 @@ class ExperimentAssistant():
 
     _logger = None
 
-    def __init__(self, name, optimizer, param_defs, experiment=None,
+    def __init__(self, name, optimizer_class, param_defs, experiment=None,
                  optimizer_arguments=None, minimization=True,
                  write_directory_base="/tmp/APSIS_WRITING",
                  experiment_directory_base=None, csv_write_frequency=1):
         self._logger = get_logger(self)
         self._logger.info("Initializing experiment assistant.")
-        self._optimizer = optimizer
-        self._optimizer_arguments = optimizer_arguments
+
         if experiment is None:
             experiment = Experiment(name, param_defs, minimization)
         self._experiment = experiment
+        self._optimizer= check_optimizer(optimizer_class, self._experiment,
+                            optimizer_arguments=optimizer_arguments)
         self._csv_write_frequency = csv_write_frequency
         if self._csv_write_frequency != 0:
             self._write_directory_base = write_directory_base
@@ -52,7 +48,6 @@ class ExperimentAssistant():
                 ensure_directory_exists(self._experiment_directory_base)
             else:
                 self._create_experiment_directory()
-        self._build_new_optimizer()
         self._logger.info("Experiment assistant for %s successfully "
                          "initialized." %name)
 
@@ -68,16 +63,14 @@ class ExperimentAssistant():
 
         self._logger.info("Returning next candidate.")
         if not self._experiment.candidates_pending:
-            try:
-                new_candidate = self._optimizer_queue.get_nowait()
-                self._experiment.candidates_pending.append(
-                    new_candidate
-                )
-            except Queue.Empty:
+            candidates = self._optimizer.get_next_candidates(num_candidates=1)
+            if candidates is None:
                 return None
+            if len(candidates) > 0:
+                return candidates[0]
+            return None
         else:
             return self._experiment.candidates_pending.pop()
-        return None
 
     def update(self, candidate, status="finished"):
         """
@@ -122,11 +115,7 @@ class ExperimentAssistant():
                 self._append_to_detailed_csv()
                 self.write_plots()
             # And we rebuild the new optimizer.
-            self._optimizer_in_queue.put(self._experiment)
-            #TODO Commenting out the below means we cannot kill the optimizer
-            # during optimization, even when we have new information. On the
-            # other hand, it now works.
-            #os.kill(self._optimizer_process.pid, signal.SIGINT)
+            self._optimizer.update(self._experiment)
 
         elif status == "pausing":
             self._experiment.add_pausing(candidate)
@@ -220,57 +209,6 @@ class ExperimentAssistant():
                 step_best.append(best_candidate.result)
         return x, step_evaluation, step_best
 
-    def _kill_optimizer(self):
-        """
-        INTERNAL USE ONLY
-
-        Kills the currently running optimizer process (if available) and closes
-        the queue that optimizer is pushing to.
-
-        The first is done by sending the SIGINT signal to the process (which
-        has been defined as telling the optimizer it is supposed to start
-        cleanup operations). This is necessary because we cannot be sure that
-        the optimizer isn't currently refitting (in which case an event-based
-        solution would mean we'd be needlessly computing), and because it's
-        irresponsible to just terminate the process when we can't know whether
-        it has created sub-processes.
-
-        Closing the queue is necessary since, after killing the optimizer,
-        we can't be sure of its integrity and because we don't need any of the
-        old candidates anyways.
-        """
-        if self._optimizer_in_queue is not None:
-            self._optimizer_in_queue.put("exit")
-            #TODO Commenting out the below means we cannot kill the optimizer
-            # during optimization, even when we have new information. On the
-            # other hand, it now works.
-            #os.kill(self._optimizer_process.pid, signal.SIGINT)
-        if self._optimizer_in_queue is not None:
-            self._optimizer_in_queue.close()
-        if self._optimizer_queue is not None:
-            self._optimizer_queue.close()
-
-
-    def _build_new_optimizer(self):
-        """
-        INTERNAL USE ONLY.
-
-        This function builds a new optimizer.
-
-        In general, it instantiates a new optimizer_queue, a new optimizer
-        (with the current experiment) and starts said optimizer. It also
-        ensures that the old optimizer has been properly killed before.
-        """
-        self._kill_optimizer()
-
-        self._optimizer_queue = multiprocessing.Queue()
-        self._optimizer_in_queue = multiprocessing.Queue()
-        self._optimizer_process = check_optimizer(self._optimizer, self._experiment,
-                            self._optimizer_queue, self._optimizer_in_queue,
-                            optimizer_arguments=self._optimizer_arguments)
-        self._optimizer_process.start()
-
-
     def _append_to_detailed_csv(self):
         if len(self._experiment.candidates_finished) <= self._csv_steps_written:
             return
@@ -350,4 +288,4 @@ class ExperimentAssistant():
         plt.close(fig)
 
     def set_exit(self):
-        self._kill_optimizer()
+        self._optimizer.exit()

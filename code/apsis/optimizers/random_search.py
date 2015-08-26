@@ -4,19 +4,22 @@ from apsis.optimizers.optimizer import Optimizer
 from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
+import time
 
 class RandomSearch(Optimizer):
     SUPPORTED_PARAM_TYPES = [NominalParamDef, NumericParamDef]
 
     random_state = None
 
-    def __init__(self, optimizer_params, out_queue, in_queue, min_candidates=1):
+    _experiment = None
+
+    def __init__(self, optimizer_params, experiment):
         if optimizer_params is None:
             optimizer_params = {}
         self.random_state = optimizer_params.get("random_state", None)
-        Optimizer.__init__(self, optimizer_params, out_queue, in_queue, min_candidates)
+        Optimizer.__init__(self, optimizer_params, experiment)
 
-    def _gen_candidates(self, num_candidates=1):
+    def get_next_candidates(self, num_candidates=1):
         list = []
         for i in range(num_candidates):
             list.append(self._gen_one_candidate())
@@ -50,6 +53,3 @@ class RandomSearch(Optimizer):
             return param_def.warp_out(self.random_state.uniform(0, 1))
         elif isinstance(param_def, NominalParamDef):
             return self.random_state.choice(param_def.values)
-
-    def _refit(self):
-        pass

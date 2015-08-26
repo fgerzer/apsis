@@ -9,96 +9,26 @@ import signal
 import multiprocessing
 import Queue
 
-class Optimizer(multiprocessing.Process):
+class Optimizer(object):
     __metaclass__ = ABCMeta
+
     SUPPORTED_PARAM_TYPES = []
 
-    _out_queue = None
     _experiment = None
 
-    _in_queue = None
-
-    _min_candidates = None
-
-    _exited = None
-
-    @abstractmethod
-    def __init__(self, optimizer_params, experiment, out_queue, in_queue, min_candidates=5):
-        self._out_queue = out_queue
-        self._in_queue = in_queue
-        self._min_candidates = min_candidates
-        #TODO By commenting this out, we risk not inefficiencies. However,
-        # due to the inability to catch signals outside the main thread,
-        # it is currently necessary.
-        #signal.signal(signal.SIGINT, self._update_and_recheck)
-        self._exited = False
-        multiprocessing.Process.__init__(self)
+    def __init__(self, optimizer_params, experiment):
         self._experiment = experiment
 
-    def run(self):
-        """
-        Runs the QueueOptimizer.
-
-        The inner working is such that, once per second, the out_queue is
-        checked on whether it is empty or contains less than min_candidates
-        candidates. If so, new candidates are generated and appended.
-        """
-        try:
-            while not self._exited:
-                self._update_and_recheck(None, None)
-                if not self._out_queue.full():
-                    try:
-                        if self._out_queue.empty() or \
-                                        self._out_queue.qsize < self._min_candidates:
-                            new_candidates = self._gen_candidates(num_candidates=self._min_candidates)
-                            [self._out_queue.put(x, block=False) for x in new_candidates]
-                    except Queue.Full:
-                        pass
-                    sleep(0.1)
-        finally:
-            if self._in_queue is not None:
-                self._in_queue.close()
-            if self._out_queue is not None:
-                self._out_queue.close()
-
-    def _update_and_recheck(self, _signo, _stack_frame):
-        new_update = None
-        while not self._in_queue.empty():
-            try:
-                new_update = self._in_queue.get_nowait()
-            except Queue.Empty:
-                return
-            if new_update == "exit":
-                self._exited = True
-                return
-        if new_update is not None:
-            # clear the out queue. We'll soon have new information.
-            try:
-                while not self._out_queue.empty():
-                    self._out_queue.get_nowait()
-            except Queue.Empty:
-                pass
-            self._experiment = new_update
-            self._refit()
+    def update(self, experiment):
+        self._experiment = experiment
 
     @abstractmethod
-    def _refit(self):
+    def get_next_candidates(self, num_candidates=1):
         pass
 
-
-    @abstractmethod
-    def _gen_candidates(self, num_candidates=1):
-        """
-        Generates new candidates to add to the out_queue.
-
-        This is the heart of the QueueOptimizer, and the implementation point
-         for each new one. Generally, this function should behave as follows:
-         On being called, returns a list of candidates next to evaluate.
-         Note that, if you don't return enough candidates to bring the queue
-         to more than min_candidates, it's probable that this function will be
-         called again directly afterwards.
-        """
+    def exit(self):
         pass
+
 
 
     def _is_experiment_supported(self, experiment):
@@ -142,3 +72,106 @@ class Optimizer(multiprocessing.Process):
                     return True
 
         return False
+
+class QueueBasedOptimizer(Optimizer):
+    _optimizer_in_queue = None
+    _optimizer_out_queue = None
+
+    _optimizer_process = None
+
+    def __init__(self, optimizer_class, optimizer_params, experiment):
+        self._optimizer_in_queue = multiprocessing.Queue()
+        self._optimizer_out_queue = multiprocessing.Queue()
+
+        optimizer = QueueBackend(optimizer_class, optimizer_params, experiment,
+                                 self._optimizer_out_queue, self._optimizer_in_queue)
+        optimizer.start()
+
+        super(QueueBasedOptimizer, self).__init__(optimizer_params,
+                                                  experiment)
+
+    def get_next_candidates(self, num_candidates=1):
+        next_candidates = []
+        try:
+            for i in range(num_candidates):
+                new_candidate = self._optimizer_out_queue.get_nowait()
+                next_candidates.append(new_candidate)
+        except Queue.Empty:
+            pass
+        return next_candidates
+
+
+    def update(self, experiment):
+        self._optimizer_in_queue.put(experiment)
+
+    def exit(self):
+        if self._optimizer_in_queue is not None:
+            self._optimizer_in_queue.put("exit")
+        if self._optimizer_in_queue is not None:
+            self._optimizer_in_queue.close()
+        if self._optimizer_out_queue is not None:
+            self._optimizer_out_queue.close()
+
+class QueueBackend(multiprocessing.Process):
+    _experiment = None
+    _out_queue = None
+    _in_queue = None
+
+    _optimizer = None
+
+    _min_candidates = None
+    _exited = None
+
+    def __init__(self, optimizer_class, optimizer_params, experiment, out_queue, in_queue):
+
+        self._out_queue = out_queue
+        self._in_queue = in_queue
+        self._min_candidates = optimizer_params.get("min_candidates", 5)
+        self._optimizer = optimizer_class(optimizer_params, experiment)
+        self._exited = False
+        self._experiment = experiment
+        multiprocessing.Process.__init__(self)
+
+    def run(self):
+        try:
+            while not self._exited:
+                self._check_generation()
+                self._check_update()
+                sleep(0.1)
+        finally:
+            if self._in_queue is not None:
+                self._in_queue.close()
+            if self._out_queue is not None:
+                self._out_queue.close()
+
+    def _check_update(self):
+        new_update = None
+        while not self._in_queue.empty():
+            try:
+                new_update = self._in_queue.get_nowait()
+            except Queue.Empty:
+                return
+            if new_update == "exit":
+                self._exited = True
+                return
+        if new_update is not None:
+            # clear the out queue. We'll soon have new information.
+            try:
+                while not self._out_queue.empty():
+                    self._out_queue.get_nowait()
+            except Queue.Empty:
+                pass
+            self._experiment = new_update
+            self._optimizer.update(self._experiment)
+
+    def _check_generation(self):
+        try:
+            while (self._out_queue.empty() or
+                           self._out_queue.qsize < self._min_candidates):
+                new_candidates = self._optimizer.get_next_candidates(num_candidates=self._min_candidates)
+                if new_candidates is None:
+                    return
+                for c in new_candidates:
+                    self._out_queue.put_nowait(c)
+        except Queue.Full:
+            return

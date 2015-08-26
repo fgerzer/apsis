@@ -25,14 +25,15 @@ class BayesianOptimizer(Optimizer):
 
     return_max = True
 
+    _experiment = None
+
     _logger = None
 
-    def __init__(self, optimizer_params, out_queue, in_queue, min_candidates=5):
+    def __init__(self, optimizer_params, experiment):
         self._logger = get_logger(self)
         if optimizer_params is None:
             optimizer_params = {}
         self.random_state = optimizer_params.get("random_state", None)
-
         self.initial_random_runs = optimizer_params.get(
             'initial_random_runs', self.initial_random_runs)
         self.random_state = check_random_state(
@@ -48,11 +49,13 @@ class BayesianOptimizer(Optimizer):
             self.acquisition_function = optimizer_params.get("acquisition")
         self.kernel_params = optimizer_params.get("kernel_params", {})
         self.kernel = optimizer_params.get("kernel", "matern52")
-        Optimizer.__init__(self, optimizer_params, out_queue, in_queue, min_candidates)
+        Optimizer.__init__(self, optimizer_params, experiment)
 
-    def _gen_candidates(self, num_candidates=1):
+
+    def get_next_candidates(self, num_candidates=1):
         if len(self._experiment.candidates_finished) < self.initial_random_runs:
             #we do a random search.
+            #TODO add real random search here.
             return self._gen_candidates_randomly(num_candidates)
         candidates = []
         new_candidate_points = self.acquisition_function.compute_proposals(
@@ -102,7 +105,8 @@ class BayesianOptimizer(Optimizer):
         elif isinstance(param_def, NominalParamDef):
             return self.random_state.choice(param_def.values)
 
-    def _refit(self):
+    def update(self, experiment):
+        self._experiment = experiment
         if len(self._experiment.candidates_finished) < self.initial_random_runs:
             return
         self.return_max = True
