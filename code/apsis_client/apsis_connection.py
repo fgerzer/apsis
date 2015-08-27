@@ -167,9 +167,9 @@ class Connection(object):
                                 blocking=blocking, timeout=timeout)
         return success
 
-    def get_all_experiment_names(self, blocking=True, timeout=None):
+    def get_all_experiment_ids(self, blocking=True, timeout=None):
         """
-        Returns the names of all experiments.
+        Returns the ids of all experiments.
 
         Parameters
         ----------
@@ -185,21 +185,21 @@ class Connection(object):
 
         Returns
         -------
-        experiment_names : list of strings
-            Returns one entry per existing experiment, containing its name.
+        experiment_ids : list of strings
+            Returns one entry per existing experiment, containing its id.
             If blocking is False, may return None or "failed".
         """
         url = self.server_address + "/experiments"
         return self._request(requests.get, url, blocking=blocking, timeout=timeout)
 
-    def get_next_candidate(self, exp_name, blocking=True, timeout=None):
+    def get_next_candidate(self, exp_id, blocking=True, timeout=None):
         """
         Returns the next candidate of an experiment.
 
         Parameters
         ----------
-        exp_name : string
-            The name of the experiment to return.
+        exp_id : string
+            The id of the experiment to return.
         blocking : bool, optional
             If True, retries the query until it receives an acceptable answer, at
             most timeout seconds.
@@ -239,17 +239,17 @@ class Connection(object):
             May also return "failed" or None if blocking is false and
             timeout > 0, which represents a failed request.
         """
-        url = self.server_address + "/experiments/%s/get_next_candidate" %exp_name
+        url = self.server_address + "/experiments/%s/get_next_candidate" %exp_id
         return self._request(requests.get, url=url, blocking=blocking, timeout=timeout)
 
-    def update(self, exp_name, candidate, status, blocking=True, timeout=None):
+    def update(self, exp_id, candidate, status, blocking=True, timeout=None):
         """
         Updates the result of the candidate.
 
         Parameters
         ----------
-        exp_name : string
-            The name of the experiment to return.
+        exp_id : string
+            The id of the experiment to return.
         candidate : dict representing a candidate
             Represents a candidate. Usually a modified candidate received from
              get_next_candidate.
@@ -298,7 +298,7 @@ class Connection(object):
         result : string
             Returns "success" iff successful, "failed" otherwise.
         """
-        url = self.server_address + "/experiments/%s/update" %exp_name
+        url = self.server_address + "/experiments/%s/update" %exp_id
         msg = {
             "status": status,
             "candidate": candidate
@@ -306,14 +306,14 @@ class Connection(object):
         return self._request(requests.post, url, json=msg, blocking=blocking,
                             timeout=timeout)
 
-    def get_best_candidate(self, exp_name, blocking=True, timeout=None):
+    def get_best_candidate(self, exp_id, blocking=True, timeout=None):
         """
         Returns the best finished candidate for an experiment.
 
         Parameters
         ----------
-        exp_name : string
-            The name of the experiment to return.
+        exp_id : string
+            The id of the experiment to return.
         blocking : bool, optional
             If True, retries the query until it receives an acceptable answer, at
             most timeout seconds.
@@ -332,17 +332,17 @@ class Connection(object):
             If blocking is True and timeout > 0, this may return None or
             "Failed".
         """
-        url = self.server_address + "/experiments/%s/get_best_candidate" %exp_name
+        url = self.server_address + "/experiments/%s/get_best_candidate" %exp_id
         return self._request(requests.get, url, blocking=blocking, timeout=timeout)
 
-    def get_all_candidates(self, exp_name, blocking=True, timeout=None):
+    def get_all_candidates(self, exp_id, blocking=True, timeout=None):
         """
         Returns the candidates for an experiment.
 
         Parameters
         ----------
-        exp_name : string
-            The name of the experiment to return.
+        exp_id : string
+            The id of the experiment to return.
         blocking : bool, optional
             If True, retries the query until it receives an acceptable answer, at
             most timeout seconds.
@@ -369,5 +369,5 @@ class Connection(object):
             If blocking is True and timeout > 0, this may return None or
             "Failed".
         """
-        url = self.server_address + "/experiments/%s/candidates" %exp_name
-        return self.request(requests.get, url, blocking=blocking, timeout=timeout)
+        url = self.server_address + "/experiments/%s/candidates" %exp_id
+        return self._request(requests.get, url, blocking=blocking, timeout=timeout)
