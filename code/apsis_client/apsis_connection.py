@@ -101,8 +101,9 @@ class Connection(object):
                     continue
             return r.json()["result"]
 
-    def init_experiment(self, name, optimizer, param_defs, optimizer_arguments,
-                        minimization=True, blocking=False, timeout=None):
+    def init_experiment(self, name, optimizer, param_defs, optimizer_arguments=None,
+                        exp_id=None, notes=None, minimization=True, blocking=False,
+                        timeout=None):
         """
         Initializes an experiment on the apsis server.
 
@@ -113,7 +114,7 @@ class Connection(object):
         Parameters
         ----------
         name : string
-            name of the experiment. Must be unique in all experiments.
+            name of the experiment.
         optimizer : string
             String representation of the optimizer.
         param_defs : dict of parameter definitions
@@ -127,6 +128,14 @@ class Connection(object):
             A dictionary defining the operation of the optimizer. See the
             respective documentation of the optimizers.
             Default is None, which are default values.
+        exp_id : string or None, optional
+            The id of the experiment, which will be used to reference it.
+            Should be a proper uuid, and especially has to be unique. If it is
+            not, an error may be returned.
+        notes : jsonable object or None, optional
+            Any note that you'd like to put in the experiment. Could be used
+            to provide some details on the experiment, on the start time or the
+            user starting it.
         minimization : bool, optional
             Whether the problem is one of minimization. Defaults to True.
         blocking : bool, optional
@@ -141,13 +150,13 @@ class Connection(object):
 
         Returns
         -------
-        success : string
-            String representing the success of the operation.
-            "success" if successful,
-            "failed" if failed.
+        id : string
+            String representing the id of the experiment or "failed" if failed.
         """
         msg = {
             "name": name,
+            "exp_id": exp_id,
+            "notes": notes,
             "optimizer": optimizer,
             "param_defs": param_defs,
             "optimizer_arguments": optimizer_arguments,

@@ -88,19 +88,22 @@ def init_experiment():
     data_received = request.get_json()
     data_received = _filter_data(data_received)
     name = data_received.get("name", None)
-    if name in lAss.exp_assistants:
-        _logger.warning("%s already in names (is %s. Failing the initialization."
-                        %(name, lAss.exp_assistants.keys()))
+    exp_id = data_received.get("exp_id", None)
+    notes = data_received.get("notes", None)
+    if exp_id in lAss.exp_assistants:
+        _logger.warning("%s already in exp_ids. (is %s). Failing the initialization."
+                        %(exp_id, lAss.exp_assistants.keys()))
         return "failed"
     optimizer = data_received.get("optimizer", None)
     optimizer_arguments = data_received.get("optimizer_arguments", None)
     minimization = data_received.get("minimization", True)
     param_defs = data_received.get("param_defs", None)
     param_defs = dict_to_param_defs(param_defs)
-    lAss.init_experiment(name, optimizer, param_defs, optimizer_arguments,
-                         minimization)
-    return "success"
-
+    exp_id = lAss.init_experiment(name, optimizer, param_defs,
+                              exp_id, notes, optimizer_arguments, minimization)
+    print("EXP_ID: " + str(exp_id))
+    print(type(exp_id))
+    return exp_id
 
 @app.route(CONTEXT_ROOT + "/experiments", methods=["GET"])
 @exception_handler
@@ -111,7 +114,7 @@ def get_all_experiments():
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
 def get_experiment(experiment_id):
    raise NotImplementedError
-    #TODO
+    #TODO return whole experiment.
 
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"

@@ -3,6 +3,7 @@ __author__ = 'Frederik Diehl'
 from apsis.models.candidate import Candidate
 from apsis.models.parameter_definition import ParamDef
 import copy
+import uuid
 
 class Experiment(object):
     """
@@ -40,7 +41,8 @@ class Experiment(object):
     parameter_definitions = None
     minimization_problem = None
 
-    note = None
+    notes = None
+    exp_id = None
 
     candidates_pending = None
     candidates_working = None
@@ -48,8 +50,7 @@ class Experiment(object):
 
     best_candidate = None
 
-    def __init__(self, name, parameter_definitions, minimization_problem=True,
-                 note=None):
+    def __init__(self, name, parameter_definitions, exp_id=None, notes=None, minimization_problem=True,):
         """
         Initializes an Experiment with a certain parameter definition.
 
@@ -70,7 +71,7 @@ class Experiment(object):
             Defines whether the experiment's goal is to find a minimum result - for
             example when evaluating errors - or a maximum result - for example when
             evaluating scores. Is True by default.
-        note : string, optional
+        notes : string or None, optional
             The note can be used to add additional human-readable information to
             the experiment.
         Raises
@@ -79,6 +80,9 @@ class Experiment(object):
             Iff parameter_definitions are not a dictionary.
         """
         self.name = name
+        if exp_id is None:
+            exp_id = uuid.uuid4()
+        self.exp_id = exp_id
         if not isinstance(parameter_definitions, dict):
             raise ValueError("parameter_definitions are not a dict.")
         for p in parameter_definitions:
@@ -93,7 +97,7 @@ class Experiment(object):
         self.candidates_pending = []
         self.candidates_working = []
 
-        self.note = note
+        self.notes = notes
 
     def add_finished(self, candidate):
         """

@@ -28,15 +28,14 @@ class ExperimentAssistant():
 
     _logger = None
 
-    def __init__(self, name, optimizer_class, param_defs, experiment=None,
+    def __init__(self, name, optimizer_class, param_defs, exp_id, notes=None, experiment=None,
                  optimizer_arguments=None, minimization=True,
                  write_directory_base="/tmp/APSIS_WRITING",
                  experiment_directory_base=None, csv_write_frequency=1):
         self._logger = get_logger(self)
         self._logger.info("Initializing experiment assistant.")
-
         if experiment is None:
-            experiment = Experiment(name, param_defs, minimization)
+            experiment = Experiment(name, param_defs, exp_id, notes, minimization)
         self._experiment = experiment
         self._optimizer= check_optimizer(optimizer_class, self._experiment,
                             optimizer_arguments=optimizer_arguments)

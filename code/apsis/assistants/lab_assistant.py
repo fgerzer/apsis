@@ -1,5 +1,3 @@
-#TODO write plotting functions.
-
 __author__ = 'Frederik Diehl'
 
 from apsis.assistants.experiment_assistant import ExperimentAssistant
@@ -10,6 +8,7 @@ import os
 from apsis.utilities.logging_utils import get_logger
 from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
 import matplotlib.pyplot as plt
+import uuid
 
 COLORS = ["g", "r", "c", "b", "m", "y"]
 
@@ -39,20 +38,27 @@ class LabAssistant():
         self.exp_assistants = {}
         self._logger.info("lab assistant successfully initialized.")
 
-    def init_experiment(self, name, optimizer, param_defs,
+    def init_experiment(self, name, optimizer, param_defs, exp_id=None, notes=None,
                         optimizer_arguments=None, minimization=True):
-        if name in self.exp_assistants:
-            raise ValueError("Already an experiment with name %s registered."
-                             %name)
+        if exp_id in self.exp_assistants.keys():
+            raise ValueError("Already an experiment with id %s registered."
+                             %exp_id)
 
+        if exp_id is None:
+            while True:
+                exp_id = uuid.uuid4().hex
+                if exp_id not in self.exp_assistants.keys():
+                    break
 
         exp_ass = ExperimentAssistant(name, optimizer,
-                            param_defs, optimizer_arguments=optimizer_arguments,
+                            param_defs, exp_id=exp_id, notes=notes,
+                                      optimizer_arguments=optimizer_arguments,
                             minimization=minimization,
                             write_directory_base=self._lab_run_directory,
                             csv_write_frequency=1)
-        self.exp_assistants[name] = exp_ass
+        self.exp_assistants[exp_id] = exp_ass
         self._logger.info("Experiment initialized successfully.")
+        return exp_id
 
     def _init_directory_structure(self):
         """
@@ -114,8 +120,8 @@ class LabAssistant():
         if title is None:
             title = "Comparison of %s." % experiments
         plots_list = []
-        for i, ex_name in enumerate(experiments):
-            exp_ass = self.exp_assistants[ex_name]
+        for i, exp_id in enumerate(experiments):
+            exp_ass = self.exp_assistants[exp_id]
             plots_list.extend(exp_ass._best_result_per_step_dicts(color=COLORS[i % len(COLORS)],
                                                                   plot_up_to=plot_up_to))
 
