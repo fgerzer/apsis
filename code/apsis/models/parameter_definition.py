@@ -41,6 +41,15 @@ class ParamDef(object):
         return 1
 
     def to_dict(self):
+        """
+        This returns a dictionary from which we can build a new instance of
+        the parameter.
+
+        Returns
+        -------
+        dict : dictionary
+            The dictionary from which we can rebuild this parameter definition.
+        """
         return self.__dict__
 
 class ComparableParamDef(object):
@@ -460,7 +469,6 @@ class AsymptoticNumericParamDef(NumericParamDef):
         elif value_in == self.asymptotic_border:
             return 1
         return (1-2**(math.log(value_in, 10)))*(self.border-self.asymptotic_border)+self.asymptotic_border
-
 
     def warp_out(self, value_out):
         """
