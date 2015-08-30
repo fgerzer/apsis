@@ -54,6 +54,7 @@ class ExperimentAssistant():
     _csv_write_frequency = None
     _csv_steps_written = 0
     _experiment_directory_base = None
+    _write_directory_base = None
 
     _logger = None
 
@@ -98,10 +99,11 @@ class ExperimentAssistant():
             else:
                 if write_directory_base is None:
                     if os.name == "nt":
-                        write_directory_base = os.path.relpath("APSIS_WRITING")
+                        self._write_directory_base = os.path.relpath("APSIS_WRITING")
                     else:
-                        write_directory_base = "/tmp/APSIS_WRITING"
-                self._create_experiment_directory(write_directory_base)
+                        self._write_directory_base = "/tmp/APSIS_WRITING"
+                else:
+                    self._write_directory_base = write_directory_base
         self._logger.info("Experiment assistant for successfully "
                          "initialized.")
 
@@ -138,6 +140,8 @@ class ExperimentAssistant():
             experiment = Experiment(name, param_defs, exp_id, notes, minimization)
             self._experiment = experiment
             self._init_optimizer()
+            if self._experiment_directory_base is None:
+                self._create_experiment_directory()
         else:
             raise ValueError("Created a new experiment with one already "
                              "existing.")
@@ -161,6 +165,8 @@ class ExperimentAssistant():
         if self._experiment is None:
             self._experiment = experiment
             self._init_optimizer()
+            if self._experiment_directory_base is None:
+                self._create_experiment_directory()
         else:
             raise ValueError("Set a new experiment with one already "
                              "existing.")
@@ -262,19 +268,14 @@ class ExperimentAssistant():
         """
         return self._experiment.best_candidate
 
-    def _create_experiment_directory(self, write_directory_base):
+    def _create_experiment_directory(self):
         """
         Generates an experiment directory from the base write directory.
-
-        Parameters
-        ----------
-        write_directory_base : string
-            The base directory of lab assistant.
         """
         global_start_date = time.time()
         date_name = datetime.datetime.utcfromtimestamp(
                 global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
-        self._experiment_directory_base = os.path.join(write_directory_base,
+        self._experiment_directory_base = os.path.join(self._write_directory_base,
                                     self._experiment.exp_id + "_" + date_name)
         ensure_directory_exists(self._experiment_directory_base)
 
