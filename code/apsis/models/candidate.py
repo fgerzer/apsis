@@ -160,7 +160,23 @@ class Candidate(object):
 
     def to_dict(self):
         """
-        EXPERIMENTAL
+        Converts this candidate to a dictionary.
+
+        Returns
+        -------
+        d : dictionary
+            Contains the following key/value pairs:
+            "id" : string
+                The id of the candidate.
+            "params" : dict
+                This dictionary contains one entry for each parameter,
+                each with the string name as key and the value as value.
+            "result" : float or None
+                The result of the Candidate
+            "cost" : float or None
+                The cost of evaluating the Candidate
+            "worker_information" : any jsonable or None
+                Client-settable worker information.
         """
         d = {}
         d["id"] = self.id
@@ -173,16 +189,32 @@ class Candidate(object):
 
     def _param_defs_to_dict(self):
         """
-        EXPERIMENTAL
+        Returns a parameter definition dictionary representation.
+
+        Returns
+        -------
+        d : dict
+            Dictionary of the parameters.
         """
         d = {}
         for k in self.params.keys():
             d[k] = self.params[k]
         return d
 
+
 def from_dict(dict):
     """
-    EXPERIMENTAL
+    Builds a new candidate from a dictionary.
+
+    Parameters
+    ----------
+    cand_dict : dictionary
+        Uses the same format as in Candidate.to_dict.
+
+    Returns
+    -------
+    c : Candidate
+        The corresponding candidate.
     """
     id = None
     if "id" in dict:
