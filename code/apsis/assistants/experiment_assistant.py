@@ -298,7 +298,7 @@ class ExperimentAssistant():
             "x": x,
             "y": step_eval,
             "type": "scatter",
-            "label": "%s, current result" %(str(self._experiment.exp_id)),
+            "label": "%s" %(str(self._experiment.exp_id)),
             "color": color
         }
 
@@ -307,10 +307,7 @@ class ExperimentAssistant():
             "y": step_best,
             "type": "line",
             "color": color,
-            #"label": "%s, best result" %(str(self._experiment.name))
         }
-
-        #print [step_eval_dict, step_best_dict]
 
         return [step_eval_dict, step_best_dict]
 
