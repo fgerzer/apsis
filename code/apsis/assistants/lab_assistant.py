@@ -50,12 +50,10 @@ class LabAssistant():
                 if exp_id not in self.exp_assistants.keys():
                     break
 
-        exp_ass = ExperimentAssistant(name, optimizer,
-                            param_defs, exp_id=exp_id, notes=notes,
-                                      optimizer_arguments=optimizer_arguments,
-                            minimization=minimization,
-                            write_directory_base=self._lab_run_directory,
+        exp_ass = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_arguments,
+                            experiment_directory_base=self._lab_run_directory + "/exp_id",
                             csv_write_frequency=1)
+        exp_ass.init_experiment(name, param_defs, exp_id, notes, minimization)
         self.exp_assistants[exp_id] = exp_ass
         self._logger.info("Experiment initialized successfully.")
         return exp_id

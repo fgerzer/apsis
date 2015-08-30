@@ -8,56 +8,185 @@ import datetime
 import os
 import time
 from apsis.utilities.logging_utils import get_logger
-import signal
-import multiprocessing
-import Queue
 from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
 import matplotlib.pyplot as plt
 
 AVAILABLE_STATUS = ["finished", "pausing", "working"]
 
 class ExperimentAssistant():
+    """
+    This class represents an assistant assisting with a single experiment.
+
+    It stores an experiment (a data structure which stores the parameter
+    definition, the candidates evaluated and current and whether it's to be
+    minimized) and an optimizer for optimizing the experiment.
+    It also contains functions for writing out results and for plotting.
+
+    Parameters
+    ----------
+    _optimizer : Optimizer
+        The Optimizer used to find new points for the experiment. It has to be
+        an apsis.optimizers.optimizer.Optimizer instance.
+    _optimizer_arguments : dict
+        Dictionary of the arguments for optimizer.
+    _experiment : Experiment
+        The experiment storing the evaluated points and parameter definition.
+    _csv_write_frequency : int, strictly positive.
+        This sets the frequency with which the csv file is written. If set to
+        1, it writes every step. If set to 2, every second and so on. Note that
+        it still writes out every step eventually.
+    _csv_steps_written : int
+        Stores the number of steps already stored to csv file.
+    _experiment_directory_base : string
+        The folder to which the csv intermediary results and the plots will be
+        written. Default is dependant on the OS. On windows, it is set to
+        ./APSIS_WRITING/<exp_id>. On Linux, it is set to
+        /tmp/APSIS_WRITING/<exp_id>.
+    _logger : logger
+        The logger instance for this class.
+
+    """
 
     _optimizer = None
+    _optimizer_arguments = None
     _experiment = None
 
-    _write_directory_base = None
     _csv_write_frequency = None
     _csv_steps_written = 0
     _experiment_directory_base = None
 
     _logger = None
 
-    def __init__(self, name, optimizer_class, param_defs, exp_id, notes=None, experiment=None,
-                 optimizer_arguments=None, minimization=True,
-                 write_directory_base="/tmp/APSIS_WRITING",
-                 experiment_directory_base=None, csv_write_frequency=1):
+    def __init__(self, optimizer_class, optimizer_arguments=None,
+                 write_directory_base=None, experiment_directory=None, csv_write_frequency=1):
+        """
+        Initializes this experiment assistant.
+
+        Note that calling this function does not yet create an experiment, for
+        that, use init_experiment. If there is an already existing experiment,
+        you can just set self._experiment.
+
+        Parameters
+        ----------
+        optimizer_class : subclass of Optimizer
+            The class of the optimizer, used to initialize it.
+        optimizer_arguments : dict, optional
+            The dictionary of optimizer arguments. If None, default values will
+            be used.
+        experiment_directory_base : string, optional
+            The folder to which the csv intermediary results and the plots will be
+            written. Default is <write_directory_base>/exp_id.
+        write_directory_base : string, optional
+            The base directory. In the default case, this is dependant on the
+            OS. On windows, it is set to ./APSIS_WRITING/. On Linux,
+            it is set to /tmp/APSIS_WRITING/. If an
+            experiment_directory has been given, this will be ignored.
+        csv_write_frequency : int, optional
+            This sets the frequency with which the csv file is written. If set
+            to 1 (the default), it writes every step. If set to 2, every second
+            and so on. Note that it still writes out every step eventually.
+        """
         self._logger = get_logger(self)
         self._logger.info("Initializing experiment assistant.")
-        if experiment is None:
-            experiment = Experiment(name, param_defs, exp_id, notes, minimization)
-        self._experiment = experiment
-        self._optimizer= check_optimizer(optimizer_class, self._experiment,
-                            optimizer_arguments=optimizer_arguments)
         self._csv_write_frequency = csv_write_frequency
+        self._optimizer = optimizer_class
+        self._optimizer_arguments = optimizer_arguments
         if self._csv_write_frequency != 0:
-            self._write_directory_base = write_directory_base
-            if experiment_directory_base is not None:
-                self._experiment_directory_base = experiment_directory_base
+            if experiment_directory is not None:
+                self._experiment_directory_base = experiment_directory
                 ensure_directory_exists(self._experiment_directory_base)
             else:
-                self._create_experiment_directory()
-        self._logger.info("Experiment assistant for %s successfully "
-                         "initialized." %name)
+                if write_directory_base is None:
+                    if os.name == "nt":
+                        write_directory_base = os.path.relpath("APSIS_WRITING")
+                    else:
+                        write_directory_base = "/tmp/APSIS_WRITING"
+                self._create_experiment_directory(write_directory_base)
+        self._logger.info("Experiment assistant for successfully "
+                         "initialized.")
+
+    def init_experiment(self, name, param_defs, exp_id=None, notes=None, minimization=True):
+        """
+        If not existing, initializes the _experiment.
+
+        Parameters
+        ----------
+        name : string
+            The name of the experiment.
+        param_defs : dict of ParamDefs
+            A dictionary with string keys, with each string being the name of
+            a parameter, and the value being its parameter definition.
+        exp_id : string, optional
+            The id of this experiment. Can be set manually, or (if None, which
+            is the default) will be generated by Experiment, which, at the
+            moment, is uuid4.
+        notes : string or None, optional
+            The notes for the experiment. Can be any string (or, actually,
+            jsonable object). Used for human-readable notes. Can be None, the
+            default.
+        minimization : bool, optional
+            Whether this experiment's goal is to minimize the score function
+            (the default assumption).
+
+        Raises
+        ------
+        ValueError
+            Iff creating a new experiment although this instance already has
+            one set.
+        """
+        if self._experiment is None:
+            experiment = Experiment(name, param_defs, exp_id, notes, minimization)
+            self._experiment = experiment
+            self._init_optimizer()
+        else:
+            raise ValueError("Created a new experiment with one already "
+                             "existing.")
+
+    def set_experiment(self, experiment):
+        """
+        Sets the experiment property of this instance.
+
+        Parameters
+        ----------
+        experiment : Experiment
+            The experiment with which to set this.
+
+
+        Raises
+        ------
+        ValueError
+            Iff creating a new experiment although this instance already has
+            one set.
+        """
+        if self._experiment is None:
+            self._experiment = experiment
+            self._init_optimizer()
+        else:
+            raise ValueError("Set a new experiment with one already "
+                             "existing.")
+
+
+    def _init_optimizer(self):
+        """
+        Initializes the optimizer if it does not exist.
+        """
+        self._optimizer= check_optimizer(self._optimizer, self._experiment,
+            optimizer_arguments=self._optimizer_arguments)
+
+
 
     def get_next_candidate(self):
         """
         Returns the Candidate next to evaluate.
 
+        Internally, it first tries to return the most recent pending candidate
+        of this experiment. If there is none, it generates one from optimizer.
+
         Returns
         -------
         next_candidate : Candidate or None
-            The Candidate object that should be evaluated next. May be None.
+            The Candidate object that should be evaluated next. May be None,
+            which is equivalent to no candidate generated.
         """
 
         self._logger.info("Returning next candidate.")
@@ -133,12 +262,20 @@ class ExperimentAssistant():
         """
         return self._experiment.best_candidate
 
-    def _create_experiment_directory(self):
+    def _create_experiment_directory(self, write_directory_base):
+        """
+        Generates an experiment directory from the base write directory.
+
+        Parameters
+        ----------
+        write_directory_base : string
+            The base directory of lab assistant.
+        """
         global_start_date = time.time()
         date_name = datetime.datetime.utcfromtimestamp(
                 global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
-        self._experiment_directory_base = os.path.join(self._write_directory_base,
-                                    self._experiment.name + "_" + date_name)
+        self._experiment_directory_base = os.path.join(write_directory_base,
+                                    self._experiment.exp_id + "_" + date_name)
         ensure_directory_exists(self._experiment_directory_base)
 
     def _best_result_per_step_dicts(self, color="b", plot_up_to=None):
@@ -161,7 +298,7 @@ class ExperimentAssistant():
             "x": x,
             "y": step_eval,
             "type": "scatter",
-            "label": "%s, current result" %(str(self._experiment.name)),
+            "label": "%s, current result" %(str(self._experiment.exp_id)),
             "color": color
         }
 
@@ -209,6 +346,11 @@ class ExperimentAssistant():
         return x, step_evaluation, step_best
 
     def _append_to_detailed_csv(self):
+        """
+        Appends the currently, non-written results to the csv summary.
+
+        In the first step, includes the header.
+        """
         if len(self._experiment.candidates_finished) <= self._csv_steps_written:
             return
 
@@ -223,7 +365,7 @@ class ExperimentAssistant():
 
         #write
         filename = os.path.join(self._experiment_directory_base,
-                                self._experiment.name + "_results.csv")
+                                self._experiment.exp_id + "_results.csv")
 
         with open(filename, 'a+') as detailed_file:
             detailed_file.write(csv_string)
@@ -231,10 +373,18 @@ class ExperimentAssistant():
         self._csv_steps_written += steps_included
 
     def get_candidates(self):
-        result = {}
-        result["finished"] = self._experiment.candidates_finished
-        result["pending"] = self._experiment.candidates_pending
-        result["working"] = self._experiment.candidates_working
+        """
+        Returns the candidates of this experiment in a dict.
+
+        Returns
+        -------
+        result : dict
+            A dictionary of three lists with the keys finished, pending and
+            working, with the corresponding candidates.
+        """
+        result = {"finished": self._experiment.candidates_finished,
+                  "pending": self._experiment.candidates_pending,
+                  "working": self._experiment.candidates_working}
         return result
 
 
@@ -279,6 +429,9 @@ class ExperimentAssistant():
         return fig
 
     def write_plots(self):
+        """
+        Writes out the plots of this assistant.
+        """
         fig = self.plot_result_per_step()
         filename = "result_per_step_%i" %len(self._experiment.candidates_finished)
         path = self._experiment_directory_base + "/plots"
@@ -287,4 +440,9 @@ class ExperimentAssistant():
         plt.close(fig)
 
     def set_exit(self):
+        """
+        Exits this assistant.
+
+        Currently, all that is done is that the optimizer is exited.
+        """
         self._optimizer.exit()
