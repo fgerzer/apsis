@@ -5,6 +5,7 @@ from apsis.models.parameter_definition import ParamDef
 import copy
 import uuid
 
+
 class Experiment(object):
     """
     An Experiment is a set of parameter definitions and multiple candidate
@@ -245,30 +246,27 @@ class Experiment(object):
             return True
 
         if not self._check_candidate(candidateA):
-            raise  ValueError("candidateA is not valid.")
+            raise ValueError("candidateA is not valid.")
         if not self._check_candidate(candidateB):
-            raise  ValueError("candidateB is not valid.")
+            raise ValueError("candidateB is not valid.")
 
+        a_result = candidateA.result
+        b_result = candidateB.result
 
-        aResult = candidateA.result
-        bResult = candidateB.result
-
-        if aResult is None:
+        if a_result is None:
             return False
-        if bResult is None:
+        if b_result is None:
             return True
         if self.minimization_problem:
-            if aResult < bResult:
+            if a_result < b_result:
                 return True
             else:
                 return False
         else:
-            if aResult > bResult:
+            if a_result > b_result:
                 return True
             else:
                 return False
-
-
 
     def warp_pt_in(self, params):
         """
@@ -333,7 +331,6 @@ class Experiment(object):
             steps_included : int
                 The number of steps included in the csv.
         """
-        #parameter names
         csv_string = ""
         if key_order is None:
             key_order = sorted(self.parameter_definitions.keys())
@@ -368,7 +365,6 @@ class Experiment(object):
         copied_experiment = copy.deepcopy(self)
 
         return copied_experiment
-
 
     def _check_candidate(self, candidate):
         """
