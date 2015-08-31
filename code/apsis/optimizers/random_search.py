@@ -13,11 +13,11 @@ class RandomSearch(Optimizer):
 
     _experiment = None
 
-    def __init__(self, optimizer_params, experiment):
+    def __init__(self, experiment, optimizer_params):
         if optimizer_params is None:
             optimizer_params = {}
         self.random_state = optimizer_params.get("random_state", None)
-        Optimizer.__init__(self, optimizer_params, experiment)
+        Optimizer.__init__(self, experiment, optimizer_params)
 
     def get_next_candidates(self, num_candidates=1):
         list = []
