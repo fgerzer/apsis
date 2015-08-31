@@ -178,13 +178,11 @@ class Candidate(object):
             "worker_information" : any jsonable or None
                 Client-settable worker information.
         """
-        d = {}
-        d["id"] = self.id
-        d["params"] = self._param_defs_to_dict()
-        d["result"] = self.result
-        d["cost"] = self.cost
-        d["worker_information"] = self.worker_information
-
+        d = {"id": self.id,
+             "params": self._param_defs_to_dict(),
+             "result": self.result,
+             "cost": self.cost,
+             "worker_information": self.worker_information}
         return d
 
     def _param_defs_to_dict(self):
