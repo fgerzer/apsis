@@ -53,8 +53,12 @@ class Optimizer(object):
         ValueError
             Iff the experiment is not supported.
         """
-        if self._is_experiment_supported(experiment):
-            raise ValueError("Experiment contains unsupported parameters.")
+        if not self._is_experiment_supported(experiment):
+            raise ValueError("Experiment contains unsupported parameters. "
+                             "Optimizer %s supports %s, experiment parameters "
+                             "are %s." %(self.__class__.__name__,
+                                         self.SUPPORTED_PARAM_TYPES,
+                                         experiment.parameter_definitions))
         self._experiment = experiment
 
     def update(self, experiment):
