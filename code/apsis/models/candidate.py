@@ -69,7 +69,7 @@ class Candidate(object):
             Iff params is not a dictionary.
         """
         if id is None:
-            self.id = uuid.uuid4()
+            self.id = uuid.uuid4().hex
         else:
             self.id = id
         if not isinstance(params, dict):
