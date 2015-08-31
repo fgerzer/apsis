@@ -6,7 +6,7 @@ from nose.tools import assert_equal, assert_items_equal, assert_dict_equal, \
     assert_less_equal, assert_in
 from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
-
+import matplotlib.pyplot as plt
 
 class TestLabAssistant(object):
     """
@@ -130,3 +130,43 @@ class TestLabAssistant(object):
         self.LAss.plot_result_per_step([exp_id_one])
         self.LAss.exp_assistants[exp_id_one]._experiment.minimization_problem = False
         self.LAss.plot_result_per_step(exp_id_two)
+
+
+    def test_validation_lab_assistant(self):
+        """
+        Just a short test on whether validation lab assistant does not crash.
+        """
+
+        optimizer = "RandomSearch"
+        name = "test_init_experiment"
+        self.param_defs = {
+            "x": MinMaxNumericParamDef(0, 1),
+            "name": NominalParamDef(["A", "B", "C"])
+        }
+        optimizer_arguments = {
+            "multiprocessing": "none"
+        }
+        minimization = True
+
+        LAss = ValidationLabAssistant(cv=1)
+        exp_id_one = LAss.init_experiment(name, optimizer, optimizer_arguments = optimizer_arguments,
+                                          param_defs=self.param_defs, minimization=minimization)
+        exp_id_two = LAss.init_experiment(name + "2", optimizer, optimizer_arguments = optimizer_arguments,
+                                          param_defs=self.param_defs, minimization=minimization)
+        cand = LAss.get_next_candidate(exp_id_one)
+        cand.result = 1
+        LAss.update(exp_id_one, "finished", cand)
+
+        #cand = LAss.get_next_candidate(exp_id_two)
+        #cand.result = 1
+        #LAss.update(exp_id_two, "finished", cand)
+
+
+        LAss.write_out_plots_current_step()
+        LAss.plot_result_per_step([exp_id_one], show_plot=False)
+        LAss.plot_validation([exp_id_one], show_plot=False)
+        LAss.exp_assistants[exp_id_one][0]._experiment.minimization_problem = False
+        LAss.plot_result_per_step(exp_id_one, show_plot=False)
+        plt.show()
+
+        LAss.set_exit()
