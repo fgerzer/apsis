@@ -7,10 +7,20 @@ from nose.tools import assert_equal, assert_items_equal, assert_dict_equal, \
 from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
 
+
 class TestLabAssistant(object):
     """
     Tests the lab_assistants.
     """
+
+    LAss = None
+    param_defs = None
+
+    def setup(self):
+        self.LAss = LabAssistant()
+
+    def teardown(self):
+        self.LAss.set_exit()
 
     def test_init(self):
         """
@@ -20,11 +30,11 @@ class TestLabAssistant(object):
             - _exp_assistants is empty
             - logger name is correctly set.
         """
-        LAss = PrettyLabAssistant()
-        assert_equal(LAss.write_directory_base, "/tmp/APSIS_WRITING")
-        assert_items_equal(LAss.exp_assistants, {})
-        assert_equal(LAss.logger,
-                     get_logger("apsis.assistants.lab_assistant.PrettyLabAssistant"))
+        if os.name == "nt":
+            assert_equal(self.LAss._write_directory_base, "/tmp/APSIS_WRITING")
+        assert_items_equal(self.LAss.exp_assistants, {})
+        assert_equal(self.LAss._logger,
+                     get_logger("apsis.assistants.lab_assistant.LabAssistant"))
 
 
     def test_init_experiment(self):
@@ -38,22 +48,31 @@ class TestLabAssistant(object):
         """
         optimizer = "RandomSearch"
         name = "test_init_experiment"
-        param_defs = {
+        self.param_defs = {
             "x": MinMaxNumericParamDef(0, 1),
             "name": NominalParamDef(["A", "B", "C"])
         }
+        optimizer_arguments = {
+            "multiprocessing": "none"
+        }
         minimization = True
 
-        LAss = PrettyLabAssistant()
-        LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
+        exp_id = self.LAss.init_experiment(name, optimizer,
+                                  optimizer_arguments=optimizer_arguments,
+                                  param_defs=self.param_defs, minimization=minimization)
 
-        exp_ass = LAss.exp_assistants[name]
+        exp_ass = self.LAss.exp_assistants[exp_id]
 
-        assert_equal(exp_ass.optimizer, optimizer)
-        assert_is_none(exp_ass.optimizer_arguments, None)
-        assert_equal(exp_ass.experiment.minimization_problem, minimization)
+        assert_equal(exp_ass._optimizer.__class__.__name__, optimizer)
+        assert_equal(exp_ass._optimizer_arguments, optimizer_arguments)
+        assert_equal(exp_ass._experiment.minimization_problem, minimization)
         with assert_raises(ValueError):
-            LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
+            self.LAss.init_experiment(name, optimizer, exp_id=exp_id,
+                              optimizer_arguments=optimizer_arguments,
+                              param_defs=self.param_defs, minimization=minimization)
+        return exp_id
+
+
 
     def test_get_next_candidate(self):
         """
@@ -61,22 +80,13 @@ class TestLabAssistant(object):
         Tests:
             - The candidate's parameters are acceptable
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        LAss = PrettyLabAssistant()
-        LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        cand = LAss.get_next_candidate(name)
+        exp_id = self.test_init_experiment()
+        cand = self.LAss.get_next_candidate(exp_id)
         assert_is_none(cand.result)
         params = cand.params
         assert_less_equal(params["x"], 1)
         assert_greater_equal(params["x"], 0)
-        assert_in(params["name"], param_defs["name"].values)
+        assert_in(params["name"], self.param_defs["name"].values)
 
     def test_update(self):
         """
@@ -84,187 +94,39 @@ class TestLabAssistant(object):
             - candidate exists in the list
             - result is equal
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        LAss = PrettyLabAssistant()
-        LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        cand = LAss.get_next_candidate(name)
+        exp_id = self.test_init_experiment()
+        cand = self.LAss.get_next_candidate(exp_id)
         cand.result = 1
-        LAss.update(name, cand)
-        assert_items_equal(LAss.exp_assistants[name].experiment.candidates_finished, [cand])
-        assert_equal(LAss.exp_assistants[name].experiment.candidates_finished[0].result, 1)
+        self.LAss.update(exp_id, status="finished", candidate=cand)
+        assert_items_equal(self.LAss.exp_assistants[exp_id]._experiment.candidates_finished, [cand])
+        assert_equal(self.LAss.exp_assistants[exp_id]._experiment.candidates_finished[0].result, 1)
 
     def test_get_best_candidate(self):
         """
         Tests whether get_best_candidate works.
             - Whether the best of the two candidates is the one it should be.
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        LAss = PrettyLabAssistant()
-        LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        cand_one = LAss.get_next_candidate(name)
+        exp_id = self.test_init_experiment()
+        cand_one = self.LAss.get_next_candidate(exp_id)
         cand_one.result = 1
-        LAss.update(name, cand_one)
+        self.LAss.update(exp_id, "finished", cand_one)
 
-        cand_two = LAss.get_next_candidate(name)
+        cand_two = self.LAss.get_next_candidate(exp_id)
         cand_two.result = 0
-        LAss.update(name, cand_two)
+        self.LAss.update(exp_id, "finished", cand_two)
 
-        assert_equal(cand_two, LAss.get_best_candidate(name))
+        assert_equal(cand_two, self.LAss.get_best_candidate(exp_id))
 
     def test_all_plots_working(self):
         """
         Tests whether all of the plot functions work. Does not test for correctness.
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        LAss = PrettyLabAssistant()
-        LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        LAss.init_experiment(name + "2", optimizer, param_defs, minimization=minimization)
-        cand = LAss.get_next_candidate(name)
+        exp_id_one = self.test_init_experiment()
+        exp_id_two = self.test_init_experiment()
+        cand = self.LAss.get_next_candidate(exp_id_one)
         cand.result = 1
-        LAss.update(name, cand)
-        LAss.write_out_plots_current_step()
-        LAss.plot_result_per_step([name], show_plot=False)
-        LAss.exp_assistants[name].experiment.minimization_problem = False
-        LAss.plot_result_per_step(name, show_plot=False)
-
-    def test_validation_lab_assistant(self):
-        """
-        Just a short test on whether validation lab assistant does not crash.
-        """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        LAss = ValidationLabAssistant()
-        LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        LAss.init_experiment(name + "2", optimizer, param_defs, minimization=minimization)
-        cand = LAss.get_next_candidate(name)
-        cand.result = 1
-        LAss.update(name, cand)
-        LAss.write_out_plots_current_step()
-        LAss.plot_result_per_step([name], show_plot=False)
-        LAss.plot_validation([name], show_plot=False)
-        LAss.exp_assistants[name][0].experiment.minimization_problem = False
-        LAss.plot_result_per_step(name, show_plot=False)
-
-class TestParallelLabAssistant(object):
-    LAss = None
-
-    def setup(self):
-        self.LAss = LabAssistant()
-        self.LAss.start()
-
-    def teardown(self):
-        self.LAss.exit()
-        self.LAss.terminate()
-
-    def test_init(self):
-        pass
-
-    def test_init_experiment(self):
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-        self.LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-
-    def test_get_next_candidate(self):
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-        self.LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        cand = self.LAss.get_next_candidate(name)
-        assert_is_none(cand.result)
-        params = cand.params
-        assert_less_equal(params["x"], 1)
-        assert_greater_equal(params["x"], 0)
-        assert_in(params["name"], param_defs["name"].values)
-
-    def test_update(self):
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-        self.LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        cand = self.LAss.get_next_candidate(name)
-        cand.result = 1
-        self.LAss.update(name, cand)
-        assert_items_equal(self.LAss.get_all_experiments()[name].experiment.candidates_finished, [cand])
-        assert_equal(self.LAss.get_all_experiments()[name].experiment.candidates_finished[0].result, 1)
-
-    def test_get_best_candidate(self):
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-        self.LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-        cand_one = self.LAss.get_next_candidate(name)
-        cand_one.result = 1
-        self.LAss.update(name, cand_one)
-
-        cand_two = self.LAss.get_next_candidate(name)
-        cand_two.result = 0
-        self.LAss.update(name, cand_two)
-
-        assert_equal(cand_two, self.LAss.get_best_candidate(name))
-
-    #
-    # def test_all_plots_working(self):
-    #     """
-    #     Tests whether all of the plot functions work. Does not test for correctness.
-    #     """
-    #     optimizer = "RandomSearch"
-    #     name = "test_init_experiment"
-    #     param_defs = {
-    #         "x": MinMaxNumericParamDef(0, 1),
-    #         "name": NominalParamDef(["A", "B", "C"])
-    #     }
-    #     minimization = True
-    #
-    #     self.LAss.init_experiment(name, optimizer, param_defs, minimization=minimization)
-    #     self.LAss.init_experiment(name + "2", optimizer, param_defs, minimization=minimization)
-    #     cand = self.LAss.get_next_candidate(name)
-    #     cand.result = 1
-    #     self.LAss.update(name, cand)
-    #     self.LAss.write_out_plots_current_step()
-    #     self.LAss.plot_result_per_step([name], show_plot=False)
-    #     self.LAss._exp_assistants[name].experiment.minimization_problem = False
-    #     self.LAss.plot_result_per_step(name, show_plot=False)
+        self.LAss.update(exp_id_one, "finished", cand)
+        self.LAss.write_out_plots_current_step()
+        self.LAss.plot_result_per_step([exp_id_one])
+        self.LAss.exp_assistants[exp_id_one]._experiment.minimization_problem = False
+        self.LAss.plot_result_per_step(exp_id_two)
