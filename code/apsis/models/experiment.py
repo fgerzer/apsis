@@ -82,7 +82,7 @@ class Experiment(object):
         """
         self.name = name
         if exp_id is None:
-            exp_id = uuid.uuid4()
+            exp_id = uuid.uuid4().hex
         self.exp_id = exp_id
         if not isinstance(parameter_definitions, dict):
             raise ValueError("parameter_definitions are not a dict.")
