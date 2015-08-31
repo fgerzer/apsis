@@ -207,6 +207,8 @@ class QueueBasedOptimizer(Optimizer):
         self._optimizer_in_queue = multiprocessing.Queue()
         self._optimizer_out_queue = multiprocessing.Queue()
 
+        self.SUPPORTED_PARAM_TYPES = optimizer_class.SUPPORTED_PARAM_TYPES
+
         optimizer = QueueBackend(optimizer_class, optimizer_params, experiment,
                                  self._optimizer_out_queue,
                                  self._optimizer_in_queue)
@@ -297,7 +299,7 @@ class QueueBackend(multiprocessing.Process):
         self._in_queue = in_queue
         self._min_candidates = optimizer_params.get("min_candidates", 5)
         self._update_time = optimizer_params.get("update_time", 0.1)
-        self._optimizer = optimizer_class(optimizer_params, experiment)
+        self._optimizer = optimizer_class(experiment, optimizer_params)
         self._exited = False
         self._experiment = experiment
         multiprocessing.Process.__init__(self)
