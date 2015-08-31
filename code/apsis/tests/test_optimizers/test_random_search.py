@@ -6,13 +6,9 @@ from nose.tools import assert_is_none, assert_equal, assert_dict_equal, \
 from apsis.models.experiment import Experiment
 from apsis.models.parameter_definition import MinMaxNumericParamDef, NominalParamDef
 from apsis.models.candidate import Candidate
-import multiprocessing
-import os
-import signal
-import time
+
 
 class test_RandomSearch(object):
-
     def test_init(self):
         #test initialization
         exp = Experiment("test", {"x": MinMaxNumericParamDef(0, 1)}, NominalParamDef(["A", "B", "C"]))
