@@ -71,7 +71,7 @@ class Candidate(object):
         if id is None:
             self.id = uuid.uuid4()
         else:
-            self.id = uuid.UUID(id)
+            self.id = id
         if not isinstance(params, dict):
             raise ValueError("No parameter dictionary given.")
         self.params = params
