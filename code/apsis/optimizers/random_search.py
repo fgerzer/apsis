@@ -13,7 +13,7 @@ class RandomSearch(Optimizer):
 
     _experiment = None
 
-    def __init__(self, experiment, optimizer_params):
+    def __init__(self, experiment, optimizer_params=None):
         if optimizer_params is None:
             optimizer_params = {}
         self.random_state = optimizer_params.get("random_state", None)
