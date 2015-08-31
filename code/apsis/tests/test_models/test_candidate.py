@@ -46,9 +46,9 @@ class TestCandidate(object):
         cand1 = Candidate(params)
         cand2 = Candidate(params)
 
-        assert_equal(cand1, cand2)
-        cand3 = Candidate(params2)
-        assert_false(cand1.__eq__(cand3))
+        assert_not_equal(cand1, cand2)
+        cand3 = Candidate(params2, id=cand1.id)
+        assert_true(cand1.__eq__(cand3))
 
         assert_false(cand1.__eq__(False))
 
@@ -74,12 +74,11 @@ class TestCandidate(object):
         }
         cand1 = Candidate(params)
         entry = cand1.to_csv_entry()
-        assert_equal(entry, "B,1,None,None")
+        assert_equal(entry, "%s,B,1,None,None" %cand1.id)
 
     def test_dict(self):
         """
         Tests the to-dict and from-dict methods.
-        :return:
         """
         params = {
             "x": 1,
@@ -87,11 +86,11 @@ class TestCandidate(object):
         }
         cand1 = Candidate(params)
         entry = cand1.to_dict()
-        d = {}
-        d["params"] = params
-        d["result"] = None
-        d["cost"] = None
-        d["worker_information"] = None
+        d = {"params": params,
+             "result": None,
+             "cost": None,
+             "worker_information": None,
+             "id": cand1.id}
         assert_dict_equal(entry, d)
 
         cand2 = from_dict(entry)
