@@ -108,7 +108,7 @@ class BayesianOptimizer(Optimizer):
             self.acquisition_function = optimizer_params.get("acquisition")
         self.kernel_params = optimizer_params.get("kernel_params", {})
         self.kernel = optimizer_params.get("kernel", "matern52")
-        self.random_searcher = RandomSearch(optimizer_params, experiment)
+        self.random_searcher = RandomSearch(experiment, optimizer_params)
         Optimizer.__init__(self, experiment, optimizer_params)
 
 
