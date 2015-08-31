@@ -182,7 +182,7 @@ class LabAssistant():
             The Candidate object that has performed best. May be None,
             which is equivalent to no candidate being evaluated.
         """
-        return self.exp_assistants[experiment_id].get_next_candidate()
+        return self.exp_assistants[experiment_id].get_best_candidate()
 
     def update(self, experiment_id, status, candidate):
         """
