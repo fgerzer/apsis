@@ -6,7 +6,7 @@ from nose.tools import assert_equal, assert_items_equal, assert_dict_equal, \
     assert_less_equal, assert_in, assert_true, assert_false, with_setup
 from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
-from apsis.optimizers.random_search import QueueRandomSearch
+from apsis.optimizers.random_search import RandomSearch
 import time
 
 class TestExperimentAssistant(object):
@@ -32,15 +32,20 @@ class TestExperimentAssistant(object):
         }
         minimization = True
 
-        self.EAss = ExperimentAssistant(name, optimizer, self.param_defs, minimization=minimization)
+        optimizer_params = {
+            "multiprocessing": "none"
+        }
 
-        assert_equal(self.EAss.optimizer, optimizer)
-        assert_is_none(self.EAss.optimizer_arguments, None)
-        assert_equal(self.EAss.experiment.minimization_problem, minimization)
+        self.EAss = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_params)
+        self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
+
+        assert_equal(self.EAss._optimizer.__class__.__name__, optimizer)
+        assert_equal(self.EAss._optimizer_arguments, optimizer_params)
+        assert_equal(self.EAss._experiment.minimization_problem, minimization)
 
 
     def teardown(self):
-        self.EAss.exit()
+        self.EAss.set_exit()
 
     def test_get_next_candidate(self):
         """
@@ -74,8 +79,8 @@ class TestExperimentAssistant(object):
         cand = self.EAss.get_next_candidate()
         cand.result = 1
         self.EAss.update(cand)
-        assert_items_equal(self.EAss.experiment.candidates_finished, [cand])
-        assert_equal(self.EAss.experiment.candidates_finished[0].result, 1)
+        assert_items_equal(self.EAss._experiment.candidates_finished, [cand])
+        assert_equal(self.EAss._experiment.candidates_finished[0].result, 1)
 
         self.EAss.update(cand, "pausing")
         self.EAss.update(cand, "working")
@@ -113,4 +118,4 @@ class TestExperimentAssistant(object):
 
         cand = self.EAss.get_next_candidate()
         cand.result = 2
-        self.EAss.plot_result_per_step(show_plot=False)
+        self.EAss.plot_result_per_step()
