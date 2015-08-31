@@ -17,16 +17,23 @@ _logger = None
 lAss = None
 
 def set_exit(_signo, _stack_frame):
-    _logger.warning("Shutting down apsis server, due to signal %s with stackframe %s" %(_signo, _stack_frame))
+    """
+    Sets the exit for the lab assistant.
+    """
+    _logger.warning("Shutting down apsis server, due to signal %s with "
+                    "stackframe %s" %(_signo, _stack_frame))
     lAss.set_exit()
     exit()
-
-
 
 signal.signal(signal.SIGINT, set_exit)
 
 
 def start_apsis():
+    """
+    Starts apsis.
+
+    Initializes logger, LabAssistant and the REST app.
+    """
     global lAss, _logger
     _logger = get_logger("REST_interface")
     lAss = LabAssistant()
@@ -35,6 +42,13 @@ def start_apsis():
 
 
 def exception_handler(func):
+    """
+    This wrapper is used to handle jsonifying and exceptions.
+
+    Specficially, it tries to jsonify the function, with the result being
+    written to the "result" field. Any failure is catched and logged.
+    If failed, "result" is set to "failed".
+    """
     @wraps(func)
     def handle_exception(*args, **kwargs):
         try:
@@ -47,6 +61,7 @@ def exception_handler(func):
 
 
 @app.route(CONTEXT_ROOT + "/", methods=["GET"])
+@exception_handler
 def overview_page():
     """
     This will, later, become an overview over the experiment.
@@ -108,12 +123,19 @@ def init_experiment():
 @app.route(CONTEXT_ROOT + "/experiments", methods=["GET"])
 @exception_handler
 def get_all_experiments():
+    """
+    This returns all experiment IDs.
+    """
     return lAss.exp_assistants.keys()
 
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
+@exception_handler
 def get_experiment(experiment_id):
-   raise NotImplementedError
+    """
+    This will, later, return more details for a single experiment.
+    """
+    raise NotImplementedError
     #TODO return whole experiment.
 
 
@@ -121,6 +143,21 @@ def get_experiment(experiment_id):
                           "/get_next_candidate", methods=["GET"])
 @exception_handler
 def get_next_candidate(experiment_id):
+    """
+    Returns the next candidate for a specific experiment.
+
+    Parameters
+    ----------
+    experiment_id : string
+        The exp_id of the experiment for which the candidate should be
+        returned.
+
+    Returns
+    -------
+    result : Candidate, None or "failed".
+        Returns either a Candidate (if successful), None if none is available
+        or possibly "failed" if the request failed.
+    """
     result_cand = lAss.get_next_candidate(experiment_id)
     if result_cand is None:
         result = "failed"
@@ -133,6 +170,20 @@ def get_next_candidate(experiment_id):
                           "/get_best_candidate", methods=["GET"])
 @exception_handler
 def get_best_candidate(experiment_id):
+    """
+    Returns the best finished candidate for an experiment.
+
+    Parameters
+    ----------
+    exp_id : string
+        The id of the experiment to return.
+
+    Returns
+    -------
+    best_candidate : dict as a candidate representation
+        Dictionary candidate representation (see get_next_candidate for the
+        exact format). May be None or "failed" if no such candidate exists.
+    """
     result_cand = lAss.get_best_candidate(experiment_id)
     if result_cand is None:
         result = "failed"
@@ -145,6 +196,54 @@ def get_best_candidate(experiment_id):
                           "/update", methods=["POST"])
 @exception_handler
 def update(experiment_id):
+    """
+    Updates the result of the candidate.
+
+    Parameters
+    ----------
+    exp_id : string
+        The id of the experiment to return.
+    json : json dict
+        Contains two elements.
+        "candidate" : dict representing a candidate
+            Represents a candidate. Usually a modified candidate received from
+             get_next_candidate.
+            It consists of the following fields:
+            "cost" : float or None
+                The cumulative cost of the evaluations of this candidate.
+                Must be set by the worker. Default is None, representing no
+                cost being set.
+            "params" : dict of parameters
+                The parameter values this candidate has. The format is
+                analogous to the parameter defintion of init_experiment,
+                with each entry being an acceptable value according to
+                param_def.
+            "id" : string
+                An id uniquely identifying this candidate.
+            "worker_information" : arbitrary
+                A field usable for setting worker information, for example a
+                directory in which intermediary results are stored. Any
+                json-able information can be stored in it (though, since
+                it's transferred via network, it is probably better to keep it
+                fairly small), and apsis guarantees never to change it.
+                By default, it's None.
+            "result" : float
+                The result of the process we want to optimize.
+                Is None by default
+        "status" : string
+            One of "finished", "working" and "pausing".
+            "finished": The evaluation is finished.
+            "working": The evaluation is still in progress. Later, it will be
+            used to ensure that the worker is still working, allowing us to
+            reschedule the candidate to other workers if necessary.
+            "pausing": Signals that this candidate has paused the execution,
+            meaning that we are allowed to reschedule it to another worker.
+
+    Returns
+    -------
+    result : string
+        Returns "success" iff successful, "failed" otherwise.
+    """
     data_received = request.get_json()
     status = data_received["status"]
     candidate = from_dict(data_received["candidate"])
@@ -156,6 +255,29 @@ def update(experiment_id):
            methods=["GET"])
 @exception_handler
 def _get_all_candidates(experiment_id):
+    """
+    Returns the candidates for an experiment.
+
+    Parameters
+    ----------
+    exp_id : string
+        The id of the experiment to return.
+
+    Returns
+    -------
+    candidates : dict of lists
+        Returns a dictionary of three lists of candidates.
+        Each of the lists contains dictionary candidate representation
+        (see get_next_candidate for the exact format). Each list may be
+        empty.
+        The three lists are:
+        "finished": The list of finished candidates.
+        "workign": The list of candidates on which workers are currently
+        working.
+        "pending": The list of not-yet finished candidates on which no
+        worker is currently working.
+        May return None or "failed" if failed.
+    """
     candidates = lAss.get_candidates(experiment_id)
     result = {}
     for r in ["finished", "working", "pending"]:
@@ -166,6 +288,11 @@ def _get_all_candidates(experiment_id):
 
 
 def _filter_data(json):
+    """
+    Filters json data.
+
+    More specifically, it converts strings to unicode in all json fields.
+    """
     for k in json:
         if isinstance(json[k], unicode):
             json[k] = str(json[k])
@@ -175,4 +302,7 @@ def _filter_data(json):
            methods=["GET"])
 @exception_handler
 def _get_fig_results_per_step(experiment_id):
+    """
+    Currently unused.
+    """
     return lAss.exp_assistants[experiment_id]._best_result_per_step_dicts(color="b")
