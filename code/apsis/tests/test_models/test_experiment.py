@@ -123,4 +123,4 @@ class TestExperiment(object):
         exp.add_finished(cand)
         string, steps_incl = exp.to_csv_results()
         assert_equal(steps_incl, 1)
-        assert_equal(string, "step,name,x,cost,result,best_result\n1,A,1,None,None,None\n")
+        assert_equal(string, "step,id,name,x,cost,result,best_result\n1,%s,A,1,None,None,None\n"%cand.id)
