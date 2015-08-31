@@ -299,7 +299,7 @@ class ExperimentAssistant():
             "x": x,
             "y": step_eval,
             "type": "scatter",
-            "label": "%s" %(str(self._experiment.exp_id)),
+            "label": "%s" %(str(self._experiment.name)),
             "color": color
         }
 
