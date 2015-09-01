@@ -4,7 +4,7 @@ from apsis.models.candidate import Candidate, from_dict
 from functools import wraps
 from apsis.utilities.param_def_utilities import dict_to_param_defs
 from apsis.utilities.logging_utils import get_logger
-import os
+import sys
 import signal
 
 WS_PORT = 5000
@@ -23,7 +23,7 @@ def set_exit(_signo, _stack_frame):
     _logger.warning("Shutting down apsis server, due to signal %s with "
                     "stackframe %s" %(_signo, _stack_frame))
     lAss.set_exit()
-    exit()
+    sys.exit()
 
 signal.signal(signal.SIGINT, set_exit)
 
