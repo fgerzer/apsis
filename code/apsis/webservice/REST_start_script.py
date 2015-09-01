@@ -29,10 +29,4 @@ if __name__ == "__main__":
     port = 5000
     if args.port:
         port = args.port
-
-    if sys.argv > 1:
-        if sys.argv[1] == "val":
-            validation = True
-        if sys.argv > 2:
-            cv = int(sys.argv[2])
-    start_rest(validation, cv)
+    start_rest(port, validation, cv)
