@@ -1,7 +1,7 @@
 Installing Apsis 
 ****************
 
-This guide provides instructions for how to get apsis running on your system. The guide is manily targetted at Ubuntu/Debian and Mac OS users, however as a user of another linux based OS you should easily to be able to follow this guide with the methods used in your distro.
+This guide provides instructions for how to get apsis running on your system. The guide is mainly targeted at Ubuntu/Debian and Mac OS users, However as a user of another linux based OS you should easily to be able to follow this guide with the methods used in your distro.
 
 
 Prerequisites
@@ -21,15 +21,15 @@ Apsis requires the following **python frameworks** and their dependencies to be 
     
     .. note:: 
 
-        For apsis versions newer than December 2014 older gpY versions will no longer work. It has been developed and tested to work with gpY version 0.6.0.
+        For apsis versions newer than December 2014 older GPy versions will no longer work. It has been developed and tested to work with GPy version 0.6.0.
 
 
 **Operating Systems**
 
-    * developed on Ubuntu 14.04. Tested on Mac OS X Yosemite.
+    * developed on Ubuntu 14.04/Arch. Tested on Mac OS X Yosemite.
     * most unix based operating systems for which the dependencies listed above are available should work.
     
-    * no support for non-unix systems right now.
+    * Currently, tests for Windows support is in progress.
  
 Installation using PIP
 ======================
@@ -66,11 +66,6 @@ The compilation of matplotlib and scipy have several non-python dependencies suc
 Tested on Ubuntu 14.04 the following command should give you what you need. If you run on another OS please check out the documentation of the listed prerequesites above for how to install them. ::
 
     $ sudo apt-get install git build-essential python-pip gfortran libopenblas-dev liblapack-dev libfreetype6-dev libpng12-dev python-dev
-    
-*Optional* In order to be able to use the Markov Chain Monte Carlo sampling for integrating over GP Hyperparameters you need to install a HDFS distribution on your system. For Ubuntu 14.04 the 
-following will do the trick. ::
-
-    $ sudo apt-get install libhdf5-serial-dev
 
     
 Installing Non-Python Prerequesites on Mac OS X
@@ -116,22 +111,20 @@ Installing Python Prerequisites with PIP
 
     $ pip install --upgrade gpy==0.6.0
     
-5. *Optional* If you want to use MCMC sampling for the hyperparameters of the acquisition functions in bayesian optimization then you need to install pymc. The installation is easy and you only need to clone the git repository and run the setup script. See the following link for details. ::
 
-    https://github.com/ebilionis/py-mcmc
+Manually installing apsis
+-------------------------
 
-Installing and Running Apsis
------------------------------
+You can find the current dev version on `github. <https://github.com/FrederikDiehl/apsis/tree/dev>`_. To be ready to use you need to
 
-Apsis doesn't have an installation routine yet. To be ready to use you need to
 
 1. Pull the code repository ::
 
     $ git clone https://github.com/FrederikDiehl/apsis.git
     
-2. Set the PYTHONPATH environment variable to include th apsis folder ::
+2. Set the PYTHONPATH environment variable to include the apsis- and apsis_client folders ::
 
-    $ export PYTHONPATH=[WHEREVER]/apsis/code/apsis
+    $ export PYTHONPATH=[WHEREVER]/apsis/code
 
 Finally run the test suite to see if everything works alright::
 
