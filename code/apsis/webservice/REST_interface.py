@@ -7,7 +7,6 @@ from apsis.utilities.logging_utils import get_logger
 import sys
 import signal
 
-WS_PORT = 5000
 CONTEXT_ROOT = ""
 
 app = Flask('apsis')
@@ -28,7 +27,7 @@ def set_exit(_signo, _stack_frame):
 signal.signal(signal.SIGINT, set_exit)
 
 
-def start_apsis(validation=False, cv=5):
+def start_apsis(port=5000, validation=False, cv=5):
     """
     Starts apsis.
 
@@ -40,7 +39,7 @@ def start_apsis(validation=False, cv=5):
         lAss = ValidationLabAssistant(cv=cv)
     else:
         lAss = LabAssistant()
-    app.run(debug=True)
+    app.run(debug=False, port=port)
     _logger.info("Finished initialization. Interface running now.")
 
 
