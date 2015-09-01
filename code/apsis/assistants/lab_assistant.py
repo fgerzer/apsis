@@ -382,6 +382,7 @@ class ValidationLabAssistant(LabAssistant):
     """
     This Lab Assistant is used for validating optimization with cross-validation.
     This is done by internally multiplexing each experiment into cv many.
+
     Attributes
     ----------
     cv : int
