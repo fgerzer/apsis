@@ -21,6 +21,7 @@ class LabAssistant(object):
     This is used to control multiple experiments at once.
 
     This is done by abstracting a dict of named experiment assistants.
+
     Attributes
     ----------
     _exp_assistants : dict of ExperimentAssistants.
@@ -215,6 +216,7 @@ class LabAssistant(object):
         """
         Returns (and plots) the plt.figure plotting the results over the steps
         for the specified experiments.
+
         Parameters
         ----------
         experiments : list of experiment names or experiment name.
@@ -293,6 +295,7 @@ class LabAssistant(object):
         """
         This method will write out all plots available to the path
         configured in self.lab_run_directory.
+
         Parameters
         ---------
         exp_ass : list, optional
@@ -415,6 +418,7 @@ class ValidationLabAssistant(LabAssistant):
         This actually initializes self.cv many experiments.
         Internally, the experiments are called name_i, where name is the
         experiment_name and i is the number of the experiment.
+
         Parameters
         ----------
         name : string
@@ -471,6 +475,7 @@ class ValidationLabAssistant(LabAssistant):
         and continues to be part of this lab assistant.
         The parameter definitions and other experiment specific configuration is
         copied over from the old to the new experiment.
+
         Parameters
         ----------
         exp_id : string
@@ -555,6 +560,7 @@ class ValidationLabAssistant(LabAssistant):
         Returns the Candidate next to evaluate for a specific experiment.
         This is done by using the get_next_candidate function from the
         sub-experiment with the least finished and pending candidates.
+
         Parameters
         ----------
         exp_name : string
@@ -586,6 +592,7 @@ class ValidationLabAssistant(LabAssistant):
             - one dot per evaluated result at a step
             - a line showing the best result found up to that step for every step
             - error bars for that line
+
         Parameters
         ----------
         experiments : list of experiment names or experiment name.
@@ -624,6 +631,7 @@ class ValidationLabAssistant(LabAssistant):
         This includes:
             - a line showing the best result found up to that step for every step
             - error bars for that line
+
         Parameters
         ----------
         experiments : list of experiment names or experiment name.
@@ -660,6 +668,7 @@ class ValidationLabAssistant(LabAssistant):
         """
         Returns the best candidate to date for a specific experiment.
         The best candidate is the best candidate from all of the experiments.
+
         Parameters
         ----------
         exp_name : string
@@ -681,6 +690,7 @@ class ValidationLabAssistant(LabAssistant):
         Returns the best candidates to date for each crossvalidated experiment.
         This is a list of candidates, on which further statistics like mean
         and variance can be computed.
+
         Parameters
         ----------
         exp_name : string
@@ -701,6 +711,7 @@ class ValidationLabAssistant(LabAssistant):
         """
         Generates plot data for use with plot_validation and
         plot_best_result_per_step
+
         Parameters
         ----------
         experiments : (List of) experiments
