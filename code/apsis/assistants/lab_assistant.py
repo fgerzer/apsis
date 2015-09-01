@@ -517,6 +517,7 @@ class ValidationLabAssistant(LabAssistant):
 
         self._logger.info("Experiment " + str(exp_id) + " cloned to " +
                          str(new_exp_id) + " and successfully initialized.")
+        return new_exp_id
 
     def _get_min_step(self):
         #min_step = min([len(x._experiment.candidates_finished) for x in self.exp_assistants.values()])
@@ -539,15 +540,15 @@ class ValidationLabAssistant(LabAssistant):
         idx = None
         for i in range(len(self.exp_assistants[exp_id])):
             if cand_id in self.candidates_pending[exp_id][i]:
-                idx = self.candidates_pending[exp_id][i].index(cand_id)
-                del(self.candidates_pending[exp_id][i][idx])
+                internal_idx = self.candidates_pending[exp_id][i].index(cand_id)
+                del(self.candidates_pending[exp_id][i][internal_idx])
+                idx = i
                 break
         if idx is None:
             raise ValueError("No candidate given to the outside for that experiment.")
         self.exp_assistants[exp_id][idx].update(candidate, status)
-        #TODO recomment.
-        #if not self.disable_auto_plot:
-            #self.write_out_plots_current_step()
+        if not self.disable_auto_plot:
+            self.write_out_plots_current_step()
 
     def get_next_candidate(self, exp_id):
         """
@@ -571,11 +572,11 @@ class ValidationLabAssistant(LabAssistant):
                               + len(self.candidates_pending[exp_id][i])
             if num_min_finished > fin_and_pending:
                 index_min_finished = i
+                num_min_finished = fin_and_pending
         cand = self.exp_assistants[exp_id][index_min_finished].get_next_candidate()
-        self.candidates_pending[exp_id][index_min_finished].append(cand.id)
+        if cand is not None:
+            self.candidates_pending[exp_id][index_min_finished].append(cand.id)
         return cand
-
-#Todo Done until here.
 
     def plot_result_per_step(self, experiments, show_plot=False, plot_min=None, plot_max=None, title=None):
         """
@@ -671,7 +672,7 @@ class ValidationLabAssistant(LabAssistant):
         """
         best_candidate = self.exp_assistants[exp_name][0].get_best_candidate()
         for c in self.get_best_candidates(exp_name):
-            if self.exp_assistants[exp_name][0].experiment.better_cand(c, best_candidate):
+            if self.exp_assistants[exp_name][0]._experiment.better_cand(c, best_candidate):
                 best_candidate = c
         return best_candidate
 
@@ -789,10 +790,10 @@ class ValidationLabAssistant(LabAssistant):
 
         for i, ex_assistant_name in enumerate(experiment_names_sorted):
             exp_asss = self.exp_assistants[ex_assistant_name]
-            curr_step = len(exp_asss[0].experiment.candidates_finished)
+            curr_step = len(exp_asss[0]._experiment.candidates_finished)
 
             for e in exp_asss:
-                curr_step = min(curr_step, e.experiment.candidates_finished)
+                curr_step = min(curr_step, e._experiment.candidates_finished)
             if i == 0:
                 last_step = curr_step
             elif last_step != curr_step:
