@@ -5,7 +5,7 @@ from nose.tools import assert_is_none, assert_equal, assert_dict_equal, \
     assert_true, assert_false
 from apsis.optimizers.bayesian.acquisition_functions import ExpectedImprovement, ProbabilityOfImprovement
 from apsis.models.experiment import Experiment
-from apsis.models.parameter_definition import MinMaxNumericParamDef
+from apsis.models.parameter_definition import MinMaxNumericParamDef, NominalParamDef
 from apsis.models.candidate import Candidate
 from apsis.utilities.import_utils import import_if_exists
 
@@ -43,9 +43,15 @@ class testBayesianOptimization(object):
         assert_equal(opt.kernel, "matern52")
 
     def test_get_next_candidate(self):
+<<<<<<< HEAD
 
         exp = Experiment("test", {"x": MinMaxNumericParamDef(0, 1)})
         opt = BayesianOptimizer(exp, {"initial_random_runs": 3})
+=======
+        opt = SimpleBayesianOptimizer({"initial_random_runs": 3})
+        exp = Experiment("test", {"x": MinMaxNumericParamDef(0, 1),
+                                  "y": NominalParamDef(["A", "B", "C"])})
+>>>>>>> i_117_nominal_hypercube
         for i in range(5):
             cand = opt.get_next_candidates()[0]
             assert_true(isinstance(cand, Candidate))

@@ -136,8 +136,8 @@ class TestLabAssistant(object):
         """
         Just a short test on whether validation lab assistant does not crash.
         """
-
         optimizer = "RandomSearch"
+
         name = "test_init_experiment"
         self.param_defs = {
             "x": MinMaxNumericParamDef(0, 1),
@@ -167,6 +167,5 @@ class TestLabAssistant(object):
         LAss.plot_validation([exp_id_one], show_plot=False)
         LAss.exp_assistants[exp_id_one][0]._experiment.minimization_problem = False
         LAss.plot_result_per_step(exp_id_one, show_plot=False)
-        plt.show()
 
         LAss.set_exit()

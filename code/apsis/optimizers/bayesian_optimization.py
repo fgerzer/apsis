@@ -42,7 +42,7 @@ class BayesianOptimizer(Optimizer):
     logger: logger
         The logger instance for this object.
     """
-    SUPPORTED_PARAM_TYPES = [NumericParamDef, PositionParamDef]
+    SUPPORTED_PARAM_TYPES = [NumericParamDef, NominalParamDef]
 
     kernel = None
     kernel_params = None
@@ -133,11 +133,15 @@ class BayesianOptimizer(Optimizer):
             return
         self.return_max = True
 
-        candidate_matrix = np.zeros((len(self._experiment.candidates_finished),
-                                     len(self._experiment.parameter_definitions)))
-        results_vector = np.zeros((len(self._experiment.candidates_finished), 1))
+        parameter_warped_size = 0
+        for p in experiment.parameter_definitions.values():
+            parameter_warped_size += p.warped_size()
 
-        param_names = sorted(self._experiment.parameter_definitions.keys())
+        candidate_matrix = np.zeros((len(experiment.candidates_finished),
+                                     parameter_warped_size))
+        results_vector = np.zeros((len(experiment.candidates_finished), 1))
+
+        param_names = sorted(experiment.parameter_definitions.keys())
         self.kernel = self._check_kernel(self.kernel, len(param_names),
                                          kernel_params=self.kernel_params)
 
@@ -145,7 +149,7 @@ class BayesianOptimizer(Optimizer):
             warped_in = self._experiment.warp_pt_in(c.params)
             param_values = []
             for pn in param_names:
-                param_values.append(warped_in[pn])
+                param_values.extend(warped_in[pn])
             candidate_matrix[i, :] = param_values
             results_vector[i] = c.result
 

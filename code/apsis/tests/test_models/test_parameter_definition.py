@@ -1,7 +1,9 @@
 __author__ = 'Frederik Diehl'
 
 from apsis.models.parameter_definition import *
-from nose.tools import assert_equal, assert_raises, assert_items_equal, assert_true, assert_false, assert_almost_equal
+from nose.tools import assert_equal, assert_raises, assert_items_equal, \
+    assert_true, assert_false, assert_almost_equal, assert_less_equal, \
+    assert_greater_equal
 
 class TestParameterDefinitions(object):
 
@@ -78,8 +80,11 @@ class TestParameterDefinitions(object):
         asymptotic = 0
         border = 1
         pd = AsymptoticNumericParamDef(asymptotic, border)
-        for i in range(-100, 201):
-            x=float(i)/100 * asymptotic + (1-float(i)/100)*border
+        for i in range(0, 100):
+            #x = float(i)/100 * asymptotic + (1-float(i)/100)*border
+            x = asymptotic + float(i)/100 * border
             w_i = pd.warp_in(x)
             w_o = pd.warp_out(w_i)
+            assert_less_equal(w_i[0], 1)
+            assert_greater_equal(w_i[0], 0)
             assert_almost_equal(w_o, min(max(x, 0), 1))
