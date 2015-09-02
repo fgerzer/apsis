@@ -7,6 +7,7 @@ from apsis.models.parameter_definition import NumericParamDef, PositionParamDef
 import random
 from apsis.utilities.logging_utils import get_logger
 
+
 class AcquisitionFunction(object):
     """
     An acquisition function is used to decide which point to evaluate next.
@@ -239,13 +240,13 @@ class ExpectedImprovement(AcquisitionFunction):
     exploitation_exploration_tradeoff = 0
     optimization_random_restarts = 10
 
-
-
     def __init__(self, params=None):
         """
         Initializes the EI instance.
 
-        Parameters: dict of string keys
+        Parameters
+        ----------
+        params : dict of string keys
             Defines behaviour of the function. Includes:
             exploitation_tradeoff: float
                 See Brochu, page 14.
@@ -291,7 +292,6 @@ class ExpectedImprovement(AcquisitionFunction):
         min_gradient :
 
         """
-        #TODO: find format of the result
         if isinstance(x, dict):
             value, gradient = self.evaluate(x, gp, experiment)
         else:
@@ -402,6 +402,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
 
     def compute_proposals_old(self, gp, experiment, number_proposals=1, return_max=True):
+        #TODO Integrate this function and fix it.
         param_names = experiment.parameter_definitions.keys()
 
 
