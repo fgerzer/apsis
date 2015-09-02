@@ -229,6 +229,12 @@ class AcquisitionFunction(object):
 
         return param_nd_array
 
+    def in_hypercube(self, x_vec):
+        for i in range(len(x_vec)):
+            if not 0 <= x_vec[i] <= 1:
+                return False
+        return True
+
 
 class ExpectedImprovement(AcquisitionFunction):
     """
@@ -469,7 +475,12 @@ class ExpectedImprovement(AcquisitionFunction):
                     #we need to check if the params are in the bounds, if
                     #they are not then don't use them
                     x_min_dict = self._translate_vector_dict(x_min, param_names)
-                    if experiment._check_param_dict(self._translate_vector_dict(x_min, param_names)):
+
+                    #This uses the fact that warp_in is defined to warp in all
+                    # parameters into the same [0, 1] hypercube. This means that
+                    # we can simply check whether all of the values for x_min
+                    # are between 0, 1.
+                    if self.in_hypercube(x_min):
                         scipy_optimizer_results.append((x_min_dict, f_min))
                     else:
                         scipy_optimizer_results_out_of_range.append((x_min_dict, f_min))
@@ -487,10 +498,10 @@ class ExpectedImprovement(AcquisitionFunction):
 
             elif len(scipy_optimizer_results) == 0 and len(scipy_optimizer_results_out_of_range) > 0:
                 self.logger.warning(str(optimizer) + " Optimization produced "
-                    "only parameter values that"
+                    "only parameter values that "
                     "do not match the defined parameter range. This indicates "
-                    "that increasing the parameter definition range might"
-                    "deliver better results."
+                    "that increasing the parameter definition range might "
+                    "deliver better results. "
                     "Using results from RandomSearch.")
 
                 return random_proposals[:number_proposals]

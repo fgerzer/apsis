@@ -5,11 +5,14 @@ from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 import time
+from apsis.utilities.logging_utils import get_logger
+
 
 class RandomSearch(Optimizer):
     SUPPORTED_PARAM_TYPES = [NominalParamDef, NumericParamDef]
 
     random_state = None
+    logger = None
 
     _experiment = None
 
@@ -20,10 +23,10 @@ class RandomSearch(Optimizer):
         Optimizer.__init__(self, experiment, optimizer_params)
 
     def get_next_candidates(self, num_candidates=1):
-        list = []
+        candidate_list = []
         for i in range(num_candidates):
-            list.append(self._gen_one_candidate())
-        return list
+            candidate_list.append(self._gen_one_candidate())
+        return candidate_list
 
     def _gen_one_candidate(self):
         self.random_state = check_random_state(self.random_state)

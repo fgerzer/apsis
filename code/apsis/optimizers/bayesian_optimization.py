@@ -111,7 +111,6 @@ class BayesianOptimizer(Optimizer):
         self.random_searcher = RandomSearch(experiment, optimizer_params)
         Optimizer.__init__(self, experiment, optimizer_params)
 
-
     def get_next_candidates(self, num_candidates=1):
         if len(self._experiment.candidates_finished) < self.initial_random_runs:
             # we do a random search.
