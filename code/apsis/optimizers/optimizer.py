@@ -244,10 +244,6 @@ class QueueBasedOptimizer(Optimizer):
         """
         if self._optimizer_in_queue is not None:
             self._optimizer_in_queue.put("exit")
-        if self._optimizer_in_queue is not None:
-            self._optimizer_in_queue.close()
-        if self._optimizer_out_queue is not None:
-            self._optimizer_out_queue.close()
 
 class QueueBackend(object):
     """
@@ -325,10 +321,7 @@ class QueueBackend(object):
                 self._check_update()
                 sleep(0.1)
         finally:
-            if self._in_queue is not None:
-                self._in_queue.close()
-            if self._out_queue is not None:
-                self._out_queue.close()
+            pass
 
     def _check_update(self):
         """
