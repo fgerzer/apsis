@@ -276,7 +276,7 @@ class ExperimentAssistant():
         date_name = datetime.datetime.utcfromtimestamp(
                 global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
         self._experiment_directory_base = os.path.join(self._write_directory_base,
-                                    self._experiment.exp_id + "_" + date_name)
+                                    self._experiment.exp_id)
         ensure_directory_exists(self._experiment_directory_base)
 
     def _best_result_per_step_dicts(self, color="b", plot_up_to=None):

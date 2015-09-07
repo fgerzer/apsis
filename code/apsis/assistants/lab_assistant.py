@@ -129,7 +129,7 @@ class LabAssistant(object):
         """
         if self._lab_run_directory is None:
             date_name = datetime.datetime.utcfromtimestamp(
-                self._global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
+                self._global_start_date).strftime("%Y-%m-%d_%H.%M.%S")
 
             self._lab_run_directory = os.path.join(self._write_directory_base,
                                                   date_name)
