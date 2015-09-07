@@ -189,6 +189,8 @@ class QueueBasedOptimizer(Optimizer):
 
     _optimizer_process = None
 
+    _manager = None
+
     def __init__(self, optimizer_class, experiment, optimizer_params=None):
         """
         Initializes a new QueueBasedOptimizer class.
@@ -208,8 +210,9 @@ class QueueBasedOptimizer(Optimizer):
             Supports the parameter "update_time", which sets the minimum time
             in seconds between checking for updates. Default is 0.1s
         """
-        self._optimizer_in_queue = multiprocessing.Queue()
-        self._optimizer_out_queue = multiprocessing.Queue()
+        self._manager = multiprocessing.Manager()
+        self._optimizer_in_queue = self._manager.Queue()
+        self._optimizer_out_queue = self._manager.Queue()
 
         self.SUPPORTED_PARAM_TYPES = optimizer_class.SUPPORTED_PARAM_TYPES
 
