@@ -216,11 +216,10 @@ class QueueBasedOptimizer(Optimizer):
 
         self.SUPPORTED_PARAM_TYPES = optimizer_class.SUPPORTED_PARAM_TYPES
 
-        optimizer = QueueBackend(optimizer_class, optimizer_params, experiment,
-                                 self._optimizer_out_queue,
-                                 self._optimizer_in_queue)
-        optimizer.start()
-
+        p = multiprocessing.Process(target=dispatch_queue_backend,
+							args=(optimizer_class, optimizer_params, experiment,
+					   self._optimizer_out_queue, self._optimizer_in_queue))
+        p.start()
         super(QueueBasedOptimizer, self).__init__(experiment, optimizer_params)
 
     def get_next_candidates(self, num_candidates=1):
@@ -250,7 +249,7 @@ class QueueBasedOptimizer(Optimizer):
         if self._optimizer_out_queue is not None:
             self._optimizer_out_queue.close()
 
-class QueueBackend(multiprocessing.Process):
+class QueueBackend(object):
     """
     This is the backend for QueueBasedOptimizer.
 
@@ -309,7 +308,7 @@ class QueueBackend(multiprocessing.Process):
         self._optimizer = optimizer_class(experiment, optimizer_params)
         self._exited = False
         self._experiment = experiment
-        multiprocessing.Process.__init__(self)
+        #multiprocessing.Process.__init__(self)
 
     def run(self):
         """
@@ -382,3 +381,10 @@ class QueueBackend(multiprocessing.Process):
                     self._out_queue.put_nowait(c)
         except Queue.Full:
             return
+
+
+def dispatch_queue_backend(optimizer_class, optimizer_params, experiment, out_queue, in_queue):
+    optimizer = QueueBackend(optimizer_class, optimizer_params, experiment,
+                                 out_queue,
+                                 in_queue)
+    optimizer.run()
