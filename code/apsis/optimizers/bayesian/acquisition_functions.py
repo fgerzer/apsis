@@ -12,8 +12,19 @@ class AcquisitionFunction(object):
     For a detailed explanation, see for example "A Tutorial on Bayesian
     Optimization of Expensive Cost Functions, with Application to Active User
     Modeling and Hierarchical Reinforcement Learning", Brochu et.al., 2010
-    In general, each acquisition function implements two functions, evaluate
-    and compute_max.
+
+    Internally, each AcquisitionFunction implements a couple of max_searcher and
+    multi_searcher functions. These work as follows:
+    A max_searcher function takes the gp, experiment and (optionally) a
+    good_proposals list. It then uses these to compute a proposal maximizing
+    the acquisition function, and returns a tuple of this and its score.
+    A multi_searcher function takes the gp, experiment, an (optional)
+    good_proposals list and a maximum number of proposals. It then uses these
+    to return several proposals in a list.
+    Additionally, both max_searcher and multi_searcher functions have to return
+    an own good_proposals list as a second return value (or None). These are
+    evaluated proposals which are not in the first list, and are used to
+    reuse computation.
     """
 
     _logger = None
@@ -22,6 +33,16 @@ class AcquisitionFunction(object):
     minimizes = True
 
     def __init__(self, params=None):
+        """
+        Initializes the acquisition function.
+
+        Parameters
+        ----------
+        params : dict or None, optional
+            The dictionary of parameters defining the behaviour of the
+            acquisition function. Supports at least max_searcher and
+            multi_searcher.
+        """
         self._logger = get_logger(self, specific_log_name=self.LOG_FILE_NAME)
         if params is None:
             params = {}
@@ -68,6 +89,37 @@ class AcquisitionFunction(object):
             return -value
 
     def compute_proposals(self, gp, experiment, number_proposals=1, return_max=True):
+        """
+        Computes up to number_proposals proposals.
+
+        If return_max, the first entry in the returned list will be the
+        proposal maximizing the acquisition function.
+
+        Parameters
+        ----------
+        gp : GPy.gp
+            The gp.
+
+        experiment : experiment
+            The current state of the experiment.
+
+        number_proposals : int, optional
+            The maximum number of proposals returned. The acquisition function
+             will try its best to return that many proposals, but this cannot
+             be guaranteed. By default, returns one proposal.
+
+        return_max : bool, optional
+            Whether to try and find the maximum of the proposal. If true (the
+            default) will do another evaluation step).
+
+        Returns
+        -------
+        proposals : list of tuples
+            A list of tuples. The first entry of each is a dictionary with the
+            parameter name and a 0-1 hypercube entry representing the warped
+            parameter value. The second entry is the acquisition function score
+            at that point. May return an empty list.
+        """
         max_searcher = "none"
         multi_searcher = "none"
         if return_max:
@@ -99,6 +151,13 @@ class AcquisitionFunction(object):
         return proposals
 
     def max_searcher_random(self, gp, experiment, good_results=None):
+        """
+        Randomly searches the best result.
+
+        Uses optimization_random_steps in self.params, with a default of 1000.
+
+        For signature details see the introduction in the class docs.
+        """
         if good_results is None:
             good_results = []
         optimization_random_steps = self.params.get("optimization_random_steps", 1000)
@@ -107,11 +166,9 @@ class AcquisitionFunction(object):
 
         best_param_idx = 0
         best_score = float("inf")
-        param_defs = experiment.parameter_definitions
-        param_names = sorted(param_defs.keys())
 
         for i in range(optimization_random_steps):
-            param_dict_eval = self._compute_random_prop(experiment)
+            param_dict_eval = self._gen_random_prop(experiment)
             score = self._compute_minimizing_evaluate(param_dict_eval, gp, experiment)
             if score < best_score:
                 best_param_idx = i
@@ -124,32 +181,26 @@ class AcquisitionFunction(object):
         return max_prop, evaluated_params
 
     def multi_searcher_random_best(self, gp, experiment, good_results=None, number_proposals=1):
-        evaluated_params = self.multi_random_ordered(gp, experiment, good_results, number_proposals)
+        """
+        Randomly evaluates a number of proposals, returning the number_proposals best ones.
+
+        Uses optimization_random_steps in self.params, with a default of 1000.
+
+        For signature details see the introduction in the class docs.
+        """
+        evaluated_params = self._multi_random_ordered(gp, experiment, good_results, number_proposals)
         return evaluated_params[:number_proposals], evaluated_params[number_proposals:]
-
-    def multi_random_ordered(self, gp, experiment, good_results=None, number_proposals=1):
-        if good_results is None:
-            good_results = []
-
-        evaluated_params = []
-
-        optimization_random_steps = self.params.get("optimization_random_steps", 1000)
-
-        random_steps = max(optimization_random_steps, number_proposals) - len(good_results)
-
-        if random_steps > 0:
-            for i in range(optimization_random_steps):
-                param_dict_eval = self._compute_random_prop(experiment)
-                score = self._compute_minimizing_evaluate(param_dict_eval, gp, experiment)
-                evaluated_params.append((param_dict_eval, score))
-
-        evaluated_params.extend(good_results)
-        evaluated_params.sort(key=lambda prop: prop[1])
-        return evaluated_params
 
 
     def multi_searcher_random_weighted(self, gp, experiment, good_results=None, number_proposals=1):
-        evaluated_params = self.multi_random_ordered(gp, experiment, good_results, number_proposals)
+        """
+        Returns number_proposals proposals randomly weighted by their acquisition result.
+
+        Uses optimization_random_steps in self.params, with a default of 1000.
+
+        For signature details see the introduction in the class docs.
+        """
+        evaluated_params = self._multi_random_ordered(gp, experiment, good_results, number_proposals)
         acq_sum = 0
         for p in evaluated_params:
             acq_sum += p[1]
@@ -167,7 +218,47 @@ class AcquisitionFunction(object):
         return props, evaluated_params
 
 
-    def _compute_random_prop(self, experiment):
+    def _multi_random_ordered(self, gp, experiment, good_results=None, number_proposals=1):
+        """
+        Generates a number of random proposals, and returns them ordered. Used
+        for other functions.
+
+        Uses optimization_random_steps in self.params, with a default of 1000.
+        """
+        if good_results is None:
+            good_results = []
+
+        evaluated_params = []
+
+        optimization_random_steps = self.params.get("optimization_random_steps", 1000)
+
+        random_steps = max(optimization_random_steps, number_proposals) - len(good_results)
+
+        if random_steps > 0:
+            for i in range(optimization_random_steps):
+                param_dict_eval = self._gen_random_prop(experiment)
+                score = self._compute_minimizing_evaluate(param_dict_eval, gp, experiment)
+                evaluated_params.append((param_dict_eval, score))
+
+        evaluated_params.extend(good_results)
+        evaluated_params.sort(key=lambda prop: prop[1])
+        return evaluated_params
+
+    def _gen_random_prop(self, experiment):
+        """
+        Generates a single random proposal in accordance to experiment.
+
+        Parameters
+        ----------
+        experiment : experiment
+            The experiment representing the current state.
+
+        Returns
+        -------
+        param_dict_eval : dict
+            Dictionary with one string key for each parameter name, and the
+            0-1 hypercube value for each of them as value.
+        """
         param_defs = experiment.parameter_definitions
         param_dict_eval = {}
         param_names = sorted(param_defs.keys())
@@ -255,12 +346,31 @@ class AcquisitionFunction(object):
 
 
 class GradientAcquisitionFunction(AcquisitionFunction):
+    """
+    This represents an acquisition function whose gradient we can compute.
+
+    This allows us to introduce some more (and nicer) optimizations.
+    """
 
     @abstractmethod
     def gradient(self, x, gp, experiment):
+        """
+        Computes the gradient of the function at x.
+
+        Signature is the same as evaluate.
+        """
         pass
 
     def _compute_minimizing_gradient(self, x, gp, experiment):
+        """
+        One problem is that, as a standard, scipy.optimize only searches
+        minima. This means we have to convert each acquisition function to
+        the minima meaning the best result.
+        Whether to actually return the negative gradient or not is set by the
+        self.minimizes parameter. If true, it will not change the sign.
+
+        Function signature is as evaluate.
+        """
         result = self.gradient(x, gp, experiment)
         if self.minimizes:
             return result
@@ -268,19 +378,24 @@ class GradientAcquisitionFunction(AcquisitionFunction):
             return -result
 
     def max_searcher_LBFGSB(self, gp, experiment, good_results=None):
+        """
+        Searches the maximum proposal via L-BFGS-B.
+
+        For signature see the class docs.
+        """
         bounds = []
         for pd in experiment.parameter_definitions.values():
             bounds.extend([(0.0, 1.0) for x in range(pd.warped_size())])
         if good_results is None:
             good_results = []
-        good_results.append(self._compute_random_prop(experiment))
+        good_results.append(self._gen_random_prop(experiment))
 
         scipy_optimizer_results = []
 
         random_restarts = self.params.get("num_restarts", 10)
 
         for i in range(random_restarts):
-            initial_guess = self._translate_dict_vector(self._compute_random_prop(experiment))
+            initial_guess = self._translate_dict_vector(self._gen_random_prop(experiment))
 
             result = scipy.optimize.minimize(self._compute_minimizing_evaluate,
                                                  x0=initial_guess, method="L-BFGS-B",
