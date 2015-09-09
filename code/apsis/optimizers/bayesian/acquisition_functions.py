@@ -1,9 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import scipy.optimize
-import logging
 from scipy.stats import multivariate_normal
-from apsis.models.parameter_definition import NumericParamDef, PositionParamDef
 import random
 from apsis.utilities.logging_utils import get_logger
 
@@ -17,7 +15,6 @@ class AcquisitionFunction(object):
     In general, each acquisition function implements two functions, evaluate
     and compute_max.
     """
-
 
     _logger = None
     params = None
@@ -76,9 +73,9 @@ class AcquisitionFunction(object):
         if return_max:
             max_searcher = self.params.get("max_searcher", "random")
             if number_proposals > 1:
-                multi_searcher = self.params.get("multi_searcher", "random")
+                multi_searcher = self.params.get("multi_searcher", "random_weighted")
         else:
-            multi_searcher = self.params.get("multi_searcher", "random")
+            multi_searcher = self.params.get("multi_searcher", "random_weighted")
 
         proposals = []
 
@@ -126,9 +123,13 @@ class AcquisitionFunction(object):
         evaluated_params.extend(good_results)
         return max_prop, evaluated_params
 
-    def multi_searcher_random(self, gp, experiment, good_results=None, number_proposals=1):
+    def multi_searcher_random_best(self, gp, experiment, good_results=None, number_proposals=1):
+        evaluated_params = self.multi_random_ordered(gp, experiment, good_results, number_proposals)
+        return evaluated_params[:number_proposals], evaluated_params[number_proposals:]
+
+    def multi_random_ordered(self, gp, experiment, good_results=None, number_proposals=1):
         if good_results is None:
-            good_results = []#TODO
+            good_results = []
 
         evaluated_params = []
 
@@ -144,7 +145,26 @@ class AcquisitionFunction(object):
 
         evaluated_params.extend(good_results)
         evaluated_params.sort(key=lambda prop: prop[1])
-        return evaluated_params[:number_proposals], evaluated_params[number_proposals:]
+        return evaluated_params
+
+
+    def multi_searcher_random_weighted(self, gp, experiment, good_results=None, number_proposals=1):
+        evaluated_params = self.multi_random_ordered(gp, experiment, good_results, number_proposals)
+        acq_sum = 0
+        for p in evaluated_params:
+            acq_sum += p[1]
+
+        props = []
+        for i in range(number_proposals):
+            rand_acq = random.random() * acq_sum
+            cur_sum = 0
+            for j, p in enumerate(evaluated_params):
+                if cur_sum + p[1] > rand_acq:
+                    props.append(p)
+                    del evaluated_params[j]
+                    break
+                cur_sum += p[1]
+        return props, evaluated_params
 
 
     def _compute_random_prop(self, experiment):
