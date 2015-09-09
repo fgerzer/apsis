@@ -8,8 +8,9 @@ import argparse
 
 def start_rest(port=5000, validation=False, cv=5):
     print("Initializing apsis. Val is %s, cv is %s" %(validation, cv))
-    REST_interface.start_apsis(port, validation)
     print("Initialized apsis on port %s" %port)
+    REST_interface.start_apsis(port, validation)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
