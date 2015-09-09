@@ -39,7 +39,7 @@ def start_apsis(port=5000, validation=False, cv=5):
         lAss = ValidationLabAssistant(cv=cv)
     else:
         lAss = LabAssistant()
-    app.run(debug=False, port=port)
+    app.run(host='0.0.0.0', debug=False, port=port)
     _logger.info("Finished initialization. Interface running now.")
 
 
