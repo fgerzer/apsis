@@ -121,7 +121,7 @@ class AcquisitionFunction(object):
                 best_score = score
             evaluated_params.append((param_dict_eval, score))
 
-        max_prop = evaluated_params[best_param_idx][0]
+        max_prop = evaluated_params[best_param_idx]
         del evaluated_params[best_param_idx]
         evaluated_params.extend(good_results)
         return max_prop, evaluated_params
@@ -279,7 +279,7 @@ class GradientAcquisitionFunction(AcquisitionFunction):
 
         scipy_optimizer_results.extend(good_results)
         best_idx = [x[1] for x in scipy_optimizer_results].index(min([x[1] for x in scipy_optimizer_results]))
-        max_prop = scipy_optimizer_results[best_idx][0]
+        max_prop = scipy_optimizer_results[best_idx]
         del scipy_optimizer_results[best_idx]
         return max_prop, scipy_optimizer_results
 
