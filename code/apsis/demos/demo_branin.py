@@ -9,7 +9,6 @@ from apsis_client.apsis_connection import Connection
 
 logger = get_logger("demos.demo_branin")
 
-server_address = "http://localhost:5000"
 conn = None
 
 def single_branin_evaluation_step(conn, exp_id):
@@ -34,7 +33,7 @@ def single_branin_evaluation_step(conn, exp_id):
 
     return to_eval
 
-def demo_branin(steps=20, random_steps=5, cv=5, disable_auto_plot=False):
+def demo_branin(steps=20, random_steps=5, cv=5, disable_auto_plot=False, server_address="http://localhost:5000"):
     conn = Connection(server_address)
 
 
@@ -56,8 +55,8 @@ def demo_branin(steps=20, random_steps=5, cv=5, disable_auto_plot=False):
     print("Initialized all optimizers.")
 
     for i in range(steps*cv):
-        if i > 0 and i%10 == 0:
-            print("finished %i" %i)
+        #if i > 0 and i%10 == 0:
+        print("finished %i" %i)
         for e_id in exp_ids:
             single_branin_evaluation_step(conn, e_id)
 
@@ -65,4 +64,4 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         server_address = sys.argv[1]
     print("Connecting to %s" %server_address)
-    demo_branin(steps=20, random_steps=10, cv=10)
+    demo_branin(steps=20, random_steps=10, cv=10, server_address=server_address)
