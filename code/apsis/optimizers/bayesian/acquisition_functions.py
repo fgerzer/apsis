@@ -87,7 +87,7 @@ class AcquisitionFunction(object):
         if max_searcher != "none":
             max_searcher = getattr(self, "max_searcher_" + max_searcher)
             max_prop, good_results_cur = max_searcher(gp, experiment)
-            if good_results_cur is None:
+            if good_results_cur is not None:
                 good_results.extend(good_results_cur)
             proposals.append(max_prop)
         if multi_searcher != "none":
@@ -95,7 +95,7 @@ class AcquisitionFunction(object):
             multi_prop, good_results_cur = multi_searcher(gp, experiment,
                                                           good_results=good_results,
                                                           number_proposals=number_proposals-1)
-            if good_results_cur is None:
+            if good_results_cur is not None:
                 good_results.extend(good_results_cur)
             proposals.extend(multi_prop)
 
@@ -114,10 +114,7 @@ class AcquisitionFunction(object):
         param_names = sorted(param_defs.keys())
 
         for i in range(optimization_random_steps):
-            param_dict_eval = {}
-            for pn in param_names:
-                pdef = param_defs[pn]
-                param_dict_eval[pn] = np.random.uniform(0, 1, pdef.warped_size)
+            param_dict_eval = self._compute_random_prop(experiment)
             score = self._compute_minimizing_evaluate(param_dict_eval, gp, experiment)
             if score < best_score:
                 best_param_idx = i
@@ -126,7 +123,7 @@ class AcquisitionFunction(object):
 
         max_prop = evaluated_params[best_param_idx][0]
         del evaluated_params[best_param_idx]
-        evaluated_params = evaluated_params.extend(good_results)
+        evaluated_params.extend(good_results)
         return max_prop, evaluated_params
 
     def multi_searcher_random(self, gp, experiment, good_results=None, number_proposals=1):
@@ -156,7 +153,7 @@ class AcquisitionFunction(object):
         param_names = sorted(param_defs.keys())
         for pn in param_names:
             pdef = param_defs[pn]
-            param_dict_eval[pn] = np.random.uniform(0, 1, pdef.warped_size)
+            param_dict_eval[pn] = np.random.uniform(0, 1, pdef.warped_size())
         return param_dict_eval
 
     def _translate_dict_vector(self, x):
