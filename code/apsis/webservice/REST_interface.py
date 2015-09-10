@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from apsis.assistants.lab_assistant import LabAssistant, ValidationLabAssistant
 from apsis.models.candidate import Candidate, from_dict
 from functools import wraps
@@ -63,14 +63,15 @@ def exception_handler(func):
 
 
 @app.route(CONTEXT_ROOT + "/", methods=["GET"])
-@exception_handler
 def overview_page():
     """
     This will, later, become an overview over the experiment.
     """
-    experiments = lAss.exp_assistants.keys()
-    str(experiments)
-    raise NotImplementedError
+    print(lAss.exp_assistants.keys())
+    return render_template("overview.html", experiments=lAss.exp_assistants.keys())
+    #experiments = lAss.exp_assistants.keys()
+    #str(experiments)
+    #raise NotImplementedError
     #TODO
 
 
