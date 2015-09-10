@@ -242,7 +242,7 @@ class Connection(object):
         url = self.server_address + "/experiments/%s/get_next_candidate" %exp_id
         return self._request(requests.get, url=url, blocking=blocking, timeout=timeout)
 
-    def update(self, exp_id, candidate, status, blocking=True, timeout=None):
+    def update(self, exp_id, candidate, status="finished", blocking=True, timeout=None):
         """
         Updates the result of the candidate.
 
