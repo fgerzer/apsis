@@ -201,10 +201,13 @@ class ExperimentAssistant():
             if candidates is None:
                 return None
             if len(candidates) > 0:
+                self._experiment.add_working(candidates[0])
                 return candidates[0]
             return None
         else:
-            return self._experiment.candidates_pending.pop()
+            cand = self._experiment.candidates_pending.pop()
+            self._experiment.add_working(cand)
+            return cand
 
     def update(self, candidate, status="finished"):
         """
