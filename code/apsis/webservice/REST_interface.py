@@ -75,9 +75,9 @@ def overview_page():
     #TODO
 
 
-@app.route(CONTEXT_ROOT + "/experiments", methods=["POST"])
+@app.route(CONTEXT_ROOT + "/c/experiments", methods=["POST"])
 @exception_handler
-def init_experiment():
+def client_init_experiment():
     """
     This initializes a single experiment.
 
@@ -123,13 +123,22 @@ def init_experiment():
     print(type(exp_id))
     return exp_id
 
-@app.route(CONTEXT_ROOT + "/experiments", methods=["GET"])
+@app.route(CONTEXT_ROOT + "/c/experiments", methods=["GET"])
 @exception_handler
-def get_all_experiments():
+def client_get_all_experiments():
     """
     This returns all experiment IDs.
     """
     return lAss.exp_assistants.keys()
+
+
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>", methods=["GET"])
+@exception_handler
+def client_get_experiment(experiment_id):
+    """
+    This will, later, return more details for a single experiment.
+    """
+    return lAss.exp_assistants[experiment_id]._experiment.to_dict()
 
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
@@ -141,10 +150,10 @@ def get_experiment(experiment_id):
     return lAss.exp_assistants[experiment_id]._experiment.to_dict()
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/get_next_candidate", methods=["GET"])
 @exception_handler
-def get_next_candidate(experiment_id):
+def client_get_next_candidate(experiment_id):
     """
     Returns the next candidate for a specific experiment.
 
@@ -168,10 +177,10 @@ def get_next_candidate(experiment_id):
     return result
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/get_best_candidate", methods=["GET"])
 @exception_handler
-def get_best_candidate(experiment_id):
+def client_get_best_candidate(experiment_id):
     """
     Returns the best finished candidate for an experiment.
 
@@ -194,10 +203,10 @@ def get_best_candidate(experiment_id):
     return result
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/update", methods=["POST"])
 @exception_handler
-def update(experiment_id):
+def client_update(experiment_id):
     """
     Updates the result of the candidate.
 
@@ -253,10 +262,10 @@ def update(experiment_id):
     return "success"
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/candidates",
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>/candidates",
            methods=["GET"])
 @exception_handler
-def _get_all_candidates(experiment_id):
+def client_get_all_candidates(experiment_id):
     """
     Returns the candidates for an experiment.
 
