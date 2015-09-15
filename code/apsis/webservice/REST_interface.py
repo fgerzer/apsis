@@ -138,8 +138,7 @@ def get_experiment(experiment_id):
     """
     This will, later, return more details for a single experiment.
     """
-    raise NotImplementedError
-    #TODO return whole experiment.
+    return lAss.exp_assistants[experiment_id]._experiment.to_dict()
 
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"

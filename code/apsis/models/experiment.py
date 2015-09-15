@@ -416,3 +416,26 @@ class Experiment(object):
                 return False
         return True
 
+    def to_dict(self):
+        param_defs = {}
+        for k in self.parameter_definitions:
+            param_defs[k] = self.parameter_definitions[k].to_dict()
+
+        cand_dict_finished = [c.to_dict() for c in self.candidates_finished]
+        cand_dict_pending = [c.to_dict() for c in self.candidates_pending]
+        cand_dict_working = [c.to_dict() for c in self.candidates_working]
+
+        result_dict = {"name": self.name,
+                "parameter_definitions": None, #TODO
+                "minimization_problem": self.minimization_problem,
+                "notes": self.notes,
+                "exp_id": self.exp_id,
+                "candidates_finished": cand_dict_finished,
+                "candidates_pending": cand_dict_pending,
+                "candidates_working": cand_dict_working
+                }
+        if self.best_candidate is not None:
+            result_dict["best_candidate"] = self.best_candidate.to_dict()
+        else:
+            result_dict["best_candidate"] = None
+        return result_dict
