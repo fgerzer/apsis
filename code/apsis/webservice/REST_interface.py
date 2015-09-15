@@ -6,6 +6,9 @@ from apsis.utilities.param_def_utilities import dict_to_param_defs
 from apsis.utilities.logging_utils import get_logger
 import sys
 import signal
+import urllib
+import StringIO
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 CONTEXT_ROOT = ""
 
@@ -142,13 +145,36 @@ def client_get_experiment(experiment_id):
 
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
-@exception_handler
 def get_experiment(experiment_id):
     """
     This will, later, return more details for a single experiment.
     """
-    return lAss.exp_assistants[experiment_id]._experiment.to_dict()
+    exp_assistant = lAss.exp_assistants[experiment_id]
+    experiment = exp_assistant._experiment
 
+    param_defs = {p: (experiment.parameter_definitions[p].__class__.__name__, experiment.parameter_definitions[p].to_dict()) for p in experiment.parameter_definitions}
+    finished_candidates_string = [c.to_dict() for c in experiment.candidates_finished]
+    pending_candidates_string = [c.to_dict() for c in experiment.candidates_pending]
+    working_candidates_string = [c.to_dict() for c in experiment.candidates_working]
+#    img_source = lAss.exp_assistants[experiment_id]._experiment_directory_base + "/cur_state.png"
+    fig = exp_assistant.plot_result_per_step()
+    fig.autofmt_xdate()
+    canvas=FigureCanvas(fig)
+    png_output = StringIO.StringIO()
+    canvas.print_png(png_output)
+    png_output = png_output.getvalue().encode("base64")
+
+
+    return render_template("experiment.html",
+                           exp_name=experiment.name,
+                           exp_id=experiment.exp_id,
+                           minimization=experiment.minimization_problem,
+                           param_defs=param_defs,
+                           finished_candidates_string=finished_candidates_string,
+                           pending_candidates_string=pending_candidates_string,
+                           working_candidates_string=working_candidates_string,
+                           result_per_step=urllib.quote(png_output.rstrip('\n'))
+                           )
 
 @app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/get_next_candidate", methods=["GET"])

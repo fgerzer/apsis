@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>apsis experiment overview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <div class="container">
+      <h1>experiment overview page</h1>
+      <br>
+      <h2>{{exp_name}}</h2>
+      <h3>experiment information</h3>
+      id: {{exp_id}}
+      <br>
+      minimization: {{minimization}}
+      <h4>Parameter Definitions</h4>
+      {% for p in param_defs%}
+        <li>{{p ~ " (" ~ param_defs[p][0] ~ ") : " ~ param_defs[p][1]}}</li>
+      {% endfor %}
+
+         <!-- <img src={{ url_for('static', filename = img_source) }} alt=""> -->
+        <img src="data:image/png;base64,{{result_per_step}}"/>
+        <h3>best candidate</h3>
+        {{best_cand_string}}
+
+
+        <h3>finished candidates</h3>
+        <table>
+            <tr>
+                <th>result</th>
+                <th>params</th>
+                <th>cost</th>
+                <th>id</th>
+                <th>worker_information</th>
+            </tr>
+        {% for c in finished_candidates_string%}
+            <tr>
+            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+                <td>{{ c[i] }}</td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+         </table>
+
+
+
+
+        <h3>working candidates</h3>
+        <table>
+            <tr>
+                <th>result</th>
+                <th>params</th>
+                <th>cost</th>
+                <th>id</th>
+                <th>worker_information</th>
+            </tr>
+        {% for c in working_candidates_string%}
+            <tr>
+            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+                <td>{{ c[i] }}</td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+         </table>
+
+        <h3>pending candidates</h3>
+        <table>
+            <tr>
+                <th>result</th>
+                <th>params</th>
+                <th>cost</th>
+                <th>id</th>
+                <th>worker_information</th>
+            </tr>
+        {% for c in pending_candidates_string%}
+            <tr>
+            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+                <td>{{ c[i] }}</td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+         </table>
+    </div>
+  </body>
+</html>

@@ -8,6 +8,7 @@
     <div class="container">
       <h1>Apsis overview page</h1>
       <br>
+      Currently running experiments:
       {% for exp in experiments %}
         <li><a href={{"/experiments/" ~ exp}}>{{exp}}</a></li>
       {% endfor %}
