@@ -438,6 +438,7 @@ class ExperimentAssistant():
         path = self._experiment_directory_base + "/plots"
         ensure_directory_exists(path)
         write_plot_to_file(fig, filename, path)
+        write_plot_to_file(fig, "cur_state", self._experiment_directory_base)
         plt.close(fig)
 
     def set_exit(self):

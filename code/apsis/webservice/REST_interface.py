@@ -6,6 +6,9 @@ from apsis.utilities.param_def_utilities import dict_to_param_defs
 from apsis.utilities.logging_utils import get_logger
 import sys
 import signal
+import urllib
+import StringIO
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 CONTEXT_ROOT = ""
 
@@ -75,9 +78,9 @@ def overview_page():
     #TODO
 
 
-@app.route(CONTEXT_ROOT + "/experiments", methods=["POST"])
+@app.route(CONTEXT_ROOT + "/c/experiments", methods=["POST"])
 @exception_handler
-def init_experiment():
+def client_init_experiment():
     """
     This initializes a single experiment.
 
@@ -123,29 +126,60 @@ def init_experiment():
     print(type(exp_id))
     return exp_id
 
-@app.route(CONTEXT_ROOT + "/experiments", methods=["GET"])
+@app.route(CONTEXT_ROOT + "/c/experiments", methods=["GET"])
 @exception_handler
-def get_all_experiments():
+def client_get_all_experiments():
     """
     This returns all experiment IDs.
     """
     return lAss.exp_assistants.keys()
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>", methods=["GET"])
 @exception_handler
+def client_get_experiment(experiment_id):
+    """
+    This will, later, return more details for a single experiment.
+    """
+    return lAss.exp_assistants[experiment_id]._experiment.to_dict()
+
+
+@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
 def get_experiment(experiment_id):
     """
     This will, later, return more details for a single experiment.
     """
-    raise NotImplementedError
-    #TODO return whole experiment.
+    exp_assistant = lAss.exp_assistants[experiment_id]
+    experiment = exp_assistant._experiment
+
+    param_defs = {p: (experiment.parameter_definitions[p].__class__.__name__, experiment.parameter_definitions[p].to_dict()) for p in experiment.parameter_definitions}
+    finished_candidates_string = [c.to_dict() for c in experiment.candidates_finished]
+    pending_candidates_string = [c.to_dict() for c in experiment.candidates_pending]
+    working_candidates_string = [c.to_dict() for c in experiment.candidates_working]
+#    img_source = lAss.exp_assistants[experiment_id]._experiment_directory_base + "/cur_state.png"
+    fig = exp_assistant.plot_result_per_step()
+    fig.autofmt_xdate()
+    canvas=FigureCanvas(fig)
+    png_output = StringIO.StringIO()
+    canvas.print_png(png_output)
+    png_output = png_output.getvalue().encode("base64")
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
+    return render_template("experiment.html",
+                           exp_name=experiment.name,
+                           exp_id=experiment.exp_id,
+                           minimization=experiment.minimization_problem,
+                           param_defs=param_defs,
+                           finished_candidates_string=finished_candidates_string,
+                           pending_candidates_string=pending_candidates_string,
+                           working_candidates_string=working_candidates_string,
+                           result_per_step=urllib.quote(png_output.rstrip('\n'))
+                           )
+
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/get_next_candidate", methods=["GET"])
 @exception_handler
-def get_next_candidate(experiment_id):
+def client_get_next_candidate(experiment_id):
     """
     Returns the next candidate for a specific experiment.
 
@@ -169,10 +203,10 @@ def get_next_candidate(experiment_id):
     return result
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/get_best_candidate", methods=["GET"])
 @exception_handler
-def get_best_candidate(experiment_id):
+def client_get_best_candidate(experiment_id):
     """
     Returns the best finished candidate for an experiment.
 
@@ -195,10 +229,10 @@ def get_best_candidate(experiment_id):
     return result
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>"
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/update", methods=["POST"])
 @exception_handler
-def update(experiment_id):
+def client_update(experiment_id):
     """
     Updates the result of the candidate.
 
@@ -254,10 +288,10 @@ def update(experiment_id):
     return "success"
 
 
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/candidates",
+@app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>/candidates",
            methods=["GET"])
 @exception_handler
-def _get_all_candidates(experiment_id):
+def client_get_all_candidates(experiment_id):
     """
     Returns the candidates for an experiment.
 

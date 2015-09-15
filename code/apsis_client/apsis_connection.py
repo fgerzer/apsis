@@ -162,7 +162,7 @@ class Connection(object):
             "optimizer_arguments": optimizer_arguments,
             "minimization": minimization
         }
-        url = self.server_address + "/experiments"
+        url = self.server_address + "/c/experiments"
         success = self._request(requests.post, url=url, json=msg,
                                 blocking=blocking, timeout=timeout)
         return success
@@ -189,7 +189,7 @@ class Connection(object):
             Returns one entry per existing experiment, containing its id.
             If blocking is False, may return None or "failed".
         """
-        url = self.server_address + "/experiments"
+        url = self.server_address + "/c/experiments"
         return self._request(requests.get, url, blocking=blocking, timeout=timeout)
 
     def get_next_candidate(self, exp_id, blocking=True, timeout=None):
@@ -239,7 +239,7 @@ class Connection(object):
             May also return "failed" or None if blocking is false and
             timeout > 0, which represents a failed request.
         """
-        url = self.server_address + "/experiments/%s/get_next_candidate" %exp_id
+        url = self.server_address + "/c/experiments/%s/get_next_candidate" %exp_id
         return self._request(requests.get, url=url, blocking=blocking, timeout=timeout)
 
     def update(self, exp_id, candidate, status="finished", blocking=True, timeout=None):
@@ -298,7 +298,7 @@ class Connection(object):
         result : string
             Returns "success" iff successful, "failed" otherwise.
         """
-        url = self.server_address + "/experiments/%s/update" %exp_id
+        url = self.server_address + "/c/experiments/%s/update" %exp_id
         msg = {
             "status": status,
             "candidate": candidate
@@ -332,7 +332,7 @@ class Connection(object):
             If blocking is True and timeout > 0, this may return None or
             "Failed".
         """
-        url = self.server_address + "/experiments/%s/get_best_candidate" %exp_id
+        url = self.server_address + "/c/experiments/%s/get_best_candidate" %exp_id
         return self._request(requests.get, url, blocking=blocking, timeout=timeout)
 
     def get_all_candidates(self, exp_id, blocking=True, timeout=None):
@@ -369,5 +369,5 @@ class Connection(object):
             If blocking is True and timeout > 0, this may return None or
             "Failed".
         """
-        url = self.server_address + "/experiments/%s/candidates" %exp_id
+        url = self.server_address + "/c/experiments/%s/candidates" %exp_id
         return self._request(requests.get, url, blocking=blocking, timeout=timeout)
