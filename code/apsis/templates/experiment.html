@@ -17,14 +17,28 @@
       {% for p in param_defs%}
         <li>{{p ~ " (" ~ param_defs[p][0] ~ ") : " ~ param_defs[p][1]}}</li>
       {% endfor %}
-
+        <br>
          <!-- <img src={{ url_for('static', filename = img_source) }} alt=""> -->
         <img src="data:image/png;base64,{{result_per_step}}"/>
+        <br>
         <h3>best candidate</h3>
-        {{best_cand_string}}
+        <table>
+            <tr>
+                <th>result</th>
+                <th>params</th>
+                <th>cost</th>
+                <th>id</th>
+                <th>worker_information</th>
+            </tr>
+            <tr>
+            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+                <td>{{ best_candidate_string[i] }}</td>
+            {% endfor %}
+            </tr>
+         </table>
+        <br>
 
-
-        <h3>finished candidates</h3>
+        <h3>finished candidates: {{finished_candidates_string|length}}</h3>
         <table>
             <tr>
                 <th>result</th>
@@ -41,11 +55,11 @@
             </tr>
         {% endfor %}
          </table>
+        <br>
 
 
 
-
-        <h3>working candidates</h3>
+        <h3>working candidates: {{working_candidates_string|length}}</h3>
         <table>
             <tr>
                 <th>result</th>
@@ -62,8 +76,11 @@
             </tr>
         {% endfor %}
          </table>
+        <br>
 
-        <h3>pending candidates</h3>
+
+
+        <h3>pending candidates: {{pending_candidates_string|length}}</h3>
         <table>
             <tr>
                 <th>result</th>
