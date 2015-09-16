@@ -257,7 +257,8 @@ class LabAssistant(object):
             "legend_loc": legend_loc,
             "x_label": "steps",
             "y_label": "result",
-            "title": title
+            "title": title,
+            "minimizing": self.exp_assistants[experiments[0]]._experiment.minimization_problem
         }
         fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
