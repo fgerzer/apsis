@@ -156,6 +156,10 @@ def get_experiment(experiment_id):
     finished_candidates_string = [c.to_dict() for c in experiment.candidates_finished]
     pending_candidates_string = [c.to_dict() for c in experiment.candidates_pending]
     working_candidates_string = [c.to_dict() for c in experiment.candidates_working]
+    if experiment.best_candidate is not None:
+        best_candidate_string = experiment.best_candidate.to_dict()
+    else:
+        best_candidate_string = None
 #    img_source = lAss.exp_assistants[experiment_id]._experiment_directory_base + "/cur_state.png"
     fig = exp_assistant.plot_result_per_step()
     fig.autofmt_xdate()
@@ -173,7 +177,8 @@ def get_experiment(experiment_id):
                            finished_candidates_string=finished_candidates_string,
                            pending_candidates_string=pending_candidates_string,
                            working_candidates_string=working_candidates_string,
-                           result_per_step=urllib.quote(png_output.rstrip('\n'))
+                           result_per_step=urllib.quote(png_output.rstrip('\n')),
+                           best_candidate_string=best_candidate_string
                            )
 
 @app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"

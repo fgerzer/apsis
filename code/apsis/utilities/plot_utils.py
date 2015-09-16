@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 plt.ioff()
 import random
 import os
-
+from matplotlib.colors import colorConverter
 
 def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None, plot_max=None):
     """
@@ -29,6 +29,9 @@ def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None, plot_max=
         color : string, optional
             Which color the plot should have. If None, a random colour is
             chosen.
+        minimizing : bool, optional
+            Whether the plot's goal is to minimize or maximize. Default is
+            minimize.
     ax : Matplotlib.Axes, optional
         Axes to continue. If None, will return a new Ax and figure.
     fig_options : dict, optional
@@ -57,6 +60,19 @@ def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None, plot_max=
     fig = None
     if ax is None:
         fig, ax = create_figure(fig_options)
+
+    for p in to_plot_list:
+        if not "cutoff_percent" in p:
+            continue
+        if fig_options.get("minimizing", True):
+            plot_min_this, plot_max_this = _get_y_min_max(p["y"], (1, p.get("cutoff_percent", 1)))
+        else:
+            plot_min_this, plot_max_this = _get_y_min_max(p["y"], (p.get("cutoff_percent", 1), 1))
+        if plot_min is None or plot_min > plot_min_this:
+            plot_min = plot_min_this
+        if plot_max is None or plot_max > plot_max_this:
+            plot_max = plot_max_this
+
     _plot_lists_ax(to_plot_list, ax, plot_min=plot_min, plot_max=plot_max)
     _polish_figure(ax, fig_options)
 
@@ -104,14 +120,11 @@ def _plot_lists_ax(to_plot_list, ax, plot_min=None, plot_max=None):
         The plot containing the plotted lists.
     """
     for p in to_plot_list:
-        ax = plot_single(p, ax)
-
+        ax = plot_single(p, ax, plot_min=plot_min, plot_max=plot_max)
     if plot_min is not None:
-        ax.ylim(ymin=plot_min)
-
+        ax.set_ylim(ymin=plot_min)
     if plot_max is not None:
-        ax.ylim(ymax=plot_max)
-
+        ax.set_ylim(ymax=plot_max)
     return ax
 
 def _get_y_min_max(y, plot_at_least):
@@ -134,15 +147,24 @@ def _get_y_min_max(y, plot_at_least):
     max_y_new : float
         The new maximum y value.
     """
+    if len(y) == 0:
+        return None, None
     sorted_y = sorted(y)
-    max_y_new = sorted_y[min(len(sorted_y)-1, int(plot_at_least[1] * len(sorted_y)))]
-    min_y_new = sorted_y[int(plot_at_least[0] * (1-len(sorted_y)))]
+    if plot_at_least[0] == 1:
+        min_y_new = min(y)
+    else:
+        min_y_new = sorted_y[int(plot_at_least[0] * (-len(sorted_y)))]
+    if plot_at_least[1] == 1:
+        max_y_new = max(y)
+    else:
+        max_y_new = sorted_y[min(len(sorted_y)-1, int(plot_at_least[1] * len(sorted_y)))]
+
     return min_y_new, max_y_new
 
 COLORS = ["g", "r", "c", "b", "m", "y"]
 
 
-def plot_single(to_plot, ax=None, fig_options=None):
+def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None):
     """
     Plots a single function.
 
@@ -188,10 +210,12 @@ def plot_single(to_plot, ax=None, fig_options=None):
     type = to_plot.get("type", "line")
     label = to_plot.get("label", None)
     color = to_plot.get("color", random.choice(COLORS))
+    color = colorConverter.to_rgba(color)
     x = to_plot.get("x", [])
     y = to_plot.get("y", [])
     var = to_plot.get("var", [])
-
+    #TODO Despite converting hte color to rgba, matplotlib does not want to change
+    #the arrow colors. Cause is unclear.
     if type == "line":
         if "var" in to_plot:
             ax.errorbar(x, y, label=label, yerr=var, color=color, linewidth=2.0, capthick=4, capsize=8.0)
@@ -199,7 +223,20 @@ def plot_single(to_plot, ax=None, fig_options=None):
             ax.plot(x, y, label=label, color=color, linewidth=2.0)
     elif type=="scatter":
         ax.scatter(x, y, label=label, color=color)
-
+        if len(x) > 1:
+            for i in range(len(x)):
+                arrow_len = (plot_max - plot_min) * 0.05
+                arrow_factor_min = abs(y[i] - min(y)) / (max(y) - min(y)) + 0.1
+                arrow_factor_max = abs(max(y) - y[i]) / (max(y) - min(y)) + 0.1
+                arrow_len_min = arrow_len * arrow_factor_min
+                arrow_len_max = arrow_len * arrow_factor_max
+                head_width = 0.2
+                if plot_min > y[i]:
+                    ax.arrow(x[i], plot_min+1.1*arrow_len_min, 0, -arrow_len_min/10, fc="k", ec="k",
+                        head_width=head_width, head_length=arrow_len_min, color=color)
+                if plot_max < y[i]:
+                    ax.arrow(x[i], plot_max-1.1*arrow_len_max, 0, arrow_len_max/10, fc="k", ec="k",
+                        head_width=head_width, head_length=arrow_len_max, color=color)
     return ax
 
 def write_plot_to_file(fig, filename, store_path,  file_format="png", transparent=False):

@@ -282,7 +282,7 @@ class ExperimentAssistant():
                                     self._experiment.exp_id)
         ensure_directory_exists(self._experiment_directory_base)
 
-    def _best_result_per_step_dicts(self, color="b", plot_up_to=None):
+    def _best_result_per_step_dicts(self, color="b", plot_up_to=None, cutoff_percentage=1.):
         """
         Returns a dict to use with plot_utils.
         Parameters
@@ -303,7 +303,8 @@ class ExperimentAssistant():
             "y": step_eval,
             "type": "scatter",
             "label": "%s" %(str(self._experiment.name)),
-            "color": color
+            "color": color,
+            "cutoff_percent": cutoff_percentage
         }
 
         step_best_dict = {
@@ -412,7 +413,7 @@ class ExperimentAssistant():
         """
 
 
-        plots = self._best_result_per_step_dicts(color)
+        plots = self._best_result_per_step_dicts(color, cutoff_percentage=0.5)
         if self._experiment.minimization_problem:
             legend_loc = 'upper right'
         else:
@@ -423,7 +424,8 @@ class ExperimentAssistant():
             "x_label": "steps",
             "y_label": "result",
             "title": "Plot of %s result over the steps."
-                     %(str(self._experiment.name))
+                     %(str(self._experiment.name)),
+            "minimizing": self._experiment.minimization_problem
         }
         fig, ax = plot_lists(plots, ax=ax, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
