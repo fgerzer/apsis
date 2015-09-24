@@ -10,6 +10,8 @@ Our goal is to provide a flexible, simple and scaleable approach - parallel, on 
 
 Apsis is open-sourced under the MIT license (see License.txt)
 
+Note that apsis only supports python 2.
+
 State
 -----
 
