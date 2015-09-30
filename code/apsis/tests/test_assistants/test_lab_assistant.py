@@ -174,5 +174,6 @@ class TestLabAssistant(object):
         LAss.plot_result_per_step(exp_id_one, show_plot=False)
         LAss._compute_current_step_overall()
 
+        LAss.get_best_candidate(exp_id_one)
         LAss.clone_experiments_by_id(exp_id_one, optimizer, optimizer_arguments, "new_name")
         LAss.set_exit()
