@@ -132,6 +132,11 @@ class TestLabAssistant(object):
         self.LAss.plot_result_per_step(exp_id_two)
 
 
+    def test_compute_current_step_overall(self):
+        exp_id = self.test_init_experiment()
+        self.LAss._compute_current_step_overall()
+
+
     def test_validation_lab_assistant(self):
         """
         Just a short test on whether validation lab assistant does not crash.
@@ -167,5 +172,8 @@ class TestLabAssistant(object):
         LAss.plot_validation([exp_id_one], show_plot=False)
         LAss.exp_assistants[exp_id_one][0]._experiment.minimization_problem = False
         LAss.plot_result_per_step(exp_id_one, show_plot=False)
+        LAss._compute_current_step_overall()
 
+        LAss.get_best_candidate(exp_id_one)
+        LAss.clone_experiments_by_id(exp_id_one, optimizer, optimizer_arguments, "new_name")
         LAss.set_exit()

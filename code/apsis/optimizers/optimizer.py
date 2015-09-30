@@ -1,11 +1,7 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.models.experiment import Experiment
 from abc import ABCMeta, abstractmethod
-import Queue
-import sys
 from time import sleep
-import signal
 import multiprocessing
 import Queue
 
@@ -276,7 +272,7 @@ class QueueBackend(object):
     _exited = None
     _update_time = None
 
-    def __init__(self, optimizer_class, optimizer_params, experiment, out_queue, in_queue):
+    def __init__(self, optimizer_class, experiment, out_queue, in_queue, optimizer_params=None):
         """
         Initializes this backend.
 
@@ -299,6 +295,8 @@ class QueueBackend(object):
         """
         self._out_queue = out_queue
         self._in_queue = in_queue
+        if optimizer_params is None:
+            optimizer_params = {}
         self._min_candidates = optimizer_params.get("min_candidates", 5)
         self._update_time = optimizer_params.get("update_time", 0.1)
         self._optimizer = optimizer_class(experiment, optimizer_params)
@@ -377,7 +375,6 @@ class QueueBackend(object):
 
 
 def dispatch_queue_backend(optimizer_class, optimizer_params, experiment, out_queue, in_queue):
-    optimizer = QueueBackend(optimizer_class, optimizer_params, experiment,
-                                 out_queue,
-                                 in_queue)
+    optimizer = QueueBackend(optimizer_class, experiment, out_queue,
+                                 in_queue, optimizer_params)
     optimizer.run()

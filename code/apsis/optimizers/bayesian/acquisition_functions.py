@@ -32,6 +32,9 @@ class AcquisitionFunction(object):
     LOG_FILE_NAME = "acquisition_functions.log"
     minimizes = True
 
+    default_max_searcher = "random"
+    default_multi_searcher = "random_weighted"
+
     def __init__(self, params=None):
         """
         Initializes the acquisition function.
@@ -123,11 +126,11 @@ class AcquisitionFunction(object):
         max_searcher = "none"
         multi_searcher = "none"
         if return_max:
-            max_searcher = self.params.get("max_searcher", "random")
+            max_searcher = self.params.get("max_searcher", self.default_max_searcher)
             if number_proposals > 1:
-                multi_searcher = self.params.get("multi_searcher", "random_weighted")
+                multi_searcher = self.params.get("multi_searcher", self.default_multi_searcher)
         else:
-            multi_searcher = self.params.get("multi_searcher", "random_weighted")
+            multi_searcher = self.params.get("multi_searcher", self.default_multi_searcher)
 
         proposals = []
 
@@ -352,6 +355,11 @@ class GradientAcquisitionFunction(AcquisitionFunction):
     This allows us to introduce some more (and nicer) optimizations.
     """
 
+
+    default_max_searcher = "LBFGSB"
+    default_multi_searcher = "random_weighted"
+
+
     @abstractmethod
     def gradient(self, x, gp, experiment):
         """
@@ -388,7 +396,9 @@ class GradientAcquisitionFunction(AcquisitionFunction):
             bounds.extend([(0.0, 1.0) for x in range(pd.warped_size())])
         if good_results is None:
             good_results = []
-        good_results.append(self._gen_random_prop(experiment))
+        random_prop = self._gen_random_prop(experiment)
+        random_prop_result = self._compute_minimizing_evaluate(random_prop, gp, experiment)
+        good_results.append((random_prop, random_prop_result))
 
         scipy_optimizer_results = []
 
@@ -526,12 +536,18 @@ class ExpectedImprovement(GradientAcquisitionFunction):
         return grad
 
     def gradient(self, x, gp, experiment):
-        x_value = self._translate_dict_vector(x)
+        if isinstance(x, dict):
+            x_value = self._translate_dict_vector(x)
+        else:
+            x_value = x
         value, gradient = self._evaluate_vector(x_value, gp, experiment)
         return gradient
 
     def evaluate(self, x, gp, experiment):
-        x_value = self._translate_dict_vector(x)
+        if isinstance(x, dict):
+            x_value = self._translate_dict_vector(x)
+        else:
+            x_value = x
         value, gradient = self._evaluate_vector(x_value, gp, experiment)
         return value
 

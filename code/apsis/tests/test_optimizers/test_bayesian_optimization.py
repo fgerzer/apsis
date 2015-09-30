@@ -43,15 +43,9 @@ class testBayesianOptimization(object):
         assert_equal(opt.kernel, "matern52")
 
     def test_get_next_candidate(self):
-<<<<<<< HEAD
-
-        exp = Experiment("test", {"x": MinMaxNumericParamDef(0, 1)})
-        opt = BayesianOptimizer(exp, {"initial_random_runs": 3})
-=======
-        opt = SimpleBayesianOptimizer({"initial_random_runs": 3})
         exp = Experiment("test", {"x": MinMaxNumericParamDef(0, 1),
                                   "y": NominalParamDef(["A", "B", "C"])})
->>>>>>> i_117_nominal_hypercube
+        opt = BayesianOptimizer(exp, {"initial_random_runs": 3})
         for i in range(5):
             cand = opt.get_next_candidates()[0]
             assert_true(isinstance(cand, Candidate))
