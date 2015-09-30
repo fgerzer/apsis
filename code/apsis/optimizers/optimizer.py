@@ -1,11 +1,7 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.models.experiment import Experiment
 from abc import ABCMeta, abstractmethod
-import Queue
-import sys
 from time import sleep
-import signal
 import multiprocessing
 import Queue
 
