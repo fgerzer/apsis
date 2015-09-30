@@ -498,12 +498,14 @@ class ValidationLabAssistant(LabAssistant):
             These are arguments for the optimizer. Refer to their documentation
             as to which are available.
         """
-        self.exp_assistants[new_exp_name] = []
 
         while True:
             new_exp_id = uuid.uuid4().hex
             if new_exp_id not in self.exp_assistants.keys():
                 break
+
+        self.exp_assistants[new_exp_id] = []
+
 
         #every experiment has self.cv many assistants
         for i in range(len(self.exp_assistants[exp_id])):
