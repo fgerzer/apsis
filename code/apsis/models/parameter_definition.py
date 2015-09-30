@@ -380,20 +380,24 @@ class PositionParamDef(OrdinalParamDef):
         super(PositionParamDef, self).__init__(values)
         self.positions = positions
 
+
     def warp_in(self, unwarped_value):
         pos = self.positions[self.values.index(unwarped_value)]
-        warped_value = (pos - self.positions[0])/(self.positions[-1]-self.positions[0])
+        warped_value = float(pos - min(self.positions))/(max(self.positions) - min(self.positions))
         return warped_value
 
     def warp_out(self, warped_value):
-        if warped_value > self.positions[-1]:
+        if warped_value > 1:
             return self.values[-1]
-        if warped_value < self.positions[0]:
+        if warped_value < 0:
             return self.values[0]
+        pos = warped_value * (max(self.positions) - min(self.positions)) + min(self.positions)
+        min_pos_idx = 0
         for i, p in enumerate(self.positions):
-            if p >= warped_value:
-                return self.values[i]
-        return self.values[-1]
+            if abs(i - pos) < abs(i - self.positions[min_pos_idx]):
+                min_pos_idx = i
+
+        return self.values[min_pos_idx]
 
     def warped_size(self):
         return 1
@@ -416,7 +420,6 @@ class FixedValueParamDef(PositionParamDef):
     """
     def __init__(self, values):
         positions = []
-        pos = 0
         for v in values:
             pos = v
             positions.append(pos)
