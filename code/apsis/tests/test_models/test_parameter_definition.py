@@ -12,8 +12,11 @@ class TestParameterDefinitions(object):
             _ = NominalParamDef(False)
         with assert_raises(ValueError):
             _ = NominalParamDef([])
-        test = NominalParamDef(["A", "B", "C"])
-        assert_items_equal(test.values, ["A", "B", "C"])
+        test_values = ["A", "B", "C"]
+        test = NominalParamDef(test_values)
+        assert_items_equal(test.values, test_values)
+        x = random.choice(test_values)
+        assert_equal(x, test.warp_out(test.warp_in(x)))
 
         assert_true(test.is_in_parameter_domain("A"))
         assert_false(test.is_in_parameter_domain(1))
@@ -23,8 +26,13 @@ class TestParameterDefinitions(object):
             _ = OrdinalParamDef(False)
         with assert_raises(ValueError):
             _ = OrdinalParamDef([])
-        test = OrdinalParamDef(["A", "B", "C"])
-        assert_items_equal(test.values, ["A", "B", "C"])
+
+
+        test_values = ["A", "B", "C"]
+        test = OrdinalParamDef(test_values)
+        assert_items_equal(test.values, test_values)
+        x = random.choice(test_values)
+        assert_equal(x, test.warp_out(test.warp_in(x)))
 
         assert_true(test.is_in_parameter_domain("A"))
         assert_false(test.is_in_parameter_domain(1))
@@ -39,6 +47,9 @@ class TestParameterDefinitions(object):
         with assert_raises(ValueError):
             _ = MinMaxNumericParamDef([], 2)
         test = MinMaxNumericParamDef(-1, 10)
+
+        x = random.uniform(-1, 10)
+        assert_equal(x, test.warp_out(test.warp_in(x)))
 
         assert_true(test.is_in_parameter_domain(0.5))
         assert_false(test.is_in_parameter_domain(11))
@@ -59,11 +70,19 @@ class TestParameterDefinitions(object):
             test.distance("A", 1)
         with assert_raises(ValueError):
             test.distance(0, "B")
+
+        x = random.uniform(0, 10)
+        assert_equal(x, test.warp_out(test.warp_in(x)))
+
         assert_equal(test.compare_values(0, 10), -1)
         assert_equal(test.compare_values(1, 0), 1)
 
     def test_fixed_def(self):
         test = FixedValueParamDef([0, 1, 2, 3])
+
+        x = random.choice([0, 1, 2, 3])
+        assert_equal(x, test.warp_out(test.warp_in(x)))
+
 
         assert_true(test.is_in_parameter_domain(1))
         assert_false(test.is_in_parameter_domain(1.5))
@@ -76,10 +95,33 @@ class TestParameterDefinitions(object):
         assert_equal(test.compare_values(0, 3), -1)
         assert_equal(test.compare_values(1, 0), 1)
 
+
+    def test_equidistant_def(self):
+        test = EquidistantPositionParamDef([0, 1, 2, 3])
+
+        x = random.choice([0, 1, 2, 3])
+        assert_equal(x, test.warp_out(test.warp_in(x)))
+
+        assert_true(test.is_in_parameter_domain(1))
+        assert_false(test.is_in_parameter_domain(1.5))
+        assert_equal(test.distance(0, 1), 1./3)
+        assert_equal(test.distance(0, 3), 1)
+        with assert_raises(ValueError):
+            test.distance("A", 1)
+        with assert_raises(ValueError):
+            test.distance(0, 4)
+        assert_equal(test.compare_values(0, 3), -1)
+        assert_equal(test.compare_values(1, 0), 1)
+
     def test_asymptotic_def(self):
         asymptotic = 0
         border = 1
+
         pd = AsymptoticNumericParamDef(asymptotic, border)
+
+        x = random.uniform(0, 1)
+        assert_almost_equal(x, pd.warp_out(pd.warp_in(x)))
+
         for i in range(0, 100):
             #x = float(i)/100 * asymptotic + (1-float(i)/100)*border
             x = asymptotic + float(i)/100 * border
