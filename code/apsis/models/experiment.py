@@ -120,7 +120,7 @@ class Experiment(object):
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
         if not self._check_candidate(candidate):
-            raise  ValueError("candidate %s is not valid." %candidate)
+            raise ValueError("candidate %s is not valid." %candidate)
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         if candidate in self.candidates_working:
@@ -151,7 +151,7 @@ class Experiment(object):
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
         if not self._check_candidate(candidate):
-            raise  ValueError("candidate is not valid.")
+            raise ValueError("candidate is not valid.")
         self.candidates_pending.append(candidate)
 
     def add_working(self, candidate):
@@ -174,7 +174,7 @@ class Experiment(object):
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
         if not self._check_candidate(candidate):
-            raise  ValueError("candidate is not valid.")
+            raise ValueError("candidate is not valid.")
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         self.candidates_working.append(candidate)
@@ -200,7 +200,7 @@ class Experiment(object):
         if not isinstance(candidate, Candidate):
             raise ValueError("candidate is not an instance of Candidate.")
         if not self._check_candidate(candidate):
-            raise  ValueError("candidate is not valid.")
+            raise ValueError("candidate is not valid.")
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
         self.candidates_pending.append(candidate)
