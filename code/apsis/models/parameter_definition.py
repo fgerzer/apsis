@@ -489,22 +489,22 @@ class AsymptoticNumericParamDef(NumericParamDef):
 
     def warp_in(self, unwarped_value):
         if not min(self.asymptotic_border, self.border) <= unwarped_value:
-            value_in = min(self.asymptotic_border, self.border)
+            unwarped_value = min(self.asymptotic_border, self.border)
         if not unwarped_value <= max(self.asymptotic_border, self.border):
-            value_in = max(self.asymptotic_border, self.border)
+            unwarped_value = max(self.asymptotic_border, self.border)
         if unwarped_value == self.border:
             return [0]
         elif unwarped_value == self.asymptotic_border:
             return [1]
-        return [(1-2**(math.log(unwarped_value, 10)))*
+        return [(1-2**(math.log(unwarped_value, 10))) *
                 (self.border-self.asymptotic_border)+self.asymptotic_border]
 
     def warp_out(self, warped_value):
         warped_value_single = warped_value[0]
-        if not 0 <= warped_value_single:
-            value_out = 0
-        if not warped_value_single <= 1:
-            value_out = 1
+        if warped_value_single < 0:
+            warped_value_single = 0
+        if warped_value_single > 1:
+            warped_value_single = 1
         if warped_value_single == 1:
             return self.asymptotic_border
         elif warped_value_single == 0:
