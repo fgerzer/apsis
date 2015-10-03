@@ -59,12 +59,24 @@ class TestParameterDefinitions(object):
         test = MinMaxNumericParamDef(-1, 10)
 
         x = random.uniform(-1, 10)
-        assert_equal(x, test.warp_out(test.warp_in(x)))
+        assert_almost_equal(x, test.warp_out(test.warp_in(x)))
 
         assert_true(test.is_in_parameter_domain(0.5))
         assert_false(test.is_in_parameter_domain(11))
-        assert_equal(test.distance(0, 1), 1./11)
-        assert_equal(test.distance(-1, 10), 1)
+        assert_almost_equal(test.distance(0, 1), 1./11)
+        assert_almost_equal(test.distance(-1, 10), 1)
+
+        # test non-inclusive
+        test = MinMaxNumericParamDef(-1, 10, False, False)
+
+        x = random.uniform(0, 9)
+        assert_almost_equal(x, test.warp_out(test.warp_in(x)))
+
+        assert_true(test.is_in_parameter_domain(0.5))
+        assert_false(test.is_in_parameter_domain(-1))
+        assert_false(test.is_in_parameter_domain(10))
+        assert_false(test.is_in_parameter_domain(11))
+
 
 
     def test_numeric_def(self):
