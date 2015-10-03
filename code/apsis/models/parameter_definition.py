@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import random
 import math
+import sys
 
 class ParamDef(object):
     """
@@ -321,11 +322,19 @@ class NumericParamDef(ParamDef, ComparableParamDef):
 class MinMaxNumericParamDef(NumericParamDef):
     """
     Defines a numeric parameter definition defined by a lower and upper bound.
+
+    By default, it will represent a parameter space of [lower_bound,
+    upper_bound]. However, it can be set to exclude one or both of the bounds.
     """
     lower_bound = None
     upper_bound = None
+    include_lower = None
+    include_upper = None
 
-    def __init__(self, lower_bound, upper_bound):
+    EPSILON = None
+
+    def __init__(self, lower_bound, upper_bound,
+                 include_lower=True, include_upper=True):
         """
         Initializes the lower/upper bound defined parameter space.
 
@@ -333,9 +342,17 @@ class MinMaxNumericParamDef(NumericParamDef):
         ----------
         lower_bound : float
             The lowest possible value
-
         upper_bound : float
             The highest possible value
+        include_lower : bool, optional
+            If true (default), lower_bound is the smallest possible value that
+            can be returned. If false, all returned values will be greater than
+            lower_bound.
+        include_upper : bool, optional
+            If true (default), upper_bound is the greatest possible value that
+            can be returned. If false, all returned values will be less than
+            upper_bound.
+
         """
         try:
             lower_bound = float(lower_bound)
@@ -344,18 +361,35 @@ class MinMaxNumericParamDef(NumericParamDef):
             raise ValueError("Bounds are not floats.")
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
+        self.include_lower = include_lower
+        self.include_upper = include_upper
+        self.EPSILON = sys.float_info.epsilon * 10
 
     def warp_in(self, unwarped_value):
-        return [(unwarped_value - self.lower_bound)/(self.upper_bound-self.lower_bound)]
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.EPSILON )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.EPSILON )
+        result = ((unwarped_value - (modifed_lower))/
+                  (modifed_upper-modifed_lower))
+        return [float(result)]
 
     def warp_out(self, warped_value):
-        return warped_value[0]*(self.upper_bound - self.lower_bound) + self.lower_bound
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.EPSILON )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.EPSILON )
+        result = warped_value[0]*(modifed_upper - modifed_lower) + modifed_lower
+        return float(result)
 
     def warped_size(self):
         return 1
 
     def is_in_parameter_domain(self, value):
-        return self.lower_bound <= value <= self.upper_bound
+        if not (self.lower_bound < value or
+                    (self.lower_bound <= value and self.include_lower)):
+            return False
+        if not (self.upper_bound > value or
+                    (self.upper_bound >= value and self.include_upper)):
+
+            return False
+        return True
 
 
 class PositionParamDef(OrdinalParamDef):
