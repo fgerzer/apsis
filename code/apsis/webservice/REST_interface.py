@@ -70,8 +70,7 @@ def overview_page():
     """
     This will, later, become an overview over the experiment.
     """
-    print(lAss.exp_assistants.keys())
-    return render_template("overview.html", experiments=lAss.exp_assistants.keys())
+    return render_template("overview.html", experiments=lAss.get_ids())
     #experiments = lAss.exp_assistants.keys()
     #str(experiments)
     #raise NotImplementedError
@@ -111,9 +110,10 @@ def client_init_experiment():
     name = data_received.get("name", None)
     exp_id = data_received.get("exp_id", None)
     notes = data_received.get("notes", None)
-    if exp_id in lAss.exp_assistants:
-        _logger.warning("%s already in exp_ids. (is %s). Failing the initialization."
-                        %(exp_id, lAss.exp_assistants.keys()))
+    if lAss.contains_id(exp_id):
+        _logger.warning("%s already in exp_ids. (Exp_ids known are %s). "
+                        "Failing the initialization."
+                        %(exp_id, lAss.get_ids()))
         return "failed"
     optimizer = data_received.get("optimizer", None)
     optimizer_arguments = data_received.get("optimizer_arguments", None)
@@ -132,7 +132,7 @@ def client_get_all_experiments():
     """
     This returns all experiment IDs.
     """
-    return lAss.exp_assistants.keys()
+    return lAss.get_ids()
 
 
 @app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>", methods=["GET"])
@@ -141,7 +141,7 @@ def client_get_experiment(experiment_id):
     """
     This will, later, return more details for a single experiment.
     """
-    return lAss.exp_assistants[experiment_id]._experiment.to_dict()
+    return lAss.get_experiment_as_dict(experiment_id)
 
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
@@ -149,19 +149,15 @@ def get_experiment(experiment_id):
     """
     This will, later, return more details for a single experiment.
     """
-    exp_assistant = lAss.exp_assistants[experiment_id]
-    experiment = exp_assistant._experiment
-
-    param_defs = {p: (experiment.parameter_definitions[p].__class__.__name__, experiment.parameter_definitions[p].to_dict()) for p in experiment.parameter_definitions}
-    finished_candidates_string = [c.to_dict() for c in experiment.candidates_finished]
-    pending_candidates_string = [c.to_dict() for c in experiment.candidates_pending]
-    working_candidates_string = [c.to_dict() for c in experiment.candidates_working]
-    if experiment.best_candidate is not None:
-        best_candidate_string = experiment.best_candidate.to_dict()
-    else:
-        best_candidate_string = None
+    exp_dict = lAss.get_experiment_as_dict(experiment_id)
+    param_defs = exp_dict["parameter_definitions"]
+    print(param_defs)
+    finished_candidates_string = exp_dict["candidates_finished"]
+    pending_candidates_string = exp_dict["candidates_pending"]
+    working_candidates_string = exp_dict["candidates_working"]
+    best_candidate_string = exp_dict["best_candidate"]
 #    img_source = lAss.exp_assistants[experiment_id]._experiment_directory_base + "/cur_state.png"
-    fig = exp_assistant.plot_result_per_step()
+    fig = lAss.get_plot_result_per_step(experiment_id)
     fig.autofmt_xdate()
     canvas=FigureCanvas(fig)
     png_output = StringIO.StringIO()
@@ -170,9 +166,9 @@ def get_experiment(experiment_id):
 
 
     return render_template("experiment.html",
-                           exp_name=experiment.name,
-                           exp_id=experiment.exp_id,
-                           minimization=experiment.minimization_problem,
+                           exp_name=exp_dict["name"],
+                           exp_id=exp_dict["exp_id"],
+                           minimization=exp_dict["minimization_problem"],
                            param_defs=param_defs,
                            finished_candidates_string=finished_candidates_string,
                            pending_candidates_string=pending_candidates_string,
@@ -347,4 +343,5 @@ def _get_fig_results_per_step(experiment_id):
     """
     Currently unused.
     """
+    raise NotImplementedError
     return lAss.exp_assistants[experiment_id]._best_result_per_step_dicts(color="b")
