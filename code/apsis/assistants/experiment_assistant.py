@@ -209,6 +209,19 @@ class ExperimentAssistant():
             self._experiment.add_working(cand)
             return cand
 
+    def get_experiment_as_dict(self):
+        """
+        Returns the dictionary describing this EAss' experiment.
+
+        Signature is equivalent to Experiment.to_dict()
+
+        Returns
+        -------
+            exp_dict : dict
+                The experiment dictionary.
+        """
+        return self._experiment.to_dict()
+
     def update(self, candidate, status="finished"):
         """
         Updates the experiment_assistant with the status of an experiment
