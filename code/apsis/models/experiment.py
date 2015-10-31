@@ -417,6 +417,29 @@ class Experiment(object):
         return True
 
     def to_dict(self):
+        """
+        Generates a dictionary describing the current state of the experiment.
+
+        This dictionary contains the following keys/value pairs:
+            - "name": The name of the experiment
+            - "parameter_definition": The parameter definition. Contains, for
+                each parameter, a key/value pair of the parameter name and the
+                dictionary as defined by param_def.to_dict().
+            - "mimization_problem": Boolean. If true, the problem is one we
+                want to minimize. If false, it's one we want to maximize.
+            - "notes": Notes the user has entered for the experiment.
+            - "exp_id": The ID of the experiment.
+            - One list each for candidates_finished, -_pending and -_working.
+                Contains, for each candidate in the respective list, a
+                dictionary as defined by Candidate.to_dict().
+            - "best_candidate": The best candidate or None.
+
+        Returns
+        -------
+            dict : dict
+                Dictionary as defined above.
+
+        """
         param_defs = {}
         for k in self.parameter_definitions:
             param_defs[k] = self.parameter_definitions[k].to_dict()
@@ -426,7 +449,7 @@ class Experiment(object):
         cand_dict_working = [c.to_dict() for c in self.candidates_working]
 
         result_dict = {"name": self.name,
-                "parameter_definitions": None, #TODO
+                "parameter_definitions": param_defs,
                 "minimization_problem": self.minimization_problem,
                 "notes": self.notes,
                 "exp_id": self.exp_id,
