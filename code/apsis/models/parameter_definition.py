@@ -54,7 +54,9 @@ class ParamDef(object):
         dict : dictionary
             The dictionary from which we can rebuild this parameter definition.
         """
-        return self.__dict__
+        result_dict = self.__dict__
+        result_dict["type"] = self.__class__.__name__
+        return result_dict
 
     @abstractmethod
     def warp_in(self, unwarped_value):
@@ -460,7 +462,8 @@ class FixedValueParamDef(PositionParamDef):
         super(FixedValueParamDef, self).__init__(values, positions)
 
     def to_dict(self):
-        return {"values": self.values}
+        return {"values": self.values,
+                "type": self.__class__.__name__}
 
 
 class EquidistantPositionParamDef(PositionParamDef):
