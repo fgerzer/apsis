@@ -333,10 +333,10 @@ class MinMaxNumericParamDef(NumericParamDef):
     include_lower = None
     include_upper = None
 
-    EPSILON = None
+    epsilon = None
 
     def __init__(self, lower_bound, upper_bound,
-                 include_lower=True, include_upper=True):
+                 include_lower=True, include_upper=True, epsilon=None):
         """
         Initializes the lower/upper bound defined parameter space.
 
@@ -354,6 +354,10 @@ class MinMaxNumericParamDef(NumericParamDef):
             If true (default), upper_bound is the greatest possible value that
             can be returned. If false, all returned values will be less than
             upper_bound.
+        epsilon : float, optional
+            The tolerance to use if excluding upper/lower. The lowest or
+            highest value will be epsilon away from the given lower or upper
+            bound. By default, this is ten times the system's float epsilon.
 
         """
         try:
@@ -361,22 +365,24 @@ class MinMaxNumericParamDef(NumericParamDef):
             upper_bound = float(upper_bound)
         except:
             raise ValueError("Bounds are not floats.")
+        if epsilon is None:
+            epsilon = sys.float_info.epsilon * 10
+        self.epsilon = epsilon
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.include_lower = include_lower
         self.include_upper = include_upper
-        self.EPSILON = sys.float_info.epsilon * 10
 
     def warp_in(self, unwarped_value):
-        modifed_lower = self.lower_bound + (0 if self.include_lower else self.EPSILON )
-        modifed_upper = self.upper_bound - (0 if self.include_upper else self.EPSILON )
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
         result = ((unwarped_value - (modifed_lower))/
                   (modifed_upper-modifed_lower))
         return [float(result)]
 
     def warp_out(self, warped_value):
-        modifed_lower = self.lower_bound + (0 if self.include_lower else self.EPSILON )
-        modifed_upper = self.upper_bound - (0 if self.include_upper else self.EPSILON )
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
         result = warped_value[0]*(modifed_upper - modifed_lower) + modifed_lower
         return float(result)
 
