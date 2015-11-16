@@ -32,7 +32,7 @@ class TestLabAssistant(object):
         """
         if os.name == "nt":
             assert_equal(self.LAss._write_directory_base, "/tmp/APSIS_WRITING")
-        assert_items_equal(self.LAss.exp_assistants, {})
+        assert_items_equal(self.LAss._exp_assistants, {})
         assert_equal(self.LAss._logger,
                      get_logger("apsis.assistants.lab_assistant.LabAssistant"))
 
@@ -61,7 +61,7 @@ class TestLabAssistant(object):
                                   optimizer_arguments=optimizer_arguments,
                                   param_defs=self.param_defs, minimization=minimization)
 
-        exp_ass = self.LAss.exp_assistants[exp_id]
+        exp_ass = self.LAss._exp_assistants[exp_id]
 
         assert_equal(exp_ass._optimizer.__class__.__name__, optimizer)
         assert_equal(exp_ass._optimizer_arguments, optimizer_arguments)
@@ -98,8 +98,8 @@ class TestLabAssistant(object):
         cand = self.LAss.get_next_candidate(exp_id)
         cand.result = 1
         self.LAss.update(exp_id, status="finished", candidate=cand)
-        assert_items_equal(self.LAss.exp_assistants[exp_id]._experiment.candidates_finished, [cand])
-        assert_equal(self.LAss.exp_assistants[exp_id]._experiment.candidates_finished[0].result, 1)
+        assert_items_equal(self.LAss._exp_assistants[exp_id]._experiment.candidates_finished, [cand])
+        assert_equal(self.LAss._exp_assistants[exp_id]._experiment.candidates_finished[0].result, 1)
 
     def test_get_best_candidate(self):
         """
@@ -128,7 +128,7 @@ class TestLabAssistant(object):
         self.LAss.update(exp_id_one, "finished", cand)
         self.LAss.write_out_plots_current_step()
         self.LAss.plot_result_per_step([exp_id_one])
-        self.LAss.exp_assistants[exp_id_one]._experiment.minimization_problem = False
+        self.LAss._exp_assistants[exp_id_one]._experiment.minimization_problem = False
         self.LAss.plot_result_per_step(exp_id_two)
 
 
@@ -170,7 +170,7 @@ class TestLabAssistant(object):
         LAss.write_out_plots_current_step()
         LAss.plot_result_per_step([exp_id_one], show_plot=False)
         LAss.plot_validation([exp_id_one], show_plot=False)
-        LAss.exp_assistants[exp_id_one][0]._experiment.minimization_problem = False
+        LAss._exp_assistants[exp_id_one][0]._experiment.minimization_problem = False
         LAss.plot_result_per_step(exp_id_one, show_plot=False)
         LAss._compute_current_step_overall()
 
