@@ -65,8 +65,9 @@ class LabAssistant(object):
         self._exp_assistants = {}
         self._logger.info("lab assistant successfully initialized.")
 
-    def init_experiment(self, name, optimizer, param_defs, exp_id=None, notes=None,
-                        optimizer_arguments=None, minimization=True):
+    def init_experiment(self, name, optimizer, param_defs, exp_id=None,
+                        notes=None, optimizer_arguments=None,
+                        minimization=True):
         """
         Initializes an experiment.
 
@@ -291,7 +292,8 @@ class LabAssistant(object):
         return plots_to_write
 
     def _get_min_step(self):
-        min_step = min([len(x._experiment.candidates_finished) for x in self._exp_assistants.values()])
+        min_step = min([len(x._experiment.candidates_finished) for x in
+                        self._exp_assistants.values()])
         return min_step
 
     def write_out_plots_current_step(self, exp_ass=None, same_steps_only=True):
@@ -328,7 +330,8 @@ class LabAssistant(object):
         for plot_name in plots_to_write.keys():
             plot_fig = plots_to_write[plot_name]
 
-            write_plot_to_file(plot_fig, plot_name + "_step" + str(min_step), plot_step_base)
+            write_plot_to_file(plot_fig, plot_name + "_step" + str(min_step),
+                               plot_step_base)
             plt.close(plot_fig)
 
 
@@ -983,5 +986,18 @@ class ValidationLabAssistant(LabAssistant):
         return self._exp_assistants[exp_id][index].get_experiment_as_dict()
 
     def get_plot_result_per_step(self, exp_id):
+        """
+        Returns the single plot of results per step for the specified exp.
+
+        Parameters
+        ----------
+        exp_id : string
+            The id of the experiment.
+
+        Returns
+        -------
+        plot : matplotlib plot
+            The result per step plot of the experiment.
+        """
         return self.plot_result_per_step([exp_id], show_plot=False,
                                          plot_min=None, plot_max=None, title=None)
