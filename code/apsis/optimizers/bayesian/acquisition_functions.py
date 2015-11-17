@@ -429,7 +429,6 @@ class GradientAcquisitionFunction(AcquisitionFunction):
         return max_prop, scipy_optimizer_results
 
 
-
 class ExpectedImprovement(GradientAcquisitionFunction):
     """
     Implements the Expected Improvement acquisition function.
@@ -550,6 +549,7 @@ class ExpectedImprovement(GradientAcquisitionFunction):
             x_value = x
         value, gradient = self._evaluate_vector(x_value, gp, experiment)
         return value
+
 
 class ProbabilityOfImprovement(AcquisitionFunction):
     """
