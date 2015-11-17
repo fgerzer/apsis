@@ -2,6 +2,7 @@ from apsis.utilities.logging_utils import get_logger
 
 logger = get_logger("apsis.utils.import_utils")
 
+
 def import_if_exists(module_name):
     """
     Function tries to import a module but will not fail if the module does

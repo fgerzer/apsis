@@ -156,7 +156,6 @@ def get_experiment(experiment_id):
     pending_candidates_string = exp_dict["candidates_pending"]
     working_candidates_string = exp_dict["candidates_working"]
     best_candidate_string = exp_dict["best_candidate"]
-#    img_source = lAss.exp_assistants[experiment_id]._experiment_directory_base + "/cur_state.png"
     fig = lAss.get_plot_result_per_step(experiment_id)
     fig.autofmt_xdate()
     canvas=FigureCanvas(fig)
