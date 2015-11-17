@@ -58,8 +58,6 @@ class BayesianOptimizer(Optimizer):
 
     return_max = True
 
-    _experiment = None
-
     _logger = None
 
     def __init__(self, experiment, optimizer_params=None):
