@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import random
 import math
+import sys
 
 class ParamDef(object):
     """
@@ -17,6 +18,9 @@ class ParamDef(object):
         """
         Should test whether a certain value is in the parameter domain as
         defined by this class.
+
+        Note that you have to test a value that is not warped in here. A
+        warped-in value can be tested by checking whether it is in [0, 1].
 
         Parameters
         ----------
@@ -39,6 +43,65 @@ class ParamDef(object):
         if valueA == valueB:
             return 0
         return 1
+
+    def to_dict(self):
+        """
+        This returns a dictionary from which we can build a new instance of
+        the parameter.
+
+        Returns
+        -------
+        dict : dictionary
+            The dictionary from which we can rebuild this parameter definition.
+        """
+        result_dict = self.__dict__
+        result_dict["type"] = self.__class__.__name__
+        return result_dict
+
+    @abstractmethod
+    def warp_in(self, unwarped_value):
+        """
+        Warps value_in into a [0, 1] hypercube represented by a list.
+
+        Parameters
+        ----------
+        unwarped_value :
+            The value to be warped in. Has to be in parameter domain of this
+            class.
+
+        Returns
+        -------
+        warped_value : list of floats in [0, 1]
+            The warped value. Length of the list is equal to the return of
+            warped_size()
+        """
+        pass
+
+    @abstractmethod
+    def warp_out(self, warped_value):
+        """
+        Warps a [0, 1] hypercube position representing a value to said value.
+
+        Parameters
+        ----------
+        warped_value : list of floats in [0, 1]
+            The warped value. Length of the list is equal to the return of
+            warped_size()
+
+        Returns
+        -------
+        unwarped_value :
+            The value to be warped in. Has to be in parameter domain of this
+            class.
+        """
+        pass
+
+    @abstractmethod
+    def warped_size(self):
+        """
+        Returns the size a list of this parameters' warped values will have.
+        """
+        pass
 
 
 class ComparableParamDef(object):
@@ -125,6 +188,18 @@ class NominalParamDef(ParamDef):
         """
         return value in self.values
 
+    def warp_in(self, unwarped_value):
+        warped_value = [0]*len(self.values)
+        warped_value[self.values.index(unwarped_value)] = 1
+        return warped_value
+
+    def warp_out(self, warped_value):
+        warped_value = list(warped_value)
+        return self.values[warped_value.index(max(warped_value))]
+
+    def warped_size(self):
+        return len(self.values)
+
 
 class OrdinalParamDef(NominalParamDef, ComparableParamDef):
     """
@@ -209,41 +284,18 @@ class NumericParamDef(ParamDef, ComparableParamDef):
         """
         Uses the warp_out function for tests.
         """
-        if 0 <= self.warp_in(value) <= 1:
+        if 0 <= self.warp_in(value)[0] <= 1:
             return True
         return False
 
-    def warp_in(self, value_in):
-        """
-        Warps value_in into the [0, 1] space.
+    def warp_in(self, unwarped_value):
+        return [self.warping_in(unwarped_value)]
 
-        Parameters
-        ----------
-        value_in : float
-            The input value
+    def warp_out(self, warped_value):
+        return self.warping_out(warped_value[0])
 
-        Returns
-        -------
-        value_in_scaled: float in [0, 1]
-            The scaled output value.
-        """
-        return self.warping_in(value_in)
-
-    def warp_out(self, value_out):
-        """
-        Warps value_out out of the [0, 1] space.
-
-        Parameters
-        ----------
-        value_out : float in [0, 1]
-            The output value.
-
-        Returns
-        -------
-        value_out_unscaled : float
-            The unscaled value in the parameter space.
-        """
-        return self.warping_out(value_out)
+    def warped_size(self):
+        return 1
 
     def compare_values(self, one, two):
         if not self.is_in_parameter_domain(one):
@@ -266,17 +318,25 @@ class NumericParamDef(ParamDef, ComparableParamDef):
         if not self.is_in_parameter_domain(valueB):
             raise ValueError("Parameter two = " + str(valueB) + " not in value "
                 "domain.")
-        return self.warp_in(valueB) - self.warp_in(valueA)
+        return self.warp_in(valueB)[0] - self.warp_in(valueA)[0]
 
 
 class MinMaxNumericParamDef(NumericParamDef):
     """
     Defines a numeric parameter definition defined by a lower and upper bound.
-    """
-    x_min = None
-    x_max = None
 
-    def __init__(self, lower_bound, upper_bound):
+    By default, it will represent a parameter space of [lower_bound,
+    upper_bound]. However, it can be set to exclude one or both of the bounds.
+    """
+    lower_bound = None
+    upper_bound = None
+    include_lower = None
+    include_upper = None
+
+    epsilon = None
+
+    def __init__(self, lower_bound, upper_bound,
+                 include_lower=True, include_upper=True, epsilon=None):
         """
         Initializes the lower/upper bound defined parameter space.
 
@@ -284,26 +344,60 @@ class MinMaxNumericParamDef(NumericParamDef):
         ----------
         lower_bound : float
             The lowest possible value
-
         upper_bound : float
             The highest possible value
+        include_lower : bool, optional
+            If true (default), lower_bound is the smallest possible value that
+            can be returned. If false, all returned values will be greater than
+            lower_bound.
+        include_upper : bool, optional
+            If true (default), upper_bound is the greatest possible value that
+            can be returned. If false, all returned values will be less than
+            upper_bound.
+        epsilon : float, optional
+            The tolerance to use if excluding upper/lower. The lowest or
+            highest value will be epsilon away from the given lower or upper
+            bound. By default, this is ten times the system's float epsilon.
+
         """
         try:
             lower_bound = float(lower_bound)
             upper_bound = float(upper_bound)
         except:
             raise ValueError("Bounds are not floats.")
-        self.x_min = lower_bound
-        self.x_max = upper_bound
+        if epsilon is None:
+            epsilon = sys.float_info.epsilon * 10
+        self.epsilon = epsilon
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
+        self.include_lower = include_lower
+        self.include_upper = include_upper
 
-    def warp_in(self, value_in):
-        return (value_in - self.x_min)/(self.x_max-self.x_min)
+    def warp_in(self, unwarped_value):
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
+        result = ((unwarped_value - (modifed_lower))/
+                  (modifed_upper-modifed_lower))
+        return [float(result)]
 
-    def warp_out(self, value_out):
-        return value_out*(self.x_max - self.x_min) + self.x_min
+    def warp_out(self, warped_value):
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
+        result = warped_value[0]*(modifed_upper - modifed_lower) + modifed_lower
+        return float(result)
+
+    def warped_size(self):
+        return 1
 
     def is_in_parameter_domain(self, value):
-        return self.x_min <= value <= self.x_max
+        if not (self.lower_bound < value or
+                    (self.lower_bound <= value and self.include_lower)):
+            return False
+        if not (self.upper_bound > value or
+                    (self.upper_bound >= value and self.include_upper)):
+
+            return False
+        return True
 
 
 class PositionParamDef(OrdinalParamDef):
@@ -328,26 +422,27 @@ class PositionParamDef(OrdinalParamDef):
         super(PositionParamDef, self).__init__(values)
         self.positions = positions
 
-    def warp_in(self, value_in):
-        """
-        Warps in the value to a [0, 1] hypercube value.
-        """
-        pos = self.positions[self.values.index(value_in)]
-        value_out = (pos - self.positions[0])/(self.positions[-1]-self.positions[0])
-        return value_out
 
-    def warp_out(self, value_out):
-        """
-        Warps out a value from a [0, 1] hypercube to one of the values.
-        """
-        if value_out > self.positions[-1]:
+    def warp_in(self, unwarped_value):
+        pos = self.positions[self.values.index(unwarped_value)]
+        warped_value = float(pos - min(self.positions))/(max(self.positions) - min(self.positions))
+        return warped_value
+
+    def warp_out(self, warped_value):
+        if warped_value > 1:
             return self.values[-1]
-        if value_out < self.positions[0]:
+        if warped_value < 0:
             return self.values[0]
+        pos = warped_value * (max(self.positions) - min(self.positions)) + min(self.positions)
+        min_pos_idx = 0
         for i, p in enumerate(self.positions):
-            if p >= value_out:
-                return self.values[i]
-        return self.values[-1]
+            if abs(i - pos) < abs(i - self.positions[min_pos_idx]):
+                min_pos_idx = i
+
+        return self.values[min_pos_idx]
+
+    def warped_size(self):
+        return 1
 
     def distance(self, valueA, valueB):
         if valueA not in self.values or valueB not in self.values:
@@ -359,6 +454,7 @@ class PositionParamDef(OrdinalParamDef):
         diff = abs(pos_a - pos_b)
         return float(diff)
 
+
 class FixedValueParamDef(PositionParamDef):
     """
     Extension of PositionParamDef, in which the position is equal to the value
@@ -366,11 +462,29 @@ class FixedValueParamDef(PositionParamDef):
     """
     def __init__(self, values):
         positions = []
-        pos = 0
         for v in values:
             pos = v
             positions.append(pos)
         super(FixedValueParamDef, self).__init__(values, positions)
+
+    def to_dict(self):
+        return {"values": self.values,
+                "type": self.__class__.__name__}
+
+
+class EquidistantPositionParamDef(PositionParamDef):
+    """
+    Extension of PositionParamDef, in which the position of each value is
+    equidistant from its neighbours and their order is determined by their
+    order in values.
+    """
+    def __init__(self, values):
+        positions = []
+        for i, v in enumerate(values):
+            pos = float(i)/(len(values)-1)
+            positions.append(pos)
+        super(EquidistantPositionParamDef, self).__init__(values, positions)
+
 
 class AsymptoticNumericParamDef(NumericParamDef):
     """
@@ -416,55 +530,30 @@ class AsymptoticNumericParamDef(NumericParamDef):
         self.asymptotic_border = float(asymptotic_border)
         self.border = float(border)
 
-    def warp_in(self, value_in):
-        """
-        Warps value_in in.
+    def warp_in(self, unwarped_value):
+        if not min(self.asymptotic_border, self.border) <= unwarped_value:
+            unwarped_value = min(self.asymptotic_border, self.border)
+        if not unwarped_value <= max(self.asymptotic_border, self.border):
+            unwarped_value = max(self.asymptotic_border, self.border)
+        if unwarped_value == self.border:
+            return [0]
+        elif unwarped_value == self.asymptotic_border:
+            return [1]
+        return [(1-2**(math.log(unwarped_value, 10))) *
+                (self.border-self.asymptotic_border)+self.asymptotic_border]
 
-        Parameters
-        ----------
-        value_in : float
-            Should be between (including) border and asymptotic_border. If
-            outside the corresponding interval, it is automatically
-            translated to 0 and 1 respectively.
-
-        Returns
-        -------
-        value_in : float
-            The [0, 1]-translated value.
-        """
-        if not min(self.asymptotic_border, self.border) <= value_in:
-            value_in = min(self.asymptotic_border, self.border)
-        if not value_in <= max(self.asymptotic_border, self.border):
-            value_in = max(self.asymptotic_border, self.border)
-        if value_in == self.border:
-            return 0
-        elif value_in == self.asymptotic_border:
-            return 1
-        return (1-2**(math.log(value_in, 10)))*(self.border-self.asymptotic_border)+self.asymptotic_border
-
-
-    def warp_out(self, value_out):
-        """
-        Warps value_in out.
-
-        Parameters
-        ----------
-        value_out : float
-            Should be between (including) 0 and 1. If bigger than 1, it is
-            translated to border. If smaller than 0, it is translated to
-            asymptotic_border.
-
-        Returns
-        -------
-        value_out : float
-            The translated value.
-        """
-        if not 0 <= value_out:
-            value_out = 0
-        if not value_out <= 1:
-            value_out = 1
-        if value_out == 1:
+    def warp_out(self, warped_value):
+        warped_value_single = warped_value[0]
+        if warped_value_single < 0:
+            warped_value_single = 0
+        if warped_value_single > 1:
+            warped_value_single = 1
+        if warped_value_single == 1:
             return self.asymptotic_border
-        elif value_out == 0:
+        elif warped_value_single == 0:
             return self.border
-        return 10**math.log(1-(value_out-self.asymptotic_border)/(self.border-self.asymptotic_border), 2)
+        return 10**math.log(1-(warped_value_single-self.asymptotic_border)/
+                            (self.border-self.asymptotic_border), 2)
+
+    def warped_size(self):
+        return 1

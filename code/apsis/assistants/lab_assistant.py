@@ -1,16 +1,22 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.assistants.experiment_assistant import BasicExperimentAssistant, PrettyExperimentAssistant
-import matplotlib.pyplot as plt
-from apsis.utilities.plot_utils import create_figure, _polish_figure, plot_lists, write_plot_to_file
+from apsis.assistants.experiment_assistant import ExperimentAssistant
 from apsis.utilities.file_utils import ensure_directory_exists
 import time
 import datetime
 import os
 from apsis.utilities.logging_utils import get_logger
+from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
+import matplotlib.pyplot as plt
+import uuid
+import copy
 import numpy as np
 
-class BasicLabAssistant(object):
+# These are the colours supported by the plot.
+COLORS = ["g", "r", "c", "b", "m", "y"]
+
+
+class LabAssistant(object):
     """
     This is used to control multiple experiments at once.
 
@@ -18,205 +24,196 @@ class BasicLabAssistant(object):
 
     Attributes
     ----------
-    exp_assistants : dict of ExperimentAssistants.
+    _exp_assistants : dict of ExperimentAssistants.
         The dictionary of experiment assistants this LabAssistant uses.
-
-    write_directory_base : String, optional
+    _write_directory_base : String, optional
         The directory to write all the results and plots to.
-
-    logger : logging.logger
+    _logger : logging.logger
         The logger for this class.
     """
-    exp_assistants = None
+    _exp_assistants = None
 
-    write_directory_base = None
-    lab_run_directory = None
-    global_start_date = None
-    logger = None
+    _write_directory_base = None
+    _lab_run_directory = None
+    _global_start_date = None
+    _logger = None
 
-    def __init__(self, write_directory_base="/tmp/APSIS_WRITING"):
+
+
+    def __init__(self, write_directory_base=None):
         """
-        Initializes the lab assistant with no experiments.
+        Initializes the lab assistant.
 
         Parameters
         ----------
-        write_directory_base : String, optional
-            The directory to write all the results and plots to.
+        write_directory_base : string, optional
+            Sets the base write directory for the lab assistant. If None
+            (default) the directory depends on the operating system.
+            ./APSIS_WRITING if on Windows, /tmp/APSIS_WRITING otherwise.
         """
-        self.exp_assistants = {}
-        self.logger = get_logger(self)
-        self.logger.info("Initializing laboratory assistant.")
-        self.write_directory_base = write_directory_base
-        self.global_start_date = time.time()
-
+        self._logger = get_logger(self)
+        if write_directory_base is None:
+            if os.name == "nt":
+                write_directory_base = os.path.relpath("APSIS_WRITING")
+            else:
+                write_directory_base = "/tmp/APSIS_WRITING"
+        self._logger.info("Initializing lab assistant.")
+        self._logger.info("Writing results to %s" %write_directory_base)
+        self._write_directory_base = write_directory_base
+        self._global_start_date = time.time()
         self._init_directory_structure()
-        self.logger.info("laboratory assistant successfully initialized.")
+        self._exp_assistants = {}
+        self._logger.info("lab assistant successfully initialized.")
 
-    def init_experiment(self, name, optimizer, param_defs,
-                        optimizer_arguments=None, minimization=True):
+    def init_experiment(self, name, optimizer, param_defs, exp_id=None,
+                        notes=None, optimizer_arguments=None,
+                        minimization=True):
         """
-        Initializes a new experiment.
+        Initializes an experiment.
 
         Parameters
         ----------
         name : string
-            The name of the experiment. This has to be unique.
-        optimizer : Optimizer instance or string
-            This is an optimizer implementing the corresponding functions: It
-            gets an experiment instance, and returns one or multiple candidates
-            which should be evaluated next.
-            Alternatively, it can be a string corresponding to the optimizer,
-            as defined by apsis.utilities.optimizer_utils.
-        param_defs : dict of ParamDef.
-            This is the parameter space defining the experiment.
+            name of the experiment.
+        optimizer : string
+            String representation of the optimizer.
+        param_defs : dict of parameter definitions
+            Dictionary of parameter definition classes.
         optimizer_arguments : dict, optional
-            These are arguments for the optimizer. Refer to their documentation
-            as to which are available.
+            A dictionary defining the operation of the optimizer. See the
+            respective documentation of the optimizers.
+            Default is None, which are default values.
+        exp_id : string or None, optional
+            The id of the experiment, which will be used to reference it.
+            Should be a proper uuid, and especially has to be unique. If it is
+            not, an error may be returned.
+        notes : jsonable object or None, optional
+            Any note that you'd like to put in the experiment. Could be used
+            to provide some details on the experiment, on the start time or the
+            user starting it.
         minimization : bool, optional
-            Whether the problem is one of minimization or maximization.
-        """
-        self.logger.info("Initializing new experiment \"%s\". "
-                     " Parameter definitions: %s. Minimization is %s"
-                     %(name, param_defs, minimization))
-        if name in self.exp_assistants:
-            raise ValueError("Already an experiment with name %s registered."
-                             %name)
-        self.exp_assistants[name] = PrettyExperimentAssistant(name, optimizer,
-            param_defs, optimizer_arguments=optimizer_arguments,
-            minimization=minimization,
-            write_directory_base=self.lab_run_directory,
-            csv_write_frequency=1)
-        self.logger.info("Experiment initialized successfully.")
-
-    def get_next_candidate(self, exp_name):
-        """
-        Returns the Candidate next to evaluate for a specific experiment.
-
-        Parameters
-        ----------
-        exp_name : string
-            Has to be in experiment_assistants.
+            Whether the problem is one of minimization. Defaults to True.
 
         Returns
         -------
-        next_candidate : Candidate or None:
-            The Candidate object that should be evaluated next. May be None.
-        """
-        return self.exp_assistants[exp_name].get_next_candidate()
+        exp_id : string
+            String representing the id of the experiment or "failed" if failed.
 
-    def update(self, exp_name, candidate, status="finished"):
+        Raises
+        ------
+        ValueError :
+            Iff there already is an experiment with the exp_id for this lab
+            assistant. Does not occur if no exp_id is given.
         """
-        Updates the experiment with the status of an experiment
+        if exp_id in self._exp_assistants.keys():
+            raise ValueError("Already an experiment with id %s registered."
+                             %exp_id)
+
+        if exp_id is None:
+            while True:
+                exp_id = uuid.uuid4().hex
+                if exp_id not in self._exp_assistants.keys():
+                    break
+
+        exp_ass = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_arguments,
+                            write_directory_base=self._lab_run_directory,
+                            csv_write_frequency=1)
+        exp_ass.init_experiment(name, param_defs, exp_id, notes, minimization)
+        self._exp_assistants[exp_id] = exp_ass
+        self._logger.info("Experiment initialized successfully.")
+        return exp_id
+
+    def _init_directory_structure(self):
+        """
+        Method to create the directory structure if it does not exist
+        for results and plot writing.
+        """
+        if self._lab_run_directory is None:
+            date_name = datetime.datetime.utcfromtimestamp(
+                self._global_start_date).strftime("%Y-%m-%d_%H.%M.%S")
+
+            self._lab_run_directory = os.path.join(self._write_directory_base,
+                                                  date_name)
+
+            ensure_directory_exists(self._lab_run_directory)
+
+    def get_candidates(self, experiment_id):
+        """
+        Returns all candidates for a specific experiment.
+
+        Parameters
+        ----------
+        experiment_id : string
+            The id of the experiment for which to return the candidates.
+
+        Returns
+        -------
+        result : dict
+            A dictionary of three lists with the keys finished, pending and
+            working, with the corresponding candidates.
+        """
+        return self._exp_assistants[experiment_id].get_candidates()
+
+    def get_next_candidate(self, experiment_id):
+        """
+        Returns the next candidates for a specific experiment.
+
+        Parameters
+        ----------
+        experiment_id : string
+            The id of the experiment for which to return the next candidate.
+
+        Returns
+        -------
+        next_candidate : Candidate or None
+            The Candidate object that should be evaluated next. May be None,
+            which is equivalent to no candidate generated.
+        """
+        return self._exp_assistants[experiment_id].get_next_candidate()
+
+    def get_best_candidate(self, experiment_id):
+        """
+        Returns the best candidates for a specific experiment.
+
+        Parameters
+        ----------
+        experiment_id : string
+            The id of the experiment for which to return the best candidate.
+
+        Returns
+        -------
+        next_candidate : Candidate or None
+            The Candidate object that has performed best. May be None,
+            which is equivalent to no candidate being evaluated.
+        """
+        return self._exp_assistants[experiment_id].get_best_candidate()
+
+    def update(self, experiment_id, status, candidate):
+        """
+        Updates the specicied experiment with the status of an experiment
         evaluation.
 
         Parameters
         ----------
-        exp_name : string
-            Has to be in experiment_assistants
+        experiment_id : string
+            The id of the experiment for which to return the best candidate.
         candidate : Candidate
             The Candidate object whose status is updated.
-        status : {"finished", "pausing", "working"}, optional
+        status : {"finished", "pausing", "working"}
             A string defining the status change. Can be one of the following:
             - finished: The Candidate is now finished.
             - pausing: The evaluation of Candidate has been paused and can be
                 resumed by another worker.
             - working: The Candidate is now being worked on by a worker.
+
         """
-        self.exp_assistants[exp_name].update(candidate, status=status)
-
-    def get_best_candidate(self, exp_name):
-        """
-        Returns the best candidate to date for a specific experiment.
-
-        Parameters
-        ----------
-        exp_name : string
-            Has to be in experiment_assistants.
-
-        Returns
-        -------
-        best_candidate : candidate or None
-            Returns a candidate if there is a best one (which corresponds to
-            at least one candidate evaluated) or None if none exists.
-        """
-        return self.exp_assistants[exp_name].get_best_candidate()
-
-    def _init_directory_structure(self):
-        """
-        Method to create the directory structure if not exists
-        for results and plots writing
-        """
-        if self.lab_run_directory is None:
-            date_name = datetime.datetime.utcfromtimestamp(
-                self.global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
-
-            self.lab_run_directory = os.path.join(self.write_directory_base,
-                                                  date_name)
-
-            ensure_directory_exists(self.lab_run_directory)
-
-class PrettyLabAssistant(BasicLabAssistant):
-    COLORS = ["g", "r", "c", "b", "m", "y"]
-
-    def update(self, exp_name, candidate, status="finished"):
-        super(PrettyLabAssistant, self).update(exp_name, candidate, status=status)
-
-        #trigger the writing, but by default only on equal steps
-        self.write_out_plots_current_step(same_steps_only=True)
+        self.write_out_plots_current_step(self._exp_assistants.keys())
+        return self._exp_assistants[experiment_id].update(status=status,
+                                                         candidate=candidate)
 
 
-    def write_out_plots_current_step(self, same_steps_only=True):
-        """
-        This method will write out all plots available to the path
-        configured in self.lab_run_directory.
-
-        Parameters
-        ---------
-        same_steps_only : boolean, optional
-            Write only if all experiment assistants in this lab assistant
-            are currently in the same step.
-        """
-        step_string, same_step = self._compute_current_step_overall()
-
-        if same_steps_only and not same_step:
-            return
-
-        plot_base = os.path.join(self.lab_run_directory, "plots")
-        plot_step_base = os.path.join(plot_base, step_string)
-        ensure_directory_exists(plot_step_base)
-
-        plots_to_write = self.generate_all_plots()
-
-        #finally write out all plots created above to their files
-        for plot_name in plots_to_write.keys():
-            plot_fig = plots_to_write[plot_name]
-
-            write_plot_to_file(plot_fig, plot_name + "_" + step_string, plot_step_base)
-
-    def generate_all_plots(self):
-        """
-        Function to generate all plots available.
-
-        Returns
-        -------
-        figures : dict of plt.figure
-            The dict contains all plots available by this assistant. Every
-            plot is keyed by an identifier.
-        """
-        #this dict will store all the plots to write
-        plots_to_write = {}
-
-        result_per_step = self.plot_result_per_step(
-            experiments=self.exp_assistants.keys(),
-            show_plot=False)
-
-        plots_to_write['result_per_step'] = result_per_step
-
-        #TODO in case there is new plots in this assistant add them here.
-
-        return plots_to_write
-
-    def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None, title=None):
+    def plot_result_per_step(self, experiments, plot_min=None,
+                             plot_max=None, title=None, plot_up_to=None):
         """
         Returns (and plots) the plt.figure plotting the results over the steps
         for the specified experiments.
@@ -246,13 +243,14 @@ class PrettyLabAssistant(BasicLabAssistant):
         if not isinstance(experiments, list):
             experiments = [experiments]
         if title is None:
-            title = "Comparison of %s." % experiments
+            title = "Comparison of the results of %s." % experiments
         plots_list = []
-        for i, ex_name in enumerate(experiments):
-            exp_ass = self.exp_assistants[ex_name]
-            plots_list.extend(exp_ass._best_result_per_step_dicts(color=self.COLORS[i % len(self.COLORS)]))
+        for i, exp_id in enumerate(experiments):
+            exp_ass = self._exp_assistants[exp_id]
+            plots_list.extend(exp_ass._best_result_per_step_dicts(color=COLORS[i % len(COLORS)],
+                                                                  plot_up_to=plot_up_to))
 
-        if self.exp_assistants[experiments[0]].experiment.minimization_problem:
+        if self._exp_assistants[experiments[0]]._experiment.minimization_problem:
             legend_loc = 'upper right'
         else:
             legend_loc = 'upper left'
@@ -260,19 +258,86 @@ class PrettyLabAssistant(BasicLabAssistant):
             "legend_loc": legend_loc,
             "x_label": "steps",
             "y_label": "result",
-            "title": title
+            "title": title,
+            "minimizing": self._exp_assistants[experiments[0]]._experiment.minimization_problem
         }
         fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
-        if show_plot:
-            plt.show(True)
-            
         return fig
+
+
+    def generate_all_plots(self, exp_ass=None, plot_up_to=None):
+        """
+        Function to generate all plots available.
+
+        Returns
+        -------
+        figures : dict of plt.figure
+            The dict contains all plots available by this assistant. Every
+            plot is keyed by an identifier.
+        """
+        #this dict will store all the plots to write
+        plots_to_write = {}
+
+        if exp_ass is None:
+            exp_ass = self._exp_assistants.keys()
+
+        result_per_step = self.plot_result_per_step(
+            experiments=exp_ass, plot_up_to=plot_up_to)
+
+        plots_to_write['result_per_step'] = result_per_step
+
+        #TODO in case there is new plots in this assistant add them here.
+
+        return plots_to_write
+
+    def _get_min_step(self):
+        min_step = min([len(x._experiment.candidates_finished) for x in
+                        self._exp_assistants.values()])
+        return min_step
+
+    def write_out_plots_current_step(self, exp_ass=None, same_steps_only=True):
+        """
+        This method will write out all plots available to the path
+        configured in self.lab_run_directory.
+
+        Parameters
+        ---------
+        exp_ass : list, optional
+            List of experiment assistant names to include in the plots. Defaults to
+            None, which is equivalent to all.
+        same_steps_only : boolean, optional
+            Write only if all experiment assistants in this lab assistant
+            are currently in the same step.
+        """
+        min_step = self._get_min_step()
+        if same_steps_only:
+            plot_up_to = min_step
+        else:
+            plot_up_to = None
+
+        plot_base = os.path.join(self._lab_run_directory, "plots")
+        plot_step_base = os.path.join(plot_base, "step_" + str(min_step))
+        ensure_directory_exists(plot_step_base)
+
+        if exp_ass is None:
+            exp_ass = self._exp_assistants.keys()
+
+        plots_to_write = self.generate_all_plots(exp_ass, plot_up_to)
+
+
+        #finally write out all plots created above to their files
+        for plot_name in plots_to_write.keys():
+            plot_fig = plots_to_write[plot_name]
+
+            write_plot_to_file(plot_fig, plot_name + "_step" + str(min_step),
+                               plot_step_base)
+            plt.close(plot_fig)
+
 
     def _compute_current_step_overall(self):
         """
         Compute the string used to describe the current state of experiments
-
         If we have three running experiments in this lab assistant, then
         we can have the first in step 3, the second in step 100 and the third
         in step 1 - hence this would yield the step string "3_100_1".
@@ -281,7 +346,6 @@ class PrettyLabAssistant(BasicLabAssistant):
         -------
         step_string : string
             The string describing the overall steps of experiments.
-
         same_step : boolean
             A boolean if all experiments are in the same step.
         """
@@ -290,10 +354,10 @@ class PrettyLabAssistant(BasicLabAssistant):
         last_step = 0
         same_step = True
 
-        experiment_names_sorted = sorted(self.exp_assistants.keys())
+        experiment_names_sorted = sorted(self._exp_assistants.keys())
 
         for i, ex_assistant_name in enumerate(experiment_names_sorted):
-            experiment = self.exp_assistants[ex_assistant_name].experiment
+            experiment = self._exp_assistants[ex_assistant_name]._experiment
 
             curr_step = len(experiment.candidates_finished)
             if i == 0:
@@ -308,10 +372,80 @@ class PrettyLabAssistant(BasicLabAssistant):
 
         return step_string, same_step
 
-class ValidationLabAssistant(PrettyLabAssistant):
+    def get_experiment_as_dict(self, exp_id):
+        """
+        Returns the specified experiment as dictionary.
+
+        Parameters
+        ----------
+        exp_id : string
+            The id of the experiment.
+
+        Returns
+        -------
+        exp_dict : dict
+            The experiment dictionary as defined by Experiment.to_dict().
+        """
+        return self._exp_assistants[exp_id].get_experiment_as_dict()
+
+    def get_plot_result_per_step(self, exp_id):
+        """
+        Returns the figure for the result of each step.
+
+        Parameters
+        ----------
+        exp_id : string
+            The id of the experiment.
+
+        Result
+        ------
+        fig : matplotlib.figure
+            The figure containing the result of each step.
+        """
+        return self._exp_assistants[exp_id].plot_result_per_step()
+
+    def contains_id(self, id):
+        """
+        Tests whether this lab assistant has an experiment with id.
+
+        Parameters
+        ----------
+        id : string
+            The ID to be tested.
+
+        Returns
+        -------
+        contains : bool
+            True iff this lab assistant contains an experiment with this id.
+        """
+        if id in self._exp_assistants:
+            return True
+        return False
+
+    def get_ids(self):
+        """
+        Returns all known ids for this lab assistant.
+
+        Returns
+        -------
+        ids : list of strings
+            All ids this lab assitant knows.
+        """
+        return self._exp_assistants.keys()
+
+
+    def set_exit(self):
+        """
+        Exits this assistant.
+
+        Currently, all that is done is exiting all exp_assistants..
+        """
+        for exp in self._exp_assistants.values():
+            exp.set_exit()
+
+class ValidationLabAssistant(LabAssistant):
     """
     This Lab Assistant is used for validating optimization with cross-validation.
-
     This is done by internally multiplexing each experiment into cv many.
 
     Attributes
@@ -325,14 +459,15 @@ class ValidationLabAssistant(PrettyLabAssistant):
     disable_auto_plot: bool
         To disable automatic plot writing functionality completely.
     """
+
+
     cv = None
-    exp_current = None
+    candidates_pending = None
     disable_auto_plot = None
 
     def __init__(self, cv=5, disable_auto_plot=False):
         """
         Initializes the ValidationLabAssistant.
-
         Paramters
         ---------
         cv : int
@@ -343,13 +478,12 @@ class ValidationLabAssistant(PrettyLabAssistant):
         super(ValidationLabAssistant, self).__init__()
         self.cv = cv
         self.disable_auto_plot = disable_auto_plot
-        self.exp_current = {}
+        self.candidates_pending = {}
 
-    def init_experiment(self, name, optimizer, param_defs,
-                        optimizer_arguments=None, minimization=True):
+    def init_experiment(self, name, optimizer, param_defs, exp_id=None,
+                        notes=None, optimizer_arguments=None, minimization=True):
         """
         Initializes a new experiment.
-
         This actually initializes self.cv many experiments.
         Internally, the experiments are called name_i, where name is the
         experiment_name and i is the number of the experiment.
@@ -372,30 +506,37 @@ class ValidationLabAssistant(PrettyLabAssistant):
         minimization : bool, optional
             Whether the problem is one of minimization or maximization.
         """
-        self.logger.info("Initializing new experiment \"%s\". "
+        self._logger.info("Initializing new experiment \"%s\". "
                      " Parameter definitions: %s. Minimization is %s"
                      %(name, param_defs, minimization))
-        if name in self.exp_assistants:
-            raise ValueError("Already an experiment with name %s registered."
+        if exp_id in self._exp_assistants:
+            raise ValueError("Already an experiment with id %s registered."
                              %name)
-        self.exp_assistants[name] = []
-        self.exp_current[name] = None
+        if exp_id is None:
+            while True:
+                exp_id = uuid.uuid4().hex
+                if exp_id not in self._exp_assistants.keys():
+                    break
+        self._exp_assistants[exp_id] = []
+        self.candidates_pending[exp_id] = []
         for i in range(self.cv):
-            self.exp_assistants[name].append(PrettyExperimentAssistant(name + "_" + str(i), optimizer,
-                param_defs, optimizer_arguments=optimizer_arguments,
-                minimization=minimization,
-                write_directory_base=self.lab_run_directory,
-                csv_write_frequency=1))
-        self.logger.info("Experiment initialized successfully.")
+            exp_ass = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_arguments,
+                                     write_directory_base=self._lab_run_directory,
+                                     csv_write_frequency=1)
+            exp_ass.init_experiment(name + "_" + str(i), param_defs, exp_id,
+                                    notes, minimization)
+            self._exp_assistants[exp_id].append(exp_ass)
+            self.candidates_pending[exp_id].append([])
+        self._logger.info("Experiment initialized successfully.")
+        return exp_id
 
-    def clone_experiments_by_name(self, exp_name, new_exp_name, optimizer,
-                                  optimizer_arguments):
+    def clone_experiments_by_id(self, exp_id, optimizer,
+                                  optimizer_arguments, new_exp_name):
         """
         Take an existing experiment managed by this lab assistant,
         fully clone it and store it under a new name to use it with a new
         optimizer. This functionality can be used to initialize several experiments
         of several optimizers with the same points.
-
         For the given exp_name all underlying experiment instances are cloned and renamed.
         Then a new experiment assistant is instantiated given the cloned and renamed
         experiment using the given optimizer. The new experiment assistants are stored
@@ -406,11 +547,11 @@ class ValidationLabAssistant(PrettyLabAssistant):
 
         Parameters
         ----------
-        exp_name : string
-            The name of the experiment to be cloned.
-        new_exp_name: string
-            The name the cloned experiment will have after creation. Needs to be unique
-            and not existant in current experiments running in this lab assistant.
+        exp_id : string
+            The id of the experiment to be cloned.
+        new_exp_name: string, optional
+            The name the cloned experiment will have after creation. If None,
+            the old name is reused.
         optimizer : Optimizer instance or string
             This is an optimizer implementing the corresponding functions: It
             gets an experiment instance, and returns one or multiple candidates
@@ -421,13 +562,19 @@ class ValidationLabAssistant(PrettyLabAssistant):
             These are arguments for the optimizer. Refer to their documentation
             as to which are available.
         """
-        self.exp_assistants[new_exp_name] = []
-        self.exp_current[new_exp_name] = None
+
+        while True:
+            new_exp_id = uuid.uuid4().hex
+            if new_exp_id not in self._exp_assistants.keys():
+                break
+
+        self._exp_assistants[new_exp_id] = []
+
 
         #every experiment has self.cv many assistants
-        for i in range(len(self.exp_assistants[exp_name])):
-            old_exp_assistant = self.exp_assistants[exp_name][i]
-            old_exp = old_exp_assistant.experiment
+        for i in range(len(self._exp_assistants[exp_id])):
+            old_exp_assistant = self._exp_assistants[exp_id][i]
+            old_exp = old_exp_assistant._experiment
 
             #clone and rename experiment
             new_exp = old_exp.clone()
@@ -436,42 +583,54 @@ class ValidationLabAssistant(PrettyLabAssistant):
             new_exp.name = new_name_cved
 
             #recreate exp assistant
-            new_exp_assistant = PrettyExperimentAssistant(new_name_cved, optimizer,
-                new_exp.parameter_definitions, experiment=new_exp, optimizer_arguments=optimizer_arguments,
-                minimization=new_exp.minimization_problem,
-                write_directory_base=self.lab_run_directory,
-                csv_write_frequency=1)
-            self.exp_assistants[new_exp_name].append(new_exp_assistant)
+            new_exp_assistant = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_arguments,
+                                     write_directory_base=self._lab_run_directory,
+                                     csv_write_frequency=1)
+            new_exp_assistant.set_experiment(new_exp)
+            self._exp_assistants[new_exp_id].append(new_exp_assistant)
 
-        self.logger.info("Experiment " + str(exp_name) + " cloned to " + str(new_exp_name) + " and successfully initialized.")
+        self.candidates_pending[new_exp_id] = copy.deepcopy(self.candidates_pending[exp_id])
 
+        self._logger.info("Experiment " + str(exp_id) + " cloned to " +
+                         str(new_exp_id) + " and successfully initialized.")
+        return new_exp_id
 
+    def _get_min_step(self):
+        #min_step = min([len(x._experiment.candidates_finished) for x in self.exp_assistants.values()])
+        min_step = None
+        for e_list in self._exp_assistants.values():
+            for e_ass in e_list:
+                if min_step is None or len(e_ass._experiment.candidates_finished) < min_step:
+                    min_step = len(e_ass._experiment.candidates_finished)
+        return min_step
 
-
-
-    def update(self, exp_name, candidate, status="finished"):
+    def update(self, exp_id, status, candidate):
         """
         Updates the experiment with a new candidate.
-
         This is done by updating the experiment from which the last candidate
         has been returned using get_next_candidate.
         Note that this LabAssistant does not feature the ability to update with
         arbitrary candidates.
         """
-        if self.exp_current[exp_name] is None:
+        cand_id = candidate.id
+        idx = None
+        for i in range(len(self._exp_assistants[exp_id])):
+            if cand_id in self.candidates_pending[exp_id][i]:
+                internal_idx = self.candidates_pending[exp_id][i].index(cand_id)
+                del(self.candidates_pending[exp_id][i][internal_idx])
+                idx = i
+                break
+        if idx is None:
             raise ValueError("No candidate given to the outside for that experiment.")
-        self.exp_assistants[exp_name][self.exp_current[exp_name]].update(candidate, status)
-        self.exp_current[exp_name] = None
-
+        self._exp_assistants[exp_id][idx].update(candidate, status)
         if not self.disable_auto_plot:
             self.write_out_plots_current_step()
 
-    def get_next_candidate(self, exp_name):
+    def get_next_candidate(self, exp_id):
         """
         Returns the Candidate next to evaluate for a specific experiment.
-
         This is done by using the get_next_candidate function from the
-        sub-experiment with the least finished candidates.
+        sub-experiment with the least finished and pending candidates.
 
         Parameters
         ----------
@@ -483,20 +642,24 @@ class ValidationLabAssistant(PrettyLabAssistant):
         next_candidate : Candidate or None:
             The Candidate object that should be evaluated next. May be None.
         """
-        min_finished = 0
-        for i in range(len(self.exp_assistants[exp_name])):
-            if (len(self.exp_assistants[exp_name][i].experiment.candidates_finished) <
-                len(self.exp_assistants[exp_name][min_finished].experiment.candidates_finished)):
-                if i != self.exp_current[exp_name]:
-                    min_finished = i
-        self.exp_current[exp_name] = min_finished
-        return self.exp_assistants[exp_name][min_finished].get_next_candidate()
+        index_min_finished = 0
+        num_min_finished = len(self._exp_assistants[exp_id][0]._experiment.candidates_finished) \
+                              + len(self.candidates_pending[exp_id][0])
+        for i in range(len(self._exp_assistants[exp_id])):
+            fin_and_pending = len(self._exp_assistants[exp_id][i]._experiment.candidates_finished) \
+                              + len(self.candidates_pending[exp_id][i])
+            if num_min_finished > fin_and_pending:
+                index_min_finished = i
+                num_min_finished = fin_and_pending
+        cand = self._exp_assistants[exp_id][index_min_finished].get_next_candidate()
+        if cand is not None:
+            self.candidates_pending[exp_id][index_min_finished].append(cand.id)
+        return cand
 
-    def plot_result_per_step(self, experiments, show_plot=True, plot_min=None, plot_max=None, title=None):
+    def plot_result_per_step(self, experiments, show_plot=False, plot_min=None, plot_max=None, title=None):
         """
         Returns (and plots) the plt.figure plotting the results over the steps
         for the specified experiments.
-
         This includes:
             - one dot per evaluated result at a step
             - a line showing the best result found up to that step for every step
@@ -527,7 +690,6 @@ class ValidationLabAssistant(PrettyLabAssistant):
         plots_list = []
         plots_list.extend(best_per_step_plots_list)
         plots_list.extend(step_plots_list)
-
         fig, ax = plot_lists(plots_list, fig_options=plot_options, plot_min=plot_min, plot_max=plot_max)
 
         if show_plot:
@@ -539,7 +701,6 @@ class ValidationLabAssistant(PrettyLabAssistant):
         """
         Returns (and plots) the plt.figure plotting the results over the steps
         for the specified experiments.
-
         This includes:
             - a line showing the best result found up to that step for every step
             - error bars for that line
@@ -580,7 +741,6 @@ class ValidationLabAssistant(PrettyLabAssistant):
     def get_best_candidate(self, exp_name):
         """
         Returns the best candidate to date for a specific experiment.
-
         The best candidate is the best candidate from all of the experiments.
 
         Parameters
@@ -594,16 +754,15 @@ class ValidationLabAssistant(PrettyLabAssistant):
             Returns a candidate if there is a best one (which corresponds to
             at least one candidate evaluated) or None if none exists.
         """
-        best_candidate = self.exp_assistants[exp_name][0].get_best_candidate()
+        best_candidate = self._exp_assistants[exp_name][0].get_best_candidate()
         for c in self.get_best_candidates(exp_name):
-            if self.exp_assistants[exp_name][0].experiment.better_cand(c, best_candidate):
+            if self._exp_assistants[exp_name][0]._experiment.better_cand(c, best_candidate):
                 best_candidate = c
         return best_candidate
 
     def get_best_candidates(self, exp_name):
         """
         Returns the best candidates to date for each crossvalidated experiment.
-
         This is a list of candidates, on which further statistics like mean
         and variance can be computed.
 
@@ -620,7 +779,7 @@ class ValidationLabAssistant(PrettyLabAssistant):
             if none exists.
         """
         best = []
-        for e in self.exp_assistants[exp_name]:
+        for e in self._exp_assistants[exp_name]:
             best.append(e.get_best_candidate())
         return best
 
@@ -644,20 +803,23 @@ class ValidationLabAssistant(PrettyLabAssistant):
             A list of the evaluated result at each step, for use with plot_utils
         plot_options : dict
             Options for the plot, for use with plot_utils
+
         """
+        #TODO document the matplotlib hack.
+
         if not isinstance(experiments, list):
             experiments = [experiments]
         if title is None:
-            title = "Comparison of %s." % experiments
+            title = "Comparison of the results of %s." % [self._exp_assistants[x][0]._experiment.name for x in experiments]
 
         best_per_step_plots_list = []
         step_plots_list = []
-        for i, ex_name in enumerate(experiments):
+        for i, exp_id in enumerate(experiments):
             step_dicts = []
             best_vals = []
             for c in range(self.cv):
-                exp_ass = self.exp_assistants[ex_name][c]
-                cur_step_dict, best_dict = exp_ass._best_result_per_step_dicts(color=self.COLORS[i % len(self.COLORS)])
+                exp_ass = self._exp_assistants[exp_id][c]
+                cur_step_dict, best_dict = exp_ass._best_result_per_step_dicts(color=COLORS[i % len(COLORS)])
                 cur_step_dict["label"] = None
                 step_dicts.append(cur_step_dict)
                 best_vals.append(best_dict["y"])
@@ -674,12 +836,13 @@ class ValidationLabAssistant(PrettyLabAssistant):
             best_dict["y"] = best_mean
             best_dict["var"] = best_var
             best_dict["x"] = x
-            best_dict["label"] = ex_name
-            best_per_step_plots_list.append(best_dict)
+            best_dict["label"] = exp_ass._experiment.name
+            # This is necessary to avoid a matplotlib crash.
+            if len(best_var) > 0:
+                best_per_step_plots_list.append(best_dict)
+                step_plots_list.extend(step_dicts)
 
-            step_plots_list.extend(step_dicts)
-
-        if self.exp_assistants[experiments[0]][0].experiment.minimization_problem:
+        if self._exp_assistants[experiments[0]][0]._experiment.minimization_problem:
             legend_loc = 'upper right'
         else:
             legend_loc = 'upper left'
@@ -689,17 +852,14 @@ class ValidationLabAssistant(PrettyLabAssistant):
             "y_label": "result",
             "title": title
         }
-
         return best_per_step_plots_list, step_plots_list, plot_options
 
     def _compute_current_step_overall(self):
         """
         Compute the string used to describe the current state of experiments
-
         If we have three running experiments in this lab assistant, then
         we can have the first in step 3, the second in step 100 and the third
         in step 1 - hence this would yield the step string "3_100_1".
-
         The step of the crossvalidated experiments is the minimum step each
         of them has achieved.
 
@@ -707,7 +867,6 @@ class ValidationLabAssistant(PrettyLabAssistant):
         -------
         step_string : string
             The string describing the overall steps of experiments.
-
         same_step : boolean
             A boolean if all experiments are in the same step.
         """
@@ -716,14 +875,14 @@ class ValidationLabAssistant(PrettyLabAssistant):
         last_step = 0
         same_step = True
 
-        experiment_names_sorted = sorted(self.exp_assistants.keys())
+        experiment_names_sorted = sorted(self._exp_assistants.keys())
 
         for i, ex_assistant_name in enumerate(experiment_names_sorted):
-            exp_asss = self.exp_assistants[ex_assistant_name]
-            curr_step = len(exp_asss[0].experiment.candidates_finished)
+            exp_asss = self._exp_assistants[ex_assistant_name]
+            curr_step = len(exp_asss[0]._experiment.candidates_finished)
 
             for e in exp_asss:
-                curr_step = min(curr_step, e.experiment.candidates_finished)
+                curr_step = min(curr_step, e._experiment.candidates_finished)
             if i == 0:
                 last_step = curr_step
             elif last_step != curr_step:
@@ -736,9 +895,9 @@ class ValidationLabAssistant(PrettyLabAssistant):
 
         return step_string, same_step
 
-    def generate_all_plots(self):
+    def generate_all_plots(self, exp_ass=None, plot_up_to=None):
         """
-        Fnction to generate all plots available.
+        Function to generate all plots available.
 
         Returns
         -------
@@ -748,15 +907,97 @@ class ValidationLabAssistant(PrettyLabAssistant):
         """
         #this hash will store all the plots to write
         plots_to_write = {}
+        if exp_ass is None:
+            exp_ass = self._exp_assistants.keys()
 
         result_per_step = self.plot_result_per_step(
-            experiments=self.exp_assistants.keys(),
+            experiments=exp_ass,
             show_plot=False)
 
         plots_to_write['result_per_step'] = result_per_step
 
         plot_validation = self.plot_validation(
-            experiments=self.exp_assistants.keys(), show_plot=False)
+            experiments=self._exp_assistants.keys(), show_plot=False)
         plots_to_write['validation'] = plot_validation
 
         return plots_to_write
+
+    def set_exit(self):
+        """
+        Exits this assistant.
+
+        Currently, all that is done is exiting all exp_assistants..
+        """
+        for exp_list in self._exp_assistants.values():
+            for exp in exp_list:
+                exp.set_exit()
+
+    def get_candidates(self, experiment_id):
+        """
+        Returns all candidates for all sub-experiments.
+
+        Parameters
+        ----------
+        experiment_id : string
+            The id of the experiment for which to return the candidates.
+
+        Returns
+        -------
+        result : dict
+            A dictionary of three lists with the keys finished, pending and
+            working, with the corresponding candidates.
+        """
+        result_dict = {
+            "finished": [],
+            "pending": [],
+            "working": []
+        }
+        for e in self._exp_assistants[experiment_id]:
+            result_this = e.get_candidates()
+            for r in ["finished", "pending", "working"]:
+                result_dict[r].extend(result_this[r])
+
+        return result_dict
+
+
+
+    def get_experiment_as_dict(self, exp_id, index=0):
+        """
+        Returns the specified experiment as dictionary.
+
+        Contrary to the normal LabAssistant's get_experiment_as_dict, it
+        has an optional parameter of index (default 0) specifying the index
+        of the parameter. This is the index of which cross-validated experiment
+        should be returned.
+
+        Parameters
+        ----------
+        exp_id : string
+            The id of the experiment.
+
+        index : int, optional
+            Which cross-validated experiment should be returned. Default is 0.
+
+        Returns
+        -------
+        exp_dict : dict
+            The experiment dictionary as defined by Experiment.to_dict().
+        """
+        return self._exp_assistants[exp_id][index].get_experiment_as_dict()
+
+    def get_plot_result_per_step(self, exp_id):
+        """
+        Returns the single plot of results per step for the specified exp.
+
+        Parameters
+        ----------
+        exp_id : string
+            The id of the experiment.
+
+        Returns
+        -------
+        plot : matplotlib plot
+            The result per step plot of the experiment.
+        """
+        return self.plot_result_per_step([exp_id], show_plot=False,
+                                         plot_min=None, plot_max=None, title=None)

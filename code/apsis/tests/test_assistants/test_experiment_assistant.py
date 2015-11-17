@@ -1,19 +1,22 @@
 __author__ = 'Frederik Diehl'
 
-from apsis.assistants.experiment_assistant import *
+from apsis.assistants.experiment_assistant import ExperimentAssistant
 from nose.tools import assert_equal, assert_items_equal, assert_dict_equal, \
     assert_is_none, assert_raises, raises, assert_greater_equal, \
-    assert_less_equal, assert_in
+    assert_less_equal, assert_in, assert_true, assert_false, with_setup
 from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
+from apsis.optimizers.random_search import RandomSearch
+import time
 
-class TestAcquisition(object):
+class TestExperimentAssistant(object):
     """
-    Tests the lab_assistants.
+    Tests the experiment assistant.
     """
+    EAss = None
+    param_defs = None
 
-
-    def test_init_experiment(self):
+    def setup(self):
         """
         Tests whether the initialization works correctly.
         Tests:
@@ -23,20 +26,46 @@ class TestAcquisition(object):
         """
         optimizer = "RandomSearch"
         name = "test_init_experiment"
-        param_defs = {
+        self.param_defs = {
             "x": MinMaxNumericParamDef(0, 1),
             "name": NominalParamDef(["A", "B", "C"])
         }
         minimization = True
 
-        EAss = PrettyExperimentAssistant(name, optimizer, param_defs, minimization=minimization)
+        optimizer_params = {
+            "multiprocessing": "none"
+        }
 
-        assert_equal(EAss.optimizer, optimizer)
-        assert_is_none(EAss.optimizer_arguments, None)
-        assert_equal(EAss.experiment.minimization_problem, minimization)
+        self.EAss = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_params)
+        self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
 
-        EAss2 = PrettyExperimentAssistant(name, optimizer, param_defs, minimization=minimization, experiment_directory_base="/tmp/APSIS_WRITING")
+        assert_equal(self.EAss._optimizer.__class__.__name__, optimizer)
+        assert_equal(self.EAss._optimizer_arguments, optimizer_params)
+        assert_equal(self.EAss._experiment.minimization_problem, minimization)
 
+    def test_init_experiment(self):
+        optimizer = "RandomSearch"
+        name = "test_init_experiment"
+        self.param_defs = {
+            "x": MinMaxNumericParamDef(0, 1),
+            "name": NominalParamDef(["A", "B", "C"])
+        }
+        minimization = True
+
+        optimizer_params = {
+            "multiprocessing": "none"
+        }
+        self.EAss = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_params)
+        self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
+
+        with assert_raises(ValueError):
+            self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
+
+        with assert_raises(ValueError):
+            self.EAss.set_experiment("this value does not matter.")
+
+    def teardown(self):
+        self.EAss.set_exit()
 
     def test_get_next_candidate(self):
         """
@@ -44,21 +73,31 @@ class TestAcquisition(object):
         Tests:
             - The candidate's parameters are acceptable
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
 
-        EAss = PrettyExperimentAssistant(name, optimizer, param_defs, minimization=minimization)
-        cand = EAss.get_next_candidate()
+        cand = None
+        counter = 0
+        while cand is None and counter < 20:
+            cand = self.EAss.get_next_candidate()
+            time.sleep(0.1)
+            counter += 1
+        if counter == 20:
+            raise Exception("Received no result in the first 2 seconds.")
         assert_is_none(cand.result)
         params = cand.params
         assert_less_equal(params["x"], 1)
         assert_greater_equal(params["x"], 0)
-        assert_in(params["name"], param_defs["name"].values)
+        assert_in(params["name"], self.param_defs["name"].values)
+        self.EAss.update(cand, "pausing")
+        time.sleep(1)
+        new_cand = None
+        while new_cand is None and counter < 20:
+            new_cand = self.EAss.get_next_candidate()
+            time.sleep(0.1)
+            counter += 1
+        if counter == 20:
+            raise Exception("Received no result in the first 2 seconds.")
+        assert_equal(new_cand, cand)
+
 
     def test_update(self):
         """
@@ -68,74 +107,53 @@ class TestAcquisition(object):
             - the status message incorrect error works
             - the candidate instance check works
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        EAss = PrettyExperimentAssistant(name, optimizer, param_defs, minimization=minimization)
-        cand = EAss.get_next_candidate()
+        cand = self.EAss.get_next_candidate()
         cand.result = 1
-        EAss.update(cand)
-        assert_items_equal(EAss.experiment.candidates_finished, [cand])
-        assert_equal(EAss.experiment.candidates_finished[0].result, 1)
+        self.EAss.update(cand)
+        assert_items_equal(self.EAss._experiment.candidates_finished, [cand])
+        assert_equal(self.EAss._experiment.candidates_finished[0].result, 1)
 
-        EAss.update(cand, "pausing")
-        EAss.update(cand, "working")
+        self.EAss.update(cand, "pausing")
+        self.EAss.update(cand, "working")
         with assert_raises(ValueError):
-            EAss.update(cand, status="No status.")
+            self.EAss.update(cand, status="No status.")
 
         with assert_raises(ValueError):
-            EAss.update(False)
+            self.EAss.update(False)
 
     def test_get_best_candidate(self):
         """
         Tests whether get_best_candidate works.
             - Whether the best of the two candidates is the one it should be.
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        EAss = PrettyExperimentAssistant(name, optimizer, param_defs, minimization=minimization)
-        cand_one = EAss.get_next_candidate()
+        cand_one = self.EAss.get_next_candidate()
         cand_one.result = 1
-        EAss.update(cand_one)
+        self.EAss.update(cand_one)
 
-        cand_two = EAss.get_next_candidate()
+        cand_two = self.EAss.get_next_candidate()
         cand_two.result = 0
-        EAss.update(cand_two)
+        self.EAss.update(cand_two)
 
-        assert_equal(cand_two, EAss.get_best_candidate())
+        assert_equal(cand_two, self.EAss.get_best_candidate())
 
     def test_all_plots_working(self):
         """
         Tests whether all of the plot functions work. Does not test for correctness.
         """
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        EAss = PrettyExperimentAssistant(name, optimizer, param_defs, minimization=minimization)
-        cand = EAss.get_next_candidate()
+        cand = self.EAss.get_next_candidate()
         cand.result = 1
-        EAss.update(cand)
+        self.EAss.update(cand)
 
-        cand = EAss.get_next_candidate()
+        cand = self.EAss.get_next_candidate()
         cand.result = 0
 
-        cand = EAss.get_next_candidate()
+        cand = self.EAss.get_next_candidate()
         cand.result = 2
+        self.EAss.plot_result_per_step()
 
-        EAss.plot_result_per_step(show_plot=False)
+    def test_get_candidates_dict(self):
+        candidates_dict = self.EAss.get_candidates()
+        assert_true(isinstance(candidates_dict, dict))
+        for l in ["finished", "pending", "working"]:
+            assert_in(l, candidates_dict)
+            assert_true(isinstance(candidates_dict[l], list))

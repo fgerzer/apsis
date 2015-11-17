@@ -5,3 +5,4 @@ API Documentation
    :maxdepth: 4
 
    apsis
+   apsis_client

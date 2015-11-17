@@ -23,10 +23,33 @@ Contents
    modules
    evaluation
 
+Example
+-------
+The following is an example on how to do a simple evaluation routine in apsis::
+
+    conn = Connection(server_address)
+
+    param_defs = {
+        "x": {"type": "MinMaxNumericParamDef", "lower_bound": -5, "upper_bound": 10},
+        "y": {"type": "MinMaxNumericParamDef", "lower_bound": 0, "upper_bound": 15},
+    }
+    
+    exp_id = conn.init_experiment(name="first_experiment", optimizer="BayOpt", param_defs=param_defs, minimization=True)
+    
+    for i in range(10):
+        to_eval = conn.get_next_candidate(exp_id)
+        result = branin_func(to_eval["params"]["x"], to_eval["params"]["y"])
+        to_eval["result"] = result
+        conn.update(exp_id, to_eval, "finished")
+    print(conn.get_best_candidate(exp_id))
+
+Check out our usage tutorials for more information.
+    
+        
 Project State
 -------------
 
-We have reached the beta state now. Documentation is ready, test covergae is at 90%.
+We are currently in beta state. Most of the structure has been implemented, as have been RandomSearch and an initial Bayesian Optimization.
 
 Scientific Project Description
 ------------------------------
