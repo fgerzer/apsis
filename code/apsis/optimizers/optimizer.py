@@ -5,6 +5,7 @@ from time import sleep
 import multiprocessing
 import Queue
 
+
 class Optimizer(object):
     """
     This defines a basic Optimizer interface.
@@ -213,8 +214,8 @@ class QueueBasedOptimizer(Optimizer):
         self.SUPPORTED_PARAM_TYPES = optimizer_class.SUPPORTED_PARAM_TYPES
 
         p = multiprocessing.Process(target=dispatch_queue_backend,
-							args=(optimizer_class, optimizer_params, experiment,
-					   self._optimizer_out_queue, self._optimizer_in_queue))
+                                    args=(optimizer_class, optimizer_params, experiment,
+                                          self._optimizer_out_queue, self._optimizer_in_queue))
         p.start()
         super(QueueBasedOptimizer, self).__init__(experiment, optimizer_params)
 
@@ -240,6 +241,7 @@ class QueueBasedOptimizer(Optimizer):
         """
         if self._optimizer_in_queue is not None:
             self._optimizer_in_queue.put("exit")
+
 
 class QueueBackend(object):
     """
