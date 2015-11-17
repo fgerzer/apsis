@@ -274,8 +274,8 @@ class Experiment(object):
 
         Parameters
         ----------
-            params : dict of string keys
-                The point to warp in
+        params : dict of string keys
+            The point to warp in
 
         Returns
         -------
@@ -293,8 +293,8 @@ class Experiment(object):
 
         Parameters
         ----------
-            params : dict of string keys
-                The point to warp out
+        params : dict of string keys
+            The point to warp out
 
         Returns
         -------
