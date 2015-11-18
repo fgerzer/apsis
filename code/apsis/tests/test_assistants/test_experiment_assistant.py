@@ -43,6 +43,26 @@ class TestExperimentAssistant(object):
         assert_equal(self.EAss._optimizer_arguments, optimizer_params)
         assert_equal(self.EAss._experiment.minimization_problem, minimization)
 
+    def test_init_experiment(self):
+        optimizer = "RandomSearch"
+        name = "test_init_experiment"
+        self.param_defs = {
+            "x": MinMaxNumericParamDef(0, 1),
+            "name": NominalParamDef(["A", "B", "C"])
+        }
+        minimization = True
+
+        optimizer_params = {
+            "multiprocessing": "none"
+        }
+        self.EAss = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_params)
+        self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
+
+        with assert_raises(ValueError):
+            self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
+
+        with assert_raises(ValueError):
+            self.EAss.set_experiment("this value does not matter.")
 
     def teardown(self):
         self.EAss.set_exit()
@@ -67,6 +87,17 @@ class TestExperimentAssistant(object):
         assert_less_equal(params["x"], 1)
         assert_greater_equal(params["x"], 0)
         assert_in(params["name"], self.param_defs["name"].values)
+        self.EAss.update(cand, "pausing")
+        time.sleep(1)
+        new_cand = None
+        while new_cand is None and counter < 20:
+            new_cand = self.EAss.get_next_candidate()
+            time.sleep(0.1)
+            counter += 1
+        if counter == 20:
+            raise Exception("Received no result in the first 2 seconds.")
+        assert_equal(new_cand, cand)
+
 
     def test_update(self):
         """
@@ -119,3 +150,10 @@ class TestExperimentAssistant(object):
         cand = self.EAss.get_next_candidate()
         cand.result = 2
         self.EAss.plot_result_per_step()
+
+    def test_get_candidates_dict(self):
+        candidates_dict = self.EAss.get_candidates()
+        assert_true(isinstance(candidates_dict, dict))
+        for l in ["finished", "pending", "working"]:
+            assert_in(l, candidates_dict)
+            assert_true(isinstance(candidates_dict[l], list))

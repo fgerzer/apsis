@@ -1,13 +1,8 @@
 from apsis.utilities.benchmark_functions import branin_func
-from apsis.assistants.lab_assistant import ValidationLabAssistant
-from apsis.models.parameter_definition import *
-from apsis.utilities.randomization import check_random_state
-import logging
-from apsis.utilities.logging_utils import get_logger
 import sys
 from apsis_client.apsis_connection import Connection
 
-logger = get_logger("demos.demo_branin")
+server_address = "http://localhost:5000"
 
 conn = None
 

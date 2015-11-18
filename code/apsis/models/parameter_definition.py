@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import random
 import math
+import sys
 
 class ParamDef(object):
     """
@@ -53,7 +54,9 @@ class ParamDef(object):
         dict : dictionary
             The dictionary from which we can rebuild this parameter definition.
         """
-        return self.__dict__
+        result_dict = self.__dict__
+        result_dict["type"] = self.__class__.__name__
+        return result_dict
 
     @abstractmethod
     def warp_in(self, unwarped_value):
@@ -321,11 +324,19 @@ class NumericParamDef(ParamDef, ComparableParamDef):
 class MinMaxNumericParamDef(NumericParamDef):
     """
     Defines a numeric parameter definition defined by a lower and upper bound.
+
+    By default, it will represent a parameter space of [lower_bound,
+    upper_bound]. However, it can be set to exclude one or both of the bounds.
     """
     lower_bound = None
     upper_bound = None
+    include_lower = None
+    include_upper = None
 
-    def __init__(self, lower_bound, upper_bound):
+    epsilon = None
+
+    def __init__(self, lower_bound, upper_bound,
+                 include_lower=True, include_upper=True, epsilon=None):
         """
         Initializes the lower/upper bound defined parameter space.
 
@@ -333,29 +344,60 @@ class MinMaxNumericParamDef(NumericParamDef):
         ----------
         lower_bound : float
             The lowest possible value
-
         upper_bound : float
             The highest possible value
+        include_lower : bool, optional
+            If true (default), lower_bound is the smallest possible value that
+            can be returned. If false, all returned values will be greater than
+            lower_bound.
+        include_upper : bool, optional
+            If true (default), upper_bound is the greatest possible value that
+            can be returned. If false, all returned values will be less than
+            upper_bound.
+        epsilon : float, optional
+            The tolerance to use if excluding upper/lower. The lowest or
+            highest value will be epsilon away from the given lower or upper
+            bound. By default, this is ten times the system's float epsilon.
+
         """
         try:
             lower_bound = float(lower_bound)
             upper_bound = float(upper_bound)
         except:
             raise ValueError("Bounds are not floats.")
+        if epsilon is None:
+            epsilon = sys.float_info.epsilon * 10
+        self.epsilon = epsilon
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
+        self.include_lower = include_lower
+        self.include_upper = include_upper
 
     def warp_in(self, unwarped_value):
-        return [(unwarped_value - self.lower_bound)/(self.upper_bound-self.lower_bound)]
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
+        result = ((unwarped_value - (modifed_lower))/
+                  (modifed_upper-modifed_lower))
+        return [float(result)]
 
     def warp_out(self, warped_value):
-        return warped_value[0]*(self.upper_bound - self.lower_bound) + self.lower_bound
+        modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
+        modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
+        result = warped_value[0]*(modifed_upper - modifed_lower) + modifed_lower
+        return float(result)
 
     def warped_size(self):
         return 1
 
     def is_in_parameter_domain(self, value):
-        return self.lower_bound <= value <= self.upper_bound
+        if not (self.lower_bound < value or
+                    (self.lower_bound <= value and self.include_lower)):
+            return False
+        if not (self.upper_bound > value or
+                    (self.upper_bound >= value and self.include_upper)):
+
+            return False
+        return True
 
 
 class PositionParamDef(OrdinalParamDef):
@@ -426,7 +468,8 @@ class FixedValueParamDef(PositionParamDef):
         super(FixedValueParamDef, self).__init__(values, positions)
 
     def to_dict(self):
-        return {"values": self.values}
+        return {"values": self.values,
+                "type": self.__class__.__name__}
 
 
 class EquidistantPositionParamDef(PositionParamDef):
@@ -489,22 +532,22 @@ class AsymptoticNumericParamDef(NumericParamDef):
 
     def warp_in(self, unwarped_value):
         if not min(self.asymptotic_border, self.border) <= unwarped_value:
-            value_in = min(self.asymptotic_border, self.border)
+            unwarped_value = min(self.asymptotic_border, self.border)
         if not unwarped_value <= max(self.asymptotic_border, self.border):
-            value_in = max(self.asymptotic_border, self.border)
+            unwarped_value = max(self.asymptotic_border, self.border)
         if unwarped_value == self.border:
             return [0]
         elif unwarped_value == self.asymptotic_border:
             return [1]
-        return [(1-2**(math.log(unwarped_value, 10)))*
+        return [(1-2**(math.log(unwarped_value, 10))) *
                 (self.border-self.asymptotic_border)+self.asymptotic_border]
 
     def warp_out(self, warped_value):
         warped_value_single = warped_value[0]
-        if not 0 <= warped_value_single:
-            value_out = 0
-        if not warped_value_single <= 1:
-            value_out = 1
+        if warped_value_single < 0:
+            warped_value_single = 0
+        if warped_value_single > 1:
+            warped_value_single = 1
         if warped_value_single == 1:
             return self.asymptotic_border
         elif warped_value_single == 0:

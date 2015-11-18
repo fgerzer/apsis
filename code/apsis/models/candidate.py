@@ -37,13 +37,13 @@ class Candidate(object):
         is never touched in apsis.
     """
 
-    id = None
+    cand_id = None
     params = None
     result = None
     cost = None
     worker_information = None
 
-    def __init__(self, params, id=None, worker_information=None):
+    def __init__(self, params, cand_id=None, worker_information=None):
         """
         Initializes the unevaluated candidate object.
 
@@ -53,7 +53,7 @@ class Candidate(object):
             A dictionary of parameter value. The keys must correspond to the
             problem definition.
             The dictionary requires one key - and value - per parameter defined.
-        id : uuid.UUID, optional
+        cand_id : uuid.UUID, optional
             The uuid identifying this candidate. This is used to compare candidates
             over server and client borders.
             Note that this should only be set explicitly if you are instantiating
@@ -68,10 +68,9 @@ class Candidate(object):
         ValueError
             Iff params is not a dictionary.
         """
-        if id is None:
-            self.id = uuid.uuid4().hex
-        else:
-            self.id = id
+        if cand_id is None:
+            cand_id = uuid.uuid4().hex
+        self.id = cand_id
         if not isinstance(params, dict):
             raise ValueError("No parameter dictionary given.")
         self.params = params
@@ -99,7 +98,7 @@ class Candidate(object):
         if not isinstance(other, Candidate):
             return False
 
-        if self.id == other.id:
+        if self.cand_id == other.cand_id:
             return True
         return False
 
@@ -109,6 +108,7 @@ class Candidate(object):
 
         A stringified Candidate is of the form:
         Candidate
+        id: XXX
         params: XXX
         cost: XXX
         result XXX
@@ -214,10 +214,10 @@ def from_dict(dict):
     c : Candidate
         The corresponding candidate.
     """
-    id = None
+    cand_id = None
     if "id" in dict:
-        id = dict["id"]
-    c = Candidate(dict["params"], id=id)
+        cand_id = dict["id"]
+    c = Candidate(dict["params"], cand_id=cand_id)
     c.result = dict.get("result", None)
     c.cost = dict.get("cost", None)
     c.worker_information = dict.get("worker_information", None)

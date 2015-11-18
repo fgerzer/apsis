@@ -27,8 +27,11 @@ class testAcquisitionFunction(object):
             cand_two.result = 2
             exp.add_finished(cand_two)
             opt.update(exp)
-        cands = opt.get_next_candidates(num_candidates=3)
-        assert_equal(len(cands), 3)
+        cands = opt.get_next_candidates(num_candidates=5)
+        assert_equal(len(cands), 5)
+
+        opt.acquisition_function.params["multi_searcher"] = "random_best"
+        cands = opt.get_next_candidates(2)
 
     def test_PoI(self):
         exp = Experiment("test", {"x": MinMaxNumericParamDef(0, 1)})

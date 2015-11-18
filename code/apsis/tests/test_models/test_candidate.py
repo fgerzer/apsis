@@ -47,7 +47,7 @@ class TestCandidate(object):
         cand2 = Candidate(params)
 
         assert_not_equal(cand1, cand2)
-        cand3 = Candidate(params2, id=cand1.id)
+        cand3 = Candidate(params2, cand_id=cand1.id)
         assert_true(cand1.__eq__(cand3))
 
         assert_false(cand1.__eq__(False))

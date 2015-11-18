@@ -5,6 +5,7 @@ import random
 import os
 from matplotlib.colors import colorConverter
 
+
 def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None, plot_max=None):
     """
     Plots several functions.
@@ -81,6 +82,7 @@ def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None, plot_max=
     else:
         return fig, ax
 
+
 def _plot_lists_ax(to_plot_list, ax, plot_min=None, plot_max=None):
     """
     Plots several functions.
@@ -126,6 +128,7 @@ def _plot_lists_ax(to_plot_list, ax, plot_min=None, plot_max=None):
     if plot_max is not None:
         ax.set_ylim(ymax=plot_max)
     return ax
+
 
 def _get_y_min_max(y, plot_at_least):
     """
@@ -207,6 +210,8 @@ def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None
     fig : plt.figure
         Either a new figure or fig, now containing the plots as specified.
     """
+    if plot_max is not None and plot_max == plot_min:
+        plot_min = plot_max - 0.1
     type = to_plot.get("type", "line")
     label = to_plot.get("label", None)
     color = to_plot.get("color", random.choice(COLORS))
@@ -223,7 +228,7 @@ def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None
             ax.plot(x, y, label=label, color=color, linewidth=2.0)
     elif type=="scatter":
         ax.scatter(x, y, label=label, color=color)
-        if len(x) > 1:
+        if len(x) > 1 and max(y) != min(y):
             for i in range(len(x)):
                 arrow_len = (plot_max - plot_min) * 0.05
                 arrow_factor_min = abs(y[i] - min(y)) / (max(y) - min(y)) + 0.1
@@ -237,7 +242,9 @@ def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None
                 if plot_max < y[i]:
                     ax.arrow(x[i], plot_max-1.1*arrow_len_max, 0, arrow_len_max/10, fc="k", ec="k",
                         head_width=head_width, head_length=arrow_len_max, color=color)
+    ax.set_xlim(xmin=0)
     return ax
+
 
 def write_plot_to_file(fig, filename, store_path,  file_format="png", transparent=False):
     """
@@ -259,6 +266,7 @@ def write_plot_to_file(fig, filename, store_path,  file_format="png", transparen
     """
     filename_w_extension = os.path.join(store_path, filename + "." + file_format)
     fig.savefig(filename_w_extension, format=file_format, transparent=transparent)
+
 
 def create_figure(fig_options=None):
     """
@@ -287,6 +295,7 @@ def create_figure(fig_options=None):
     ax.set_ylabel(fig_options.get("y_label", ""))
     ax.set_title(fig_options.get("title", ""))
     return fig, ax
+
 
 def _polish_figure(ax, fig_options=None):
     """

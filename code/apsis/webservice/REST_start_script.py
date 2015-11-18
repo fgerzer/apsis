@@ -35,9 +35,7 @@ if platform.system() == 'Windows':
 
 
 import REST_interface
-import sys
 import argparse
-
 
 
 def start_rest(port=5000, validation=False, cv=5):

@@ -15,7 +15,7 @@
       minimization: {{minimization}}
       <h4>Parameter Definitions</h4>
       {% for p in param_defs%}
-        <li>{{p ~ " (" ~ param_defs[p][0] ~ ") : " ~ param_defs[p][1]}}</li>
+        <li>{{p ~ ": " ~ param_defs[p]}}</li>
       {% endfor %}
         <br>
          <!-- <img src={{ url_for('static', filename = img_source) }} alt=""> -->
