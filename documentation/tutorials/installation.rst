@@ -6,6 +6,7 @@ This guide provides instructions for how to get apsis running on your system. Th
 
 Prerequisites
 =============
+Since GPy requires Python 2, so does apsis.
 
 Apsis requires the following **python frameworks** and their dependencies to be installed.
 
