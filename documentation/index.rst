@@ -25,7 +25,7 @@ Contents
 
 Example
 -------
-The following is an example on how to do a simple evaluation routine in apsis::
+The following is an example on how to do a simple evaluation routine in apsis (after starting a server)::
 
     conn = Connection(server_address)
 
