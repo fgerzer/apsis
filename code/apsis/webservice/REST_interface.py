@@ -122,8 +122,6 @@ def client_init_experiment():
     param_defs = dict_to_param_defs(param_defs)
     exp_id = lAss.init_experiment(name, optimizer, param_defs,
                               exp_id, notes, optimizer_arguments, minimization)
-    print("EXP_ID: " + str(exp_id))
-    print(type(exp_id))
     return exp_id
 
 @app.route(CONTEXT_ROOT + "/c/experiments", methods=["GET"])
@@ -151,7 +149,6 @@ def get_experiment(experiment_id):
     """
     exp_dict = lAss.get_experiment_as_dict(experiment_id)
     param_defs = exp_dict["parameter_definitions"]
-    print(param_defs)
     finished_candidates_string = exp_dict["candidates_finished"]
     pending_candidates_string = exp_dict["candidates_pending"]
     working_candidates_string = exp_dict["candidates_working"]
