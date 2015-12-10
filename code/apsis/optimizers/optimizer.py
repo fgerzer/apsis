@@ -4,7 +4,8 @@ from abc import ABCMeta, abstractmethod
 from time import sleep
 import multiprocessing
 import Queue
-
+import thread
+import Queue
 
 class Optimizer(object):
     """
@@ -207,13 +208,10 @@ class QueueBasedOptimizer(Optimizer):
             Supports the parameter "update_time", which sets the minimum time
             in seconds between checking for updates. Default is 0.1s
         """
-        self._manager = multiprocessing.Manager()
-        self._optimizer_in_queue = self._manager.Queue()
-        self._optimizer_out_queue = self._manager.Queue()
-
+        self._optimizer_in_queue = Queue.Queue()
+        self._optimizer_out_queue = Queue.Queue()
         self.SUPPORTED_PARAM_TYPES = optimizer_class.SUPPORTED_PARAM_TYPES
-
-        p = multiprocessing.Process(target=dispatch_queue_backend,
+        p = threading.Thread(target=dispatch_queue_backend,
                                     args=(optimizer_class, optimizer_params, experiment,
                                           self._optimizer_out_queue, self._optimizer_in_queue))
         p.start()
