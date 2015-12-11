@@ -2,9 +2,7 @@ __author__ = 'Frederik Diehl'
 
 from abc import ABCMeta, abstractmethod
 from time import sleep
-import multiprocessing
-import Queue
-import thread
+import threading
 import Queue
 
 class Optimizer(object):
