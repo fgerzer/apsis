@@ -210,8 +210,8 @@ class Experiment(object):
         Determines whether CandidateA is better than candidateB in the context
         of this experiment.
         This is done as follows:
-        If candidateA's result is None, it is not better.
-        If candidateB's result is None, it is better.
+        If candidateA's result is None or it failed, it is not better.
+        If candidateB's result is None or it failed, it is better.
         If it is a minimization problem and the result is smaller than B's, it
         is better. Corresponding for being a maximization problem.
 
@@ -253,9 +253,9 @@ class Experiment(object):
         a_result = candidateA.result
         b_result = candidateB.result
 
-        if a_result is None:
+        if a_result is None or candidateA.failed:
             return False
-        if b_result is None:
+        if b_result is None or candidateB.failed:
             return True
         if self.minimization_problem:
             if a_result < b_result:
@@ -340,7 +340,7 @@ class Experiment(object):
             for k in key_order:
                 csv_string += k + delimiter
             csv_string += "cost" + delimiter + "result" + delimiter + \
-                          "best_result" + line_delimiter
+                          "failed" + delimiter + "best_result" + line_delimiter
 
         steps_included = 0
         for c in range(fromIndex, len(self.candidates_finished)):
