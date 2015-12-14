@@ -72,6 +72,8 @@ class Optimizer(object):
                                          self.SUPPORTED_PARAM_TYPES,
                                          experiment.parameter_definitions))
         self._experiment = experiment
+        if optimizer_params is None:
+            optimizer_params = {}
         self.treat_failed = optimizer_params.get("treat_failed", "worst_mult")
         second_value = None
         if not isinstance(self.treat_failed, tuple):
