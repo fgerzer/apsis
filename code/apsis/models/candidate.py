@@ -162,7 +162,7 @@ class Candidate(object):
             string += str(self.params[k]) + delimiter
         string += str(self.cost) + delimiter
         string += str(self.result) + delimiter
-        string += str(self.failed) + delimiter
+        string += str(self.failed)
         return string
 
     def to_dict(self):
