@@ -4,6 +4,7 @@ from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer
 from apsis.utilities.file_utils import ensure_directory_exists
+import numpy as np
 import datetime
 import os
 import time
@@ -262,6 +263,8 @@ class ExperimentAssistant(object):
                                             candidate.result))
 
         if status == "finished":
+            if (candidate.result is None or not np.isfinite(candidate.result)):
+                candidate.failed = True
             self._experiment.add_finished(candidate)
 
             # invoke the writing to files
@@ -340,7 +343,7 @@ class ExperimentAssistant(object):
 
     def _best_result_per_step_data(self, plot_up_to=None):
         """
-        This internal function returns goodness of the results by step.
+        This internal function returns quality of the results by step.
         This returns an x coordinate, and for each of them a value for the
         currently evaluated result and the best found result.
         Returns
