@@ -111,9 +111,8 @@ class TestParameterDefinitions(object):
 
     def test_fixed_def(self):
         pd = FixedValueParamDef([0, 1, 2, 3])
-
-        x = random.choice([0, 1, 2, 3])
-        assert_equal(x, pd.warp_out(pd.warp_in(x)))
+        for x in [0, 1, 2, 3]:
+            assert_equal(x, pd.warp_out(pd.warp_in(x)))
 
 
         assert_true(pd.is_in_parameter_domain(1))
@@ -128,6 +127,33 @@ class TestParameterDefinitions(object):
         assert_equal(pd.warp_out(-1), 0)
         assert_equal(pd.compare_values(0, 3), -1)
         assert_equal(pd.compare_values(1, 0), 1)
+
+        assert_equal(pd.warped_size(), 1)
+
+        pd = FixedValueParamDef([1, 2, 3, 5, 25])
+        for x in [1, 2, 3, 5, 25]:
+            assert_equal(x, pd.warp_out(pd.warp_in(x)))
+
+
+    def test_range(self):
+        pd = RangeParamDef(10)
+        assert_equal(pd.values, range(10))
+
+        pd = RangeParamDef(2, 10)
+        assert_equal(pd.values, range(2, 10))
+
+        pd = RangeParamDef(2, 10, 3)
+        assert_equal(pd.values, range(2, 10, 3))
+
+        for i in range(2, 10, 3):
+            assert_equal(i, pd.warp_out(pd.warp_in(i)))
+
+        assert_true(pd.is_in_parameter_domain(2))
+        assert_false(pd.is_in_parameter_domain(3))
+        with assert_raises(ValueError):
+            pd.distance("A", 1)
+        with assert_raises(ValueError):
+            pd.distance(0, 4)
 
         assert_equal(pd.warped_size(), 1)
 
