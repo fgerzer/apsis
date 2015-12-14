@@ -422,13 +422,13 @@ class PositionParamDef(OrdinalParamDef):
         super(PositionParamDef, self).__init__(values)
         self.positions = positions
 
-
     def warp_in(self, unwarped_value):
         pos = self.positions[self.values.index(unwarped_value)]
         warped_value = float(pos - min(self.positions))/(max(self.positions) - min(self.positions))
-        return warped_value
+        return [warped_value]
 
     def warp_out(self, warped_value):
+        warped_value = warped_value[0]
         if warped_value > 1:
             return self.values[-1]
         if warped_value < 0:
