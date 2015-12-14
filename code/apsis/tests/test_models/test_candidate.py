@@ -74,7 +74,7 @@ class TestCandidate(object):
         }
         cand1 = Candidate(params)
         entry = cand1.to_csv_entry()
-        assert_equal(entry, "%s,B,1,None,None" %cand1.id)
+        assert_equal(entry, "%s,B,1,None,None,False" %cand1.id)
 
     def test_dict(self):
         """
@@ -90,6 +90,7 @@ class TestCandidate(object):
              "result": None,
              "cost": None,
              "worker_information": None,
+             "failed": False,
              "id": cand1.id}
         assert_dict_equal(entry, d)
 
