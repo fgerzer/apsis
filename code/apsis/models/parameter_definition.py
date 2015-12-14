@@ -436,7 +436,7 @@ class PositionParamDef(OrdinalParamDef):
         pos = warped_value * (max(self.positions) - min(self.positions)) + min(self.positions)
         min_pos_idx = 0
         for i, p in enumerate(self.positions):
-            if abs(i - pos) < abs(i - self.positions[min_pos_idx]):
+            if abs(p - pos) < abs(self.positions[min_pos_idx] - pos):
                 min_pos_idx = i
 
         return self.values[min_pos_idx]
@@ -470,6 +470,112 @@ class FixedValueParamDef(PositionParamDef):
     def to_dict(self):
         return {"values": self.values,
                 "type": self.__class__.__name__}
+
+
+class RangeParamDef(FixedValueParamDef):
+    """
+    Defines a parameter space equivalent to python's range argument.
+
+    That is, the parameter space consists of a number of numbers starting
+    with start (default is 0) followed by integers of the form start + i*step
+    (with step defaulting to 1) for i = [1, 2, ...] and ending with the
+    last value that's absolutely smaller than the abs of stop.
+
+    Note that this can be slightly more flexible than python's range function:
+    If we initialize it with ints=False no test for integers is done, meaning
+    we can use it to generate non-integer sequences.
+    """
+
+    _start = None
+    _stop = None
+    _step = None
+    _ints = None
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the RangeParamDef.
+
+        Syntax is mostly as with python's range:
+        - range(b): Iterate from 0 to b with a step size of 1.
+        - range(a, b): Iterate from a to b with a step size of 1.
+        - range(a, b, c): Iterate from a to b with a step size of c.
+        However, an additional parameter allows us to change the behaviour
+        away from python's range function to the equivalent function but
+        allowing non-integer numbers. You can either call it with
+        - range(a, b, c, BOOL) where BOOL is True or False (the default, True,
+        means using normal python range behaviour) or by using ints=BOOL as a
+        kwarg.
+        - range(kwargs) where it receives exactly four kwargs (used for
+        reconstruction).
+        """
+        self._start = 0
+        self._stop = None
+        self._step = 1
+        self._ints = kwargs.get("ints", True)
+        if len(args) == 4:
+            self._start, self._stop, self._step, self._ints = args
+            if not kwargs:
+                raise ValueError("Received four positional arguments plus at"
+                                 "least one kwarg argument. Cannot guarantee"
+                                 "unambiguity. args were %s, kwargs %s"
+                                 %(args, kwargs))
+        elif len(args) == 3:
+            self._start, self._stop, self._step = args
+        elif len(args) == 2:
+            self._start, self._stop = args
+        elif len(args) == 1:
+            self._stop, = args
+        else:
+            if len(kwargs) != 4:
+                raise ValueError("Did not receive the right amount of"
+                                 "positional arguments. You can have "
+                                 "1, 2, 3 or 4 positional arguments and no "
+                                 "kwargs, 1-3 positional and the ints kwarg "
+                                 "or exactly four kwargs.")
+        if len(kwargs) >= 1:
+            if len(kwargs) == 4:
+                self._start = kwargs.get("start")
+                self._stop = kwargs.get("stop")
+                self._step = kwargs.get("step")
+                self._ints = kwargs.get("ints")
+            else:
+                raise ValueError("Received too many keyword arguments. It is "
+                             "only allowed to specify one of them (ints). "
+                             "kwarg was %s" %(kwargs))
+        if len(kwargs) == 1 and "ints" not in kwargs:
+            raise ValueError("Received unknown keyword argument. Only ints is"
+                             "allowed. Received %s." %(kwargs))
+
+        if self._ints:
+            if not isinstance(self._start, (int, long)):
+                raise ValueError("start is not an integer type but we are "
+                                 "forced to only work on integers. Either "
+                                 "change start or set ints to False.")
+            if not isinstance(self._stop, (int, long)):
+                raise ValueError("stop is not an integer type but we are "
+                                 "forced to only work on integers. Either "
+                                 "change stop or set ints to False.")
+            if not isinstance(self._step, (int, long)):
+                raise ValueError("step is not an integer type but we are "
+                                 "forced to only work on integers. Either "
+                                 "change step or set ints to False.")
+
+        values = []
+        cur_value = self._start
+        while abs(cur_value) < abs(self._stop):
+            values.append(cur_value)
+            cur_value += self._step
+
+        super(RangeParamDef, self).__init__(values)
+
+    def to_dict(self):
+        return {"start": self._start,
+                "stop": self._stop,
+                "step": self._step,
+                "ints": self._ints,
+                "type": self.__class__.__name__}
+
+
 
 
 class EquidistantPositionParamDef(PositionParamDef):
