@@ -114,6 +114,8 @@ class BayesianOptimizer(Optimizer):
             # we do a random search.
             return self.random_searcher.get_next_candidates(num_candidates)
         candidates = []
+        if self.gp is None:
+            self.update(self._experiment)
         new_candidate_points = self.acquisition_function.compute_proposals(
             self.gp, self._experiment, number_proposals=num_candidates,
             return_max=self.return_max
