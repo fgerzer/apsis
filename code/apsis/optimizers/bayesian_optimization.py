@@ -7,6 +7,7 @@ from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 from apsis.optimizers.bayesian.acquisition_functions import *
 import GPy
+from apsis.utilities.optimizer_utils import create_cand_matrix_vector
 
 
 class BayesianOptimizer(Optimizer):
@@ -131,26 +132,11 @@ class BayesianOptimizer(Optimizer):
             return
         self.return_max = True
 
-        parameter_warped_size = 0
-        for p in experiment.parameter_definitions.values():
-            parameter_warped_size += p.warped_size()
+        candidate_matrix, results_vector = create_cand_matrix_vector(experiment,
+                                                                     self.treat_failed)
 
-        candidate_matrix = np.zeros((len(experiment.candidates_finished),
-                                     parameter_warped_size))
-        results_vector = np.zeros((len(experiment.candidates_finished), 1))
-
-        param_names = sorted(experiment.parameter_definitions.keys())
-        self.kernel = self._check_kernel(self.kernel, len(param_names),
+        self.kernel = self._check_kernel(self.kernel, len(candidate_matrix.shape[1]),
                                          kernel_params=self.kernel_params)
-
-        for i, c in enumerate(self._experiment.candidates_finished):
-            warped_in = self._experiment.warp_pt_in(c.params)
-            param_values = []
-            for pn in param_names:
-                param_values.extend(warped_in[pn])
-            candidate_matrix[i, :] = param_values
-            results_vector[i] = c.result
-
 
         self._logger.debug("Refitting gp with cand %s and results %s"
                           %(candidate_matrix, results_vector))
