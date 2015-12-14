@@ -114,7 +114,6 @@ class TestParameterDefinitions(object):
         for x in [0, 1, 2, 3]:
             assert_equal(x, pd.warp_out(pd.warp_in(x)))
 
-
         assert_true(pd.is_in_parameter_domain(1))
         assert_false(pd.is_in_parameter_domain(1.5))
         assert_equal(pd.distance(0, 1), 1)
@@ -123,8 +122,8 @@ class TestParameterDefinitions(object):
             pd.distance("A", 1)
         with assert_raises(ValueError):
             pd.distance(0, 4)
-        assert_equal(pd.warp_out(1.5), 3)
-        assert_equal(pd.warp_out(-1), 0)
+        assert_equal(pd.warp_out([1.5]), 3)
+        assert_equal(pd.warp_out([-1]), 0)
         assert_equal(pd.compare_values(0, 3), -1)
         assert_equal(pd.compare_values(1, 0), 1)
 
