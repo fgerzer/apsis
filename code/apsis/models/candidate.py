@@ -27,6 +27,9 @@ class Candidate(object):
         The results of evaluating the parameter set. This value is optimized
         over.
 
+    failed : bool
+        Whether the evaluation has been successful. Default is false.
+
     cost : float
         The cost of evaluating the parameter set. This may correspond to
         runtime, cost of ingredients or human attention required.
@@ -41,6 +44,7 @@ class Candidate(object):
     params = None
     result = None
     cost = None
+    failed = None
     worker_information = None
 
     def __init__(self, params, cand_id=None, worker_information=None):
@@ -73,6 +77,7 @@ class Candidate(object):
         self.id = cand_id
         if not isinstance(params, dict):
             raise ValueError("No parameter dictionary given.")
+        self.failed = False
         self.params = params
         self.worker_information = worker_information
 
@@ -125,6 +130,7 @@ class Candidate(object):
         if self.cost is not None:
             string += "cost: %s\n" %self.cost
         string += "result: %s\n" %str(self.result)
+        string += "failed: %s\n" %str(self.failed)
         return string
 
     def to_csv_entry(self, delimiter=",", key_order=None):
@@ -133,7 +139,7 @@ class Candidate(object):
 
         It is delimited by `delimiter`, and first consists of the id, followed
         by all parameters in the order defined by `key_order`, followed by the
-        cost and result.
+        cost, the results and the failure state.
 
         Parameters
         ----------
@@ -155,7 +161,8 @@ class Candidate(object):
         for k in key_order:
             string += str(self.params[k]) + delimiter
         string += str(self.cost) + delimiter
-        string += str(self.result)
+        string += str(self.result) + delimiter
+        string += str(self.failed) + delimiter
         return string
 
     def to_dict(self):
@@ -173,6 +180,8 @@ class Candidate(object):
                 each with the string name as key and the value as value.
             "result" : float or None
                 The result of the Candidate
+            "failed" : bool
+                Whether the evaluation failed.
             "cost" : float or None
                 The cost of evaluating the Candidate
             "worker_information" : any jsonable or None
@@ -181,6 +190,7 @@ class Candidate(object):
         d = {"id": self.id,
              "params": self._param_defs_to_dict(),
              "result": self.result,
+             "failed": self.failed,
              "cost": self.cost,
              "worker_information": self.worker_information}
         return d
@@ -219,6 +229,7 @@ def from_dict(dict):
         cand_id = dict["id"]
     c = Candidate(dict["params"], cand_id=cand_id)
     c.result = dict.get("result", None)
+    c.failed = dict.get("failed", False)
     c.cost = dict.get("cost", None)
     c.worker_information = dict.get("worker_information", None)
     return c
