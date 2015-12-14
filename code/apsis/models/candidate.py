@@ -210,7 +210,7 @@ class Candidate(object):
         return d
 
 
-def from_dict(dict):
+def from_dict(cand_dict):
     """
     Builds a new candidate from a dictionary.
 
@@ -225,11 +225,11 @@ def from_dict(dict):
         The corresponding candidate.
     """
     cand_id = None
-    if "id" in dict:
-        cand_id = dict["id"]
-    c = Candidate(dict["params"], cand_id=cand_id)
-    c.result = dict.get("result", None)
-    c.failed = dict.get("failed", False)
-    c.cost = dict.get("cost", None)
-    c.worker_information = dict.get("worker_information", None)
+    if "id" in cand_dict:
+        cand_id = cand_dict["id"]
+    c = Candidate(cand_dict["params"], cand_id=cand_id)
+    c.result = cand_dict.get("result", None)
+    c.failed = cand_dict.get("failed", False)
+    c.cost = cand_dict.get("cost", None)
+    c.worker_information = cand_dict.get("worker_information", None)
     return c
