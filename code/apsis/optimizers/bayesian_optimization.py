@@ -7,7 +7,7 @@ from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 from apsis.optimizers.bayesian.acquisition_functions import *
 import GPy
-from apsis.utilities.optimizer_utils import create_cand_matrix_vector
+import apsis.utilities.optimizer_utils
 
 
 class BayesianOptimizer(Optimizer):
@@ -132,10 +132,10 @@ class BayesianOptimizer(Optimizer):
             return
         self.return_max = True
 
-        candidate_matrix, results_vector = create_cand_matrix_vector(experiment,
+        candidate_matrix, results_vector = apsis.utilities.optimizer_utils.create_cand_matrix_vector(experiment,
                                                                      self.treat_failed)
 
-        self.kernel = self._check_kernel(self.kernel, len(candidate_matrix.shape[1]),
+        self.kernel = self._check_kernel(self.kernel, candidate_matrix.shape[1],
                                          kernel_params=self.kernel_params)
 
         self._logger.debug("Refitting gp with cand %s and results %s"
