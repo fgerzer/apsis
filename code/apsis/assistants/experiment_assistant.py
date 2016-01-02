@@ -10,6 +10,7 @@ import time
 from apsis.utilities.logging_utils import get_logger
 from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
 import matplotlib.pyplot as plt
+import json
 
 AVAILABLE_STATUS = ["finished", "pausing", "working"]
 
@@ -175,6 +176,25 @@ class ExperimentAssistant(object):
         else:
             raise ValueError("Set a new experiment with one already "
                              "existing.")
+
+    def store(self, filename):
+        # needs to store:
+        #   - the optimizer
+        #   - the optimizer_arguments
+        #   - the write_directory_base
+        #   - the experiment_directory
+        #   - csv_write_frequency
+        optimizer_string = self._optimizer
+        if not isinstance(optimizer_string, basestring):
+            optimizer_string = self._optimizer.__class__.__name__
+        store_dict = {
+            "optimizer_class": optimizer_string,
+            "optimizer_arguments": self._optimizer_arguments,
+            "write_directory_base": self._write_directory_base,
+            "experiment_directory": self._experiment_directory_base,
+            "csv_write_frequency": self._csv_write_frequency
+        }
+
 
 
     def _init_optimizer(self):
