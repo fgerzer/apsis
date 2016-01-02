@@ -47,7 +47,7 @@ class TestCandidate(object):
         cand2 = Candidate(params)
 
         assert_not_equal(cand1, cand2)
-        cand3 = Candidate(params2, cand_id=cand1.id)
+        cand3 = Candidate(params2, cand_id=cand1.cand_id)
         assert_true(cand1.__eq__(cand3))
 
         assert_false(cand1.__eq__(False))
@@ -74,7 +74,7 @@ class TestCandidate(object):
         }
         cand1 = Candidate(params)
         entry = cand1.to_csv_entry()
-        assert_equal(entry, "%s,B,1,None,None" %cand1.id)
+        assert_equal(entry, "%s,B,1,None,None" %cand1.cand_id)
 
     def test_dict(self):
         """
@@ -90,7 +90,7 @@ class TestCandidate(object):
              "result": None,
              "cost": None,
              "worker_information": None,
-             "id": cand1.id}
+             "cand_id": cand1.cand_id}
         assert_dict_equal(entry, d)
 
         cand2 = from_dict(entry)
