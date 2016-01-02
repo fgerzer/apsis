@@ -70,7 +70,7 @@ class Candidate(object):
         """
         if cand_id is None:
             cand_id = uuid.uuid4().hex
-        self.id = cand_id
+        self.cand_id = cand_id
         if not isinstance(params, dict):
             raise ValueError("No parameter dictionary given.")
         self.params = params
@@ -120,7 +120,7 @@ class Candidate(object):
 
         """
         string = "Candidate\n"
-        string += "id: %s\n" %self.id
+        string += "cand_id: %s\n" %self.cand_id
         string += "params: %s\n" %str(self.params)
         if self.cost is not None:
             string += "cost: %s\n" %self.cost
@@ -151,7 +151,7 @@ class Candidate(object):
         if key_order is None:
             key_order = sorted(self.params.keys())
         string = ""
-        string += str(self.id) + delimiter
+        string += str(self.cand_id) + delimiter
         for k in key_order:
             string += str(self.params[k]) + delimiter
         string += str(self.cost) + delimiter
@@ -178,7 +178,7 @@ class Candidate(object):
             "worker_information" : any jsonable or None
                 Client-settable worker information.
         """
-        d = {"id": self.id,
+        d = {"cand_id": self.cand_id,
              "params": self._param_defs_to_dict(),
              "result": self.result,
              "cost": self.cost,
@@ -215,8 +215,8 @@ def from_dict(dict):
         The corresponding candidate.
     """
     cand_id = None
-    if "id" in dict:
-        cand_id = dict["id"]
+    if "cand_id" in dict:
+        cand_id = dict["cand_id"]
     c = Candidate(dict["params"], cand_id=cand_id)
     c.result = dict.get("result", None)
     c.cost = dict.get("cost", None)

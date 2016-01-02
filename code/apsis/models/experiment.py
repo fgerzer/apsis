@@ -125,10 +125,10 @@ class Experiment(object):
             self.candidates_pending.remove(candidate)
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_finished.append(candidate)
-        if (self.best_candidate is None or
-                    self.better_cand(candidate, self.best_candidate)):
-            self.best_candidate = candidate
+        self._update_best()
 
     def add_pending(self, candidate):
         """
@@ -152,7 +152,14 @@ class Experiment(object):
             raise ValueError("candidate is not an instance of Candidate.")
         if not self._check_candidate(candidate):
             raise ValueError("candidate is not valid.")
+        if candidate in self.candidates_pending:
+            self.candidates_pending.remove(candidate)
+        if candidate in self.candidates_working:
+            self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_pending.append(candidate)
+        self._update_best()
 
     def add_working(self, candidate):
         """
@@ -177,7 +184,12 @@ class Experiment(object):
             raise ValueError("candidate is not valid.")
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
+        if candidate in self.candidates_working:
+            self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_working.append(candidate)
+        self._update_best()
 
     def add_pausing(self, candidate):
         """
@@ -203,7 +215,14 @@ class Experiment(object):
             raise ValueError("candidate is not valid.")
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
+        if candidate in self.candidates_pending:
+            self.candidates_pending.remove(candidate)
+        if candidate in self.candidates_working:
+            self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_pending.append(candidate)
+        self._update_best()
 
     def better_cand(self, candidateA, candidateB):
         """
@@ -336,7 +355,7 @@ class Experiment(object):
             key_order = sorted(self.parameter_definitions.keys())
 
         if wHeader:
-            csv_string += "step" + delimiter + "id" + delimiter
+            csv_string += "step" + delimiter + "cand_id" + delimiter
             for k in key_order:
                 csv_string += k + delimiter
             csv_string += "cost" + delimiter + "result" + delimiter + \
@@ -462,3 +481,10 @@ class Experiment(object):
         else:
             result_dict["best_candidate"] = None
         return result_dict
+
+    def _update_best(self):
+        best_candidate = None
+        for c in self.candidates_finished:
+            if self.better_cand(c, best_candidate):
+                best_candidate = c
+        self.best_candidate = best_candidate
