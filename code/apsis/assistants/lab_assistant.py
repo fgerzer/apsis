@@ -612,7 +612,7 @@ class ValidationLabAssistant(LabAssistant):
         Note that this LabAssistant does not feature the ability to update with
         arbitrary candidates.
         """
-        cand_id = candidate.id
+        cand_id = candidate.cand_id
         idx = None
         for i in range(len(self._exp_assistants[exp_id])):
             if cand_id in self.candidates_pending[exp_id][i]:
@@ -653,7 +653,7 @@ class ValidationLabAssistant(LabAssistant):
                 num_min_finished = fin_and_pending
         cand = self._exp_assistants[exp_id][index_min_finished].get_next_candidate()
         if cand is not None:
-            self.candidates_pending[exp_id][index_min_finished].append(cand.id)
+            self.candidates_pending[exp_id][index_min_finished].append(cand.cand_id)
         return cand
 
     def plot_result_per_step(self, experiments, show_plot=False, plot_min=None, plot_max=None, title=None):
