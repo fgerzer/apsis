@@ -4,7 +4,9 @@ from apsis.models.candidate import Candidate
 from apsis.models.parameter_definition import ParamDef
 import copy
 import uuid
-
+from apsis.utilities.param_def_utilities import dict_to_param_defs
+import json
+from apsis.models import candidate
 
 class Experiment(object):
     """
@@ -488,3 +490,36 @@ class Experiment(object):
             if self.better_cand(c, best_candidate):
                 best_candidate = c
         self.best_candidate = best_candidate
+
+    def write_state_to_file(self, path):
+        with open(path + '/experiment.json', 'w') as outfile:
+            json.dump(self.to_dict(), outfile)
+
+def from_dict(d):
+    name = d["name"]
+    param_defs = dict_to_param_defs(d["parameter_definitions"])
+    minimization_problem = d["minimization_problem"]
+    notes = d["notes"]
+    exp_id = d["exp_id"]
+    cand_dict_finished = d["candidates_finished"]
+    cands_finished = []
+    for c in cand_dict_finished:
+        cands_finished.append(candidate.from_dict(c))
+    cand_dict_pending = d["candidates_pending"]
+    cands_pending = []
+    for c in cand_dict_pending:
+        cands_pending.append(candidate.from_dict(c))
+    cand_dict_working = d["candidates_working"]
+    cands_working = []
+    for c in cand_dict_working:
+        cands_working.append(candidate.from_dict(c))
+    best_candidate = d["best_candidate"]
+
+    exp = Experiment(name, param_defs, exp_id, notes, minimization_problem)
+
+    exp.candidates_finished = cands_finished
+    exp.candidates_pending = cands_pending
+    exp.candidates_working = exp.candidates_working
+    exp._update_best()
+
+    return exp

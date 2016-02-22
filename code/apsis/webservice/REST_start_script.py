@@ -4,10 +4,11 @@ import REST_interface
 import argparse
 
 
-def start_rest(port=5000, validation=False, cv=5):
+def start_rest(port=5000, validation=False, cv=5, continue_path=None):
     print("Initializing apsis. Val is %s, cv is %s" %(validation, cv))
     print("Initialized apsis on port %s" %port)
-    REST_interface.start_apsis(port, validation)
+    print("in start_rest: %s" %continue_path)
+    REST_interface.start_apsis(port, validation, continue_path=continue_path)
 
 
 if __name__ == "__main__":
@@ -17,6 +18,7 @@ if __name__ == "__main__":
                                                    "using --validation.")
     parser.add_argument("--validation", help="Use ValidationLabAssistant",
                     action="store_true")
+    parser.add_argument("--continue_path", help="Continue a previous experiment.")
     args = parser.parse_args()
 
     validation = False
@@ -28,4 +30,8 @@ if __name__ == "__main__":
     port = 5000
     if args.port:
         port = args.port
-    start_rest(port, validation, cv)
+    continue_path = None
+    if args.continue_path:
+        continue_path = args.continue_path
+    print("Continue path: %s" %continue_path)
+    start_rest(port, validation, cv, continue_path)

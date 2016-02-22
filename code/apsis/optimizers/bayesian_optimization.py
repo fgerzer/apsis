@@ -56,6 +56,7 @@ class BayesianOptimizer(Optimizer):
     initial_random_runs = 10
     num_gp_restarts = 10
 
+    name = "BayOpt"
     return_max = True
 
     _logger = None
@@ -126,6 +127,7 @@ class BayesianOptimizer(Optimizer):
             point_candidate = Candidate(self._experiment.warp_pt_out(point_and_value[0]))
             candidates.append(point_candidate)
         return candidates
+
 
     def update(self, experiment):
         self._experiment = experiment

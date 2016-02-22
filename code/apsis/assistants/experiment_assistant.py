@@ -10,6 +10,7 @@ import time
 from apsis.utilities.logging_utils import get_logger
 from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
 import matplotlib.pyplot as plt
+import json
 
 AVAILABLE_STATUS = ["finished", "pausing", "working"]
 
@@ -176,6 +177,8 @@ class ExperimentAssistant(object):
             raise ValueError("Set a new experiment with one already "
                              "existing.")
 
+        self._write_state_to_file()
+
 
     def _init_optimizer(self):
         """
@@ -201,18 +204,20 @@ class ExperimentAssistant(object):
         """
 
         self._logger.info("Returning next candidate.")
+        to_return = None
         if not self._experiment.candidates_pending:
             candidates = self._optimizer.get_next_candidates(num_candidates=1)
             if candidates is None:
-                return None
-            if len(candidates) > 0:
+                to_return = None
+            elif len(candidates) > 0:
                 self._experiment.add_working(candidates[0])
-                return candidates[0]
-            return None
+                to_return = candidates[0]
         else:
             cand = self._experiment.candidates_pending.pop()
             self._experiment.add_working(cand)
-            return cand
+            to_return = cand
+        self._write_state_to_file()
+        return to_return
 
     def get_experiment_as_dict(self):
         """
@@ -277,6 +282,21 @@ class ExperimentAssistant(object):
             self._experiment.add_pausing(candidate)
         elif status == "working":
             self._experiment.add_working(candidate)
+        self._write_state_to_file()
+
+    def _write_state_to_file(self):
+        state = {}
+        opt = self._optimizer
+        if not isinstance(opt, basestring):
+            opt = opt.name
+        state["optimizer_class"] = opt
+        state["optimizer_arguments"] = self._optimizer_arguments
+        state["write_directory_base"] = self._write_directory_base
+        state["experiment_directory"] = self._experiment_directory_base
+        state["csv_write_frequency"] = self._csv_write_frequency
+        with open(self._experiment_directory_base + '/exp_assistant.json', 'w') as outfile:
+            json.dump(state, outfile)
+        self._experiment.write_state_to_file(self._experiment_directory_base)
 
     def get_best_candidate(self):
         """
@@ -477,3 +497,6 @@ class ExperimentAssistant(object):
         Currently, all that is done is that the optimizer is exited.
         """
         self._optimizer.exit()
+
+    def get_exp_id(self):
+        return self._experiment.exp_id
