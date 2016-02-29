@@ -3,6 +3,9 @@ __author__ = 'Frederik Diehl'
 import REST_interface
 import argparse
 
+# Fix for TclError: no display name and no $DISPLAY environment variable
+import matplotlib
+matplotlib.use('Agg')
 
 def start_rest(port=5000, validation=False, cv=5, continue_path=None):
     print("Initializing apsis. Val is %s, cv is %s" %(validation, cv))
