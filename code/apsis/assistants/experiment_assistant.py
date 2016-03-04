@@ -43,21 +43,19 @@ class ExperimentAssistant(object):
         Directory containing the checkpoints.
     _logger : logger
         The logger instance for this class.
-
     """
 
     _optimizer = None
     _optimizer_arguments = None
     _experiment = None
 
-    _csv_write_frequency = None
-    _csv_steps_written = 0
     _write_dir = None
 
     _logger = None
 
-    def __init__(self, optimizer_class, experiment, optimizer_arguments=None,
-                 write_dir=None, csv_write_frequency=1):
+    def __init__(self, optimizer_class, experiment, write_dir,
+                 optimizer_arguments=None,
+                 csv_write_frequency=1):
         """
         Initializes this experiment assistant.
 
@@ -71,25 +69,18 @@ class ExperimentAssistant(object):
             The class of the optimizer, used to initialize it.
         experiment : Experiment
             The experiment representing the data of this experiment assistant.
+        write_dir : basestring,
+            The directory the state of this experiment assistant is regularly
+            written to. If this is None (default), no state will be written.
         optimizer_arguments : dict, optional
             The dictionary of optimizer arguments. If None, default values will
             be used.
-        write_dir : basestring, optional
-            The directory the state of this experiment assistant is regularly
-            written to. If this is None (default), no state will be written.
-        csv_write_frequency : int, optional
-            This sets the frequency with which the csv file is written. If set
-            to 1 (the default), it writes every step. If set to 2, every second
-            and so on. Note that it still writes out every step eventually.
-            If this is 0, no state will be written.
         """
         self._logger = get_logger(self)
         self._logger.info("Initializing experiment assistant.")
-        self._csv_write_frequency = csv_write_frequency
         self._optimizer = optimizer_class
         self._optimizer_arguments = optimizer_arguments
-        if self._csv_write_frequency != 0 and write_dir is not None:
-            self._write_dir = write_dir
+        self._write_dir = write_dir
         self._experiment = experiment
         self._init_optimizer()
         self._write_state_to_file()
@@ -182,12 +173,6 @@ class ExperimentAssistant(object):
         if status == "finished":
             self._experiment.add_finished(candidate)
 
-            # invoke the writing to files
-            step = len(self._experiment.candidates_finished)
-            if self._csv_write_frequency != 0 and step != 0 \
-                    and step % self._csv_write_frequency == 0:
-                self._append_to_detailed_csv()
-                self.write_plots()
             # And we rebuild the new optimizer.
             self._optimizer.update(self._experiment)
 
@@ -205,7 +190,6 @@ class ExperimentAssistant(object):
         state["optimizer_class"] = opt
         state["optimizer_arguments"] = self._optimizer_arguments
         state["write_dir"] = self._write_dir
-        state["csv_write_frequency"] = self._csv_write_frequency
         with open(self._write_dir + '/exp_assistant.json', 'w') as outfile:
             json.dump(state, outfile)
         self._experiment.write_state_to_file(self._write_dir)
@@ -302,35 +286,6 @@ class ExperimentAssistant(object):
                 step_best.append(best_candidate.result)
         return x, step_evaluation, step_best
 
-    def _append_to_detailed_csv(self):
-        """
-        Appends the currently, non-written results to the csv summary.
-
-        In the first step, includes the header.
-        """
-        if len(self._experiment.candidates_finished) <= \
-                self._csv_steps_written:
-            return
-
-        # create file and header if
-        wHeader = False
-        if self._csv_steps_written == 0:
-            #set use header
-            wHeader = True
-
-        csv_string, steps_included = self._experiment.to_csv_results(
-                                            wHeader=wHeader,
-                                            fromIndex=self._csv_steps_written)
-
-        # write
-        filename = os.path.join(self.write_dir,
-                                self._experiment.exp_id + "_results.csv")
-
-        with open(filename, 'a+') as detailed_file:
-            detailed_file.write(csv_string)
-
-        self._csv_steps_written += steps_included
-
     def get_candidates(self):
         """
         Returns the candidates of this experiment in a dict.
@@ -345,7 +300,6 @@ class ExperimentAssistant(object):
                   "pending": self._experiment.candidates_pending,
                   "working": self._experiment.candidates_working}
         return result
-
 
     def plot_result_per_step(self, ax=None, color="b",
                              plot_min=None, plot_max=None):
@@ -367,8 +321,6 @@ class ExperimentAssistant(object):
         ax: plt.Axes
             The Axes containing the results over the steps.
         """
-
-
         plots = self._best_result_per_step_dicts(color, cutoff_percentage=0.5)
         if self._experiment.minimization_problem:
             legend_loc = 'upper right'
@@ -387,20 +339,6 @@ class ExperimentAssistant(object):
                              plot_min=plot_min, plot_max=plot_max)
 
         return fig
-
-    def write_plots(self):
-        """
-        Writes out the plots of this assistant.
-        """
-        fig = self.plot_result_per_step()
-        filename = "result_per_step_%i" \
-                   % len(self._experiment.candidates_finished)
-
-        path = self.write_dir + "/plots"
-        ensure_directory_exists(path)
-        write_plot_to_file(fig, filename, path)
-        write_plot_to_file(fig, "cur_state", self._write_dir)
-        plt.close(fig)
 
     def set_exit(self):
         """
