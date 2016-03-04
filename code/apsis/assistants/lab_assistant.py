@@ -167,7 +167,7 @@ class LabAssistant(object):
                                       optimizer_arguments=optimizer_arguments,
                                       write_dir=exp_ass_write_dir)
 
-        self._exp_assistants[exp_ass.exp_id()] = exp_ass
+        self._exp_assistants[exp_ass.exp_id] = exp_ass
 
     def _load_experiment(self, path):
         with open(path + "/experiment.json", 'r') as infile:
