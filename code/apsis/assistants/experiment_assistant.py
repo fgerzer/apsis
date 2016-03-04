@@ -69,7 +69,7 @@ class ExperimentAssistant(object):
             The class of the optimizer, used to initialize it.
         experiment : Experiment
             The experiment representing the data of this experiment assistant.
-        write_dir : basestring,
+        write_dir : basestring, optional
             The directory the state of this experiment assistant is regularly
             written to. If this is None (default), no state will be written.
         optimizer_arguments : dict, optional
