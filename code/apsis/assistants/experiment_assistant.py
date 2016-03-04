@@ -33,12 +33,6 @@ class ExperimentAssistant(object):
         Dictionary of the arguments for optimizer.
     _experiment : Experiment
         The experiment storing the evaluated points and parameter definition.
-    _csv_write_frequency : int, strictly positive.
-        This sets the frequency with which the csv file is written. If set to
-        1, it writes every step. If set to 2, every second and so on. Note that
-        it still writes out every step eventually.
-    _csv_steps_written : int
-        Stores the number of steps already stored to csv file.
     _write_dir : basestring
         Directory containing the checkpoints.
     _logger : logger
@@ -183,6 +177,16 @@ class ExperimentAssistant(object):
         self._write_state_to_file()
 
     def _write_state_to_file(self):
+        """
+        Writes the current state to the specified file.
+
+        When this is called, it collects the state of this experiment assistant
+        - that is, optimizer_class, optimizer_arguments and write_dir - and
+        writes them to file. It also forces _experiment to write its state to
+        file.
+        All of this only happens if _write_dir is not None - if it is, we will
+        do nothing.
+        """
         if self._write_dir is None:
             return
         state = {}
@@ -216,7 +220,7 @@ class ExperimentAssistant(object):
         date_name = datetime.datetime.utcfromtimestamp(
                 global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
         self._experiment_directory_base = os.path.join(
-                                    self.write_dir,
+                                    self._write_dir,
                                     self._experiment.exp_id)
         ensure_directory_exists(self._write_dir)
 
@@ -350,8 +354,8 @@ class ExperimentAssistant(object):
         """
         self._optimizer.exit()
 
-    #TODO property!
-    def get_exp_id(self):
+    @property
+    def exp_id(self):
         return self._experiment.exp_id
 
     @property
