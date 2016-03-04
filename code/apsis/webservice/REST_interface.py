@@ -29,8 +29,7 @@ def set_exit(_signo, _stack_frame):
 
 signal.signal(signal.SIGINT, set_exit)
 
-
-def start_apsis(port=5000):
+def start_apsis(port=5000, continue_path=None):
     """
     Starts apsis.
 
@@ -38,7 +37,7 @@ def start_apsis(port=5000):
     """
     global lAss, _logger
     _logger = get_logger("REST_interface")
-    lAss = LabAssistant()
+    lAss = LabAssistant(continue_path=continue_path)
     app.run(host='0.0.0.0', debug=False, port=port)
     _logger.info("Finished initialization. Interface running now.")
 

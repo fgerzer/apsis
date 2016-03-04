@@ -23,6 +23,7 @@ class RandomSearch(Optimizer):
 
     random_state = None
     logger = None
+    name = "RandomSearch"
 
     def __init__(self, experiment, optimizer_params=None):
         """

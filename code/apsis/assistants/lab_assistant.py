@@ -5,12 +5,14 @@ from apsis.utilities.file_utils import ensure_directory_exists
 import time
 import datetime
 import os
+import json
 from apsis.utilities.logging_utils import get_logger
 from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
 import matplotlib.pyplot as plt
 import uuid
 import copy
 import numpy as np
+from apsis.models import experiment
 
 # These are the colours supported by the plot.
 COLORS = ["g", "r", "c", "b", "m", "y"]
@@ -40,7 +42,7 @@ class LabAssistant(object):
 
 
 
-    def __init__(self, write_directory_base=None):
+    def __init__(self, write_directory_base=None, continue_path=None):
         """
         Initializes the lab assistant.
 
@@ -50,6 +52,9 @@ class LabAssistant(object):
             Sets the base write directory for the lab assistant. If None
             (default) the directory depends on the operating system.
             ./APSIS_WRITING if on Windows, /tmp/APSIS_WRITING otherwise.
+        continue_path : string, optional
+            The path for continuing the experiment. If None (default) a new
+            lab assistant is started.
         """
         self._logger = get_logger(self)
         if write_directory_base is None:
@@ -57,12 +62,25 @@ class LabAssistant(object):
                 write_directory_base = os.path.relpath("APSIS_WRITING")
             else:
                 write_directory_base = "/tmp/APSIS_WRITING"
+
         self._logger.info("Initializing lab assistant.")
         self._logger.info("Writing results to %s" %write_directory_base)
         self._write_directory_base = write_directory_base
-        self._global_start_date = time.time()
-        self._init_directory_structure()
+
         self._exp_assistants = {}
+        if continue_path is None:
+            self._global_start_date = time.time()
+            self._init_directory_structure()
+        else:
+            # set the correct path.
+            self._lab_run_directory = continue_path
+            with open(continue_path + "/lab_assistant.json", 'r') as infile:
+                lab_assistant_json = json.load(infile)
+            self._global_start_date = lab_assistant_json["global_start_date"]
+            for p in lab_assistant_json["exp_assistants"].values():
+                self._load_exp_assistant_from_path(p)
+
+        self._write_state_to_file(self._lab_run_directory)
         self._logger.info("lab assistant successfully initialized.")
 
     def init_experiment(self, name, optimizer, param_defs, exp_id=None,
@@ -121,6 +139,7 @@ class LabAssistant(object):
         exp_ass.init_experiment(name, param_defs, exp_id, notes, minimization)
         self._exp_assistants[exp_id] = exp_ass
         self._logger.info("Experiment initialized successfully.")
+        self._write_state_to_file(self._lab_run_directory)
         return exp_id
 
     def _init_directory_structure(self):
@@ -136,6 +155,37 @@ class LabAssistant(object):
                                                   date_name)
 
             ensure_directory_exists(self._lab_run_directory)
+
+    def _load_exp_assistant_from_path(self, path):
+        with open(path + "/exp_assistant.json", 'r') as infile:
+            exp_assistant_json = json.load(infile)
+
+        optimizer_class = exp_assistant_json["optimizer_class"]
+        optimizer_arguments = exp_assistant_json["optimizer_arguments"]
+        write_directory_base = exp_assistant_json["write_directory_base"]
+        experiment_directory = exp_assistant_json["experiment_directory"]
+        csv_write_frequency = exp_assistant_json["csv_write_frequency"]
+
+        exp_ass = ExperimentAssistant(optimizer_class, optimizer_arguments,
+                                      write_directory_base, experiment_directory,
+                                      csv_write_frequency)
+        exp = self._load_experiment(path)
+        exp_ass.set_experiment(exp)
+        self._exp_assistants[exp_ass.get_exp_id()] = exp_ass
+
+    def _load_experiment(self, path):
+        with open(path + "/experiment.json", 'r') as infile:
+            exp_json = json.load(infile)
+        exp = experiment.from_dict(exp_json)
+        return exp
+
+
+    def _write_state_to_file(self, path):
+        state = {"global_start_date": self._global_start_date,
+                "exp_assistants": {x.get_exp_id(): x._experiment_directory_base for x
+                                    in self._exp_assistants.values()}}
+        with open(path + '/lab_assistant.json', 'w') as outfile:
+            json.dump(state, outfile)
 
     def get_candidates(self, experiment_id):
         """

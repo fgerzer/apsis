@@ -33,7 +33,7 @@ class Optimizer(object):
     SUPPORTED_PARAM_TYPES = []
 
     _experiment = None
-
+    name = None
     def __init__(self, experiment, optimizer_params):
         """
         Initializes the optimizer.
@@ -84,6 +84,7 @@ class Optimizer(object):
                                          self.SUPPORTED_PARAM_TYPES,
                                          experiment.parameter_definitions))
         self._experiment = experiment
+
 
     @abstractmethod
     def get_next_candidates(self, num_candidates=1):
@@ -189,6 +190,8 @@ class QueueBasedOptimizer(Optimizer):
 
     _manager = None
 
+    _optimizer_class = None
+
     def __init__(self, optimizer_class, experiment, optimizer_params=None):
         """
         Initializes a new QueueBasedOptimizer class.
@@ -210,6 +213,7 @@ class QueueBasedOptimizer(Optimizer):
         """
         self._optimizer_in_queue = Queue.Queue()
         self._optimizer_out_queue = Queue.Queue()
+        self._optimizer_class = optimizer_class
         self.SUPPORTED_PARAM_TYPES = optimizer_class.SUPPORTED_PARAM_TYPES
         p = threading.Thread(target=dispatch_queue_backend,
                                     args=(optimizer_class, optimizer_params, experiment,
@@ -226,6 +230,13 @@ class QueueBasedOptimizer(Optimizer):
         except Queue.Empty:
             pass
         return next_candidates
+
+    @property
+    def name(self):
+        if isinstance(self._optimizer_class, basestring):
+            return self._optimizer_class
+        else:
+            return self._optimizer_class.name
 
 
     def update(self, experiment):
