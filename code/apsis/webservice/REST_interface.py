@@ -4,11 +4,15 @@ from apsis.models.candidate import Candidate, from_dict
 from functools import wraps
 from apsis.utilities.param_def_utilities import dict_to_param_defs
 from apsis.utilities.logging_utils import get_logger
+import os
 import sys
 import signal
 import urllib
 import StringIO
+import datetime
+import time
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from apsis.utilities import file_utils
 
 CONTEXT_ROOT = ""
 
@@ -37,7 +41,19 @@ def start_apsis(port=5000, continue_path=None):
     """
     global lAss, _logger
     _logger = get_logger("REST_interface")
-    lAss = LabAssistant(continue_path=continue_path)
+    if continue_path:
+        write_dir = continue_path
+    else:
+        if os.name == "nt":
+            write_dir = os.path.relpath("APSIS_WRITING")
+        else:
+            write_dir = "/tmp/APSIS_WRITING"
+    date_name = datetime.datetime.utcfromtimestamp(
+                time.time()).strftime("%Y-%m-%d_%H.%M.%S")
+
+    write_dir = os.path.join(write_dir, date_name)
+    file_utils.ensure_directory_exists(write_dir)
+    lAss = LabAssistant(write_dir=write_dir)
     app.run(host='0.0.0.0', debug=False, port=port)
     _logger.info("Finished initialization. Interface running now.")
 

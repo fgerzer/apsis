@@ -28,59 +28,56 @@ class LabAssistant(object):
     ----------
     _exp_assistants : dict of ExperimentAssistants.
         The dictionary of experiment assistants this LabAssistant uses.
-    _write_directory_base : String, optional
+    _write_dir : String, optional
         The directory to write all the results and plots to.
     _logger : logging.logger
         The logger for this class.
     """
     _exp_assistants = None
 
-    _write_directory_base = None
-    _lab_run_directory = None
+    _write_dir = None
+
     _global_start_date = None
     _logger = None
 
-
-
-    def __init__(self, write_directory_base=None, continue_path=None):
+    def __init__(self, write_dir=None):
         """
         Initializes the lab assistant.
 
         Parameters
         ----------
-        write_directory_base : string, optional
-            Sets the base write directory for the lab assistant. If None
-            (default) the directory depends on the operating system.
-            ./APSIS_WRITING if on Windows, /tmp/APSIS_WRITING otherwise.
-        continue_path : string, optional
-            The path for continuing the experiment. If None (default) a new
-            lab assistant is started.
+        write_dir: string, optional
+            Sets the write directory for the lab assistant. If None (default),
+            nothing will be written.
         """
         self._logger = get_logger(self)
-        if write_directory_base is None:
-            if os.name == "nt":
-                write_directory_base = os.path.relpath("APSIS_WRITING")
-            else:
-                write_directory_base = "/tmp/APSIS_WRITING"
-
         self._logger.info("Initializing lab assistant.")
-        self._logger.info("Writing results to %s" %write_directory_base)
-        self._write_directory_base = write_directory_base
+        self._logger.info("Writing results to %s" %write_dir)
+        self._write_dir = write_dir
 
         self._exp_assistants = {}
-        if continue_path is None:
+
+        reloading_possible = True
+        try:
+            if self._write_dir:
+                with open(self._write_dir + "/lab_assistant.json", "r"):
+                    pass
+            else:
+                reloading_possible = False
+        except IOError:
+            reloading_possible = False
+
+        if not reloading_possible:
             self._global_start_date = time.time()
-            self._init_directory_structure()
         else:
             # set the correct path.
-            self._lab_run_directory = continue_path
-            with open(continue_path + "/lab_assistant.json", 'r') as infile:
+            with open(self._write_dir + "/lab_assistant.json", 'r') as infile:
                 lab_assistant_json = json.load(infile)
             self._global_start_date = lab_assistant_json["global_start_date"]
             for p in lab_assistant_json["exp_assistants"].values():
                 self._load_exp_assistant_from_path(p)
 
-        self._write_state_to_file(self._lab_run_directory)
+        self._write_state_to_file()
         self._logger.info("lab assistant successfully initialized.")
 
     def init_experiment(self, name, optimizer, param_defs, exp_id=None,
@@ -133,10 +130,12 @@ class LabAssistant(object):
                 if exp_id not in self._exp_assistants.keys():
                     break
 
-        exp_assistant_write_directory = os.path.join(self._lab_run_directory +
+        if not self._write_dir:
+            exp_assistant_write_directory = None
+        else:
+            exp_assistant_write_directory = os.path.join(self._write_dir +
                                                      "/" + exp_id)
-
-        ensure_directory_exists(exp_assistant_write_directory)
+            ensure_directory_exists(exp_assistant_write_directory)
 
         exp = experiment.Experiment(name,
                                     param_defs,
@@ -150,22 +149,8 @@ class LabAssistant(object):
                                       write_dir=exp_assistant_write_directory)
         self._exp_assistants[exp_id] = exp_ass
         self._logger.info("Experiment initialized successfully.")
-        self._write_state_to_file(self._lab_run_directory)
+        self._write_state_to_file()
         return exp_id
-
-    def _init_directory_structure(self):
-        """
-        Method to create the directory structure if it does not exist
-        for results and plot writing.
-        """
-        if self._lab_run_directory is None:
-            date_name = datetime.datetime.utcfromtimestamp(
-                self._global_start_date).strftime("%Y-%m-%d_%H.%M.%S")
-
-            self._lab_run_directory = os.path.join(self._write_directory_base,
-                                                  date_name)
-
-            ensure_directory_exists(self._lab_run_directory)
 
     def _load_exp_assistant_from_path(self, path):
         with open(path + "/exp_assistant.json", 'r') as infile:
@@ -191,11 +176,13 @@ class LabAssistant(object):
         return exp
 
 
-    def _write_state_to_file(self, path):
+    def _write_state_to_file(self):
+        if not self._write_dir:
+            return
         state = {"global_start_date": self._global_start_date,
                 "exp_assistants": {x.exp_id: x.write_dir for x
                                     in self._exp_assistants.values()}}
-        with open(path + '/lab_assistant.json', 'w') as outfile:
+        with open(self._write_dir + '/lab_assistant.json', 'w') as outfile:
             json.dump(state, outfile)
 
     def get_candidates(self, experiment_id):
@@ -371,13 +358,15 @@ class LabAssistant(object):
             Write only if all experiment assistants in this lab assistant
             are currently in the same step.
         """
+        if not self._write_dir:
+            return
         min_step = self._get_min_step()
         if same_steps_only:
             plot_up_to = min_step
         else:
             plot_up_to = None
 
-        plot_base = os.path.join(self._lab_run_directory, "plots")
+        plot_base = os.path.join(self._write_dir, "plots")
         plot_step_base = os.path.join(plot_base, "step_" + str(min_step))
         ensure_directory_exists(plot_step_base)
 
