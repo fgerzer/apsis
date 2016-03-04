@@ -5,6 +5,7 @@ import os
 from apsis.utilities.file_utils import ensure_directory_exists
 import logging.config
 import apsis
+import yaml
 
 logging_intitialized = False
 
@@ -44,6 +45,8 @@ def get_logger(module, specific_log_name=None):
         new_logger_name = module.__module__ + "." + module.__class__.__name__
 
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    #TODO - Windows!
     LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
     ensure_directory_exists(LOG_ROOT)
     global logging_intitialized
@@ -52,7 +55,10 @@ def get_logger(module, specific_log_name=None):
         #initialize the root logger.
         project_dirname = os.path.dirname(apsis.__file__)
         log_config_file = os.path.join(project_dirname, 'config/logging.conf')
-        logging.config.fileConfig(log_config_file, defaults={'logfilename': os.path.join(LOG_ROOT, "log")})
+        with open(log_config_file, "r") as conf_file:
+            conf_dict = yaml.load(conf_file)
+        print(conf_dict)
+        logging.config.dictConfig(conf_dict)
 
     logger_existed = False
     if new_logger_name in logging.Logger.manager.loggerDict:
