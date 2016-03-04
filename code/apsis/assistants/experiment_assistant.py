@@ -53,9 +53,9 @@ class ExperimentAssistant(object):
 
     _logger = None
 
-    def __init__(self, optimizer_class, experiment, write_dir,
+    def __init__(self, optimizer_class, experiment,
                  optimizer_arguments=None,
-                 csv_write_frequency=1):
+                 write_dir=None):
         """
         Initializes this experiment assistant.
 
@@ -183,6 +183,8 @@ class ExperimentAssistant(object):
         self._write_state_to_file()
 
     def _write_state_to_file(self):
+        if self._write_dir is None:
+            return
         state = {}
         opt = self._optimizer
         if not isinstance(opt, basestring):
