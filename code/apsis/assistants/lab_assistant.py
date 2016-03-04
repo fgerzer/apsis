@@ -147,8 +147,7 @@ class LabAssistant(object):
         exp_ass = ExperimentAssistant(optimizer,
                                       experiment=exp,
                                       optimizer_arguments=optimizer_arguments,
-                                      write_dir=exp_assistant_write_directory,
-                                      csv_write_frequency=1)
+                                      write_dir=exp_assistant_write_directory)
         self._exp_assistants[exp_id] = exp_ass
         self._logger.info("Experiment initialized successfully.")
         self._write_state_to_file(self._lab_run_directory)
@@ -176,14 +175,12 @@ class LabAssistant(object):
         optimizer_arguments = exp_assistant_json["optimizer_arguments"]
         exp_ass_write_dir = exp_assistant_json["write_dir"]
         ensure_directory_exists(exp_ass_write_dir)
-        csv_write_frequency = exp_assistant_json["csv_write_frequency"]
         exp = self._load_experiment(path)
 
         exp_ass = ExperimentAssistant(optimizer_class=optimizer_class,
                                       experiment=exp,
                                       optimizer_arguments=optimizer_arguments,
-                                      write_dir=exp_ass_write_dir,
-                                      csv_write_frequency=csv_write_frequency)
+                                      write_dir=exp_ass_write_dir)
 
         self._exp_assistants[exp_ass.get_exp_id()] = exp_ass
 
