@@ -116,22 +116,3 @@ class TestLabAssistant(object):
         self.LAss.update(exp_id, "finished", cand_two)
 
         assert_equal(cand_two, self.LAss.get_best_candidate(exp_id))
-
-    def test_all_plots_working(self):
-        """
-        Tests whether all of the plot functions work. Does not test for correctness.
-        """
-        exp_id_one = self.test_init_experiment()
-        exp_id_two = self.test_init_experiment()
-        cand = self.LAss.get_next_candidate(exp_id_one)
-        cand.result = 1
-        self.LAss.update(exp_id_one, "finished", cand)
-        self.LAss.write_out_plots_current_step()
-        self.LAss.plot_result_per_step([exp_id_one])
-        self.LAss._exp_assistants[exp_id_one]._experiment.minimization_problem = False
-        self.LAss.plot_result_per_step(exp_id_two)
-
-
-    def test_compute_current_step_overall(self):
-        exp_id = self.test_init_experiment()
-        self.LAss._compute_current_step_overall()
