@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import uuid
 import copy
 import numpy as np
-from apsis.models import experiment
+import apsis.models.experiment as experiment
 
 # These are the colours supported by the plot.
 COLORS = ["g", "r", "c", "b", "m", "y"]
@@ -133,10 +133,22 @@ class LabAssistant(object):
                 if exp_id not in self._exp_assistants.keys():
                     break
 
-        exp_ass = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_arguments,
-                            write_directory_base=self._lab_run_directory,
-                            csv_write_frequency=1)
-        exp_ass.init_experiment(name, param_defs, exp_id, notes, minimization)
+        exp_assistant_write_directory = os.path.join(self._lab_run_directory +
+                                                     "/" + exp_id)
+
+        ensure_directory_exists(exp_assistant_write_directory)
+
+        exp = experiment.Experiment(name,
+                                    param_defs,
+                                    exp_id,
+                                    notes,
+                                    minimization)
+
+        exp_ass = ExperimentAssistant(optimizer,
+                                      experiment=exp,
+                                      optimizer_arguments=optimizer_arguments,
+                                      write_dir=exp_assistant_write_directory,
+                                      csv_write_frequency=1)
         self._exp_assistants[exp_id] = exp_ass
         self._logger.info("Experiment initialized successfully.")
         self._write_state_to_file(self._lab_run_directory)
@@ -162,15 +174,17 @@ class LabAssistant(object):
 
         optimizer_class = exp_assistant_json["optimizer_class"]
         optimizer_arguments = exp_assistant_json["optimizer_arguments"]
-        write_directory_base = exp_assistant_json["write_directory_base"]
-        experiment_directory = exp_assistant_json["experiment_directory"]
+        exp_ass_write_dir = exp_assistant_json["write_dir"]
+        ensure_directory_exists(exp_ass_write_dir)
         csv_write_frequency = exp_assistant_json["csv_write_frequency"]
-
-        exp_ass = ExperimentAssistant(optimizer_class, optimizer_arguments,
-                                      write_directory_base, experiment_directory,
-                                      csv_write_frequency)
         exp = self._load_experiment(path)
-        exp_ass.set_experiment(exp)
+
+        exp_ass = ExperimentAssistant(optimizer_class=optimizer_class,
+                                      experiment=exp,
+                                      optimizer_arguments=optimizer_arguments,
+                                      write_dir=exp_ass_write_dir,
+                                      csv_write_frequency=csv_write_frequency)
+
         self._exp_assistants[exp_ass.get_exp_id()] = exp_ass
 
     def _load_experiment(self, path):
@@ -182,7 +196,7 @@ class LabAssistant(object):
 
     def _write_state_to_file(self, path):
         state = {"global_start_date": self._global_start_date,
-                "exp_assistants": {x.get_exp_id(): x._experiment_directory_base for x
+                "exp_assistants": {x.get_exp_id(): x.write_dir for x
                                     in self._exp_assistants.values()}}
         with open(path + '/lab_assistant.json', 'w') as outfile:
             json.dump(state, outfile)
@@ -407,9 +421,9 @@ class LabAssistant(object):
         experiment_names_sorted = sorted(self._exp_assistants.keys())
 
         for i, ex_assistant_name in enumerate(experiment_names_sorted):
-            experiment = self._exp_assistants[ex_assistant_name]._experiment
+            exp = self._exp_assistants[ex_assistant_name]._experiment
 
-            curr_step = len(experiment.candidates_finished)
+            curr_step = len(exp.candidates_finished)
             if i == 0:
                 last_step = curr_step
             elif last_step != curr_step:
