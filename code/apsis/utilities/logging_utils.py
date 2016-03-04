@@ -9,7 +9,7 @@ import yaml
 
 logging_intitialized = False
 
-def get_logger(module, specific_log_name=None):
+def get_logger(module, specific_log_name=None, extra_info=None):
     """
     Abstraction from logging.getLogging, which also adds initialization.
 
@@ -31,6 +31,11 @@ def get_logger(module, specific_log_name=None):
     specific_log_name : string, optional
         If you want logging for this logger (and all sublogger) to a specific
         file, this allows you to set the corresponding filename.
+
+    extra_info : string, optional
+        If None (the default), a usual logger is returned. If not, a
+        logger_adapter is returned, which always prepends the corresponding
+        string.
 
     Returns
     -------
@@ -68,4 +73,14 @@ def get_logger(module, specific_log_name=None):
         fh = logging.FileHandler(os.path.join(LOG_ROOT, specific_log_name))
         fh.setFormatter(formatter)
         logger.addHandler(fh)
+
+
+
+    class AddInfoClass(logging.LoggerAdapter):
+        def process(self, msg, kwargs):
+            return '[%s] %s' % (self.extra['extra_info'], msg), kwargs
+
+    if extra_info:
+        logger = AddInfoClass(logger, {"extra_info": extra_info})
+
     return logger

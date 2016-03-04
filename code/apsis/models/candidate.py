@@ -70,14 +70,13 @@ class Candidate(object):
         ValueError
             Iff params is not a dictionary.
         """
-        self._logger = get_logger(self)
+        if cand_id is None:
+            cand_id = uuid.uuid4().hex
+        self._logger = get_logger(self, extra_info="cand_id " + str(cand_id))
         self._logger.debug("Initializing new candidate. Params %s, cand_id %s,"
                            "worker_info %s", params, cand_id,
                            worker_information)
-        if cand_id is None:
-            cand_id = uuid.uuid4().hex
-            self._logger.debug("Generated candidate id: %s", cand_id)
-        self.cand_id = cand_id
+
         if not isinstance(params, dict):
             self._logger.error("No parameter dict given, received %s instead",
                                params)

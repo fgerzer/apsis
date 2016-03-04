@@ -70,7 +70,8 @@ class ExperimentAssistant(object):
             The dictionary of optimizer arguments. If None, default values will
             be used.
         """
-        self._logger = get_logger(self)
+        self._logger = get_logger(self, extra_info="exp_id: " +
+                                                   str(experiment.exp_id))
         self._logger.info("Initializing experiment assistant.")
         self._optimizer = optimizer_class
         self._optimizer_arguments = optimizer_arguments
