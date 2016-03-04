@@ -84,8 +84,12 @@ class ExperimentAssistant(object):
         """
         Initializes the optimizer if it does not exist.
         """
+        self._logger.debug("Initializing optimizer. Current state is %s"
+                           %self._optimizer)
         self._optimizer= check_optimizer(self._optimizer, self._experiment,
             optimizer_arguments=self._optimizer_arguments)
+        self._logger.debug("Initialized optimizer. State afterwards is %s"
+                           %self._optimizer)
 
     def get_next_candidate(self):
         """
@@ -101,19 +105,24 @@ class ExperimentAssistant(object):
             which is equivalent to no candidate generated.
         """
 
-        self._logger.info("Returning next candidate.")
+        self._logger.debug("Returning next candidate.")
         to_return = None
         if not self._experiment.candidates_pending:
+            self._logger.debug("No candidate pending; requesting one from "
+                               "optimizer.")
             candidates = self._optimizer.get_next_candidates(num_candidates=1)
+            self._logger.debug("Got %s" %candidates)
             if candidates is None:
                 to_return = None
             elif len(candidates) > 0:
                 self._experiment.add_working(candidates[0])
                 to_return = candidates[0]
         else:
+            self._logger.debug("Had at least one pending.")
             cand = self._experiment.candidates_pending.pop()
             self._experiment.add_working(cand)
             to_return = cand
+        self._logger.debug("Returning candidate %s" %to_return)
         self._write_state_to_file()
         return to_return
 
@@ -128,7 +137,10 @@ class ExperimentAssistant(object):
             exp_dict : dict
                 The experiment dictionary.
         """
-        return self._experiment.to_dict()
+        self._logger.debug("Returning experiment as dict.")
+        exp_dict = self._experiment.to_dict()
+        self._logger.debug("Exp_dict is %s" %exp_dict)
+        return exp_dict
 
     def update(self, candidate, status="finished"):
         """
@@ -147,6 +159,8 @@ class ExperimentAssistant(object):
             - working: The Candidate is now being worked on by a worker.
 
         """
+        self._logger.debug("Updating experiment assistant with candidate %s,"
+                           "status %s" %(candidate, status))
         if status not in AVAILABLE_STATUS:
             message = ("status not in %s but %s."
                              %(str(AVAILABLE_STATUS), str(status)))
@@ -159,17 +173,16 @@ class ExperimentAssistant(object):
             self._logger.error(message)
             raise ValueError(message)
 
-        self._logger.info("Got new %s of candidate %s with parameters %s"
-                         " and result %s" % (status, candidate,
-                                            candidate.params,
-                                            candidate.result))
+        self._logger.debug("Got new %s of candidate %s with parameters %s"
+                         " and result %s", status, candidate, candidate.params,
+                          candidate.result)
 
         if status == "finished":
             self._experiment.add_finished(candidate)
-
+            self._logger.debug("Was finished, updating optimizer.")
             # And we rebuild the new optimizer.
             self._optimizer.update(self._experiment)
-
+            self._logger.debug("Optimizer updated.")
         elif status == "pausing":
             self._experiment.add_pausing(candidate)
         elif status == "working":
@@ -187,7 +200,11 @@ class ExperimentAssistant(object):
         All of this only happens if _write_dir is not None - if it is, we will
         do nothing.
         """
+        self._logger.debug("Writing experiment assistant status to file %s",
+                           self._write_dir)
         if self._write_dir is None:
+            self._logger.debug("No write directory is set; not writing "
+                               "anything.")
             return
         state = {}
         opt = self._optimizer
@@ -198,6 +215,7 @@ class ExperimentAssistant(object):
         state["write_dir"] = self._write_dir
         with open(self._write_dir + '/exp_assistant.json', 'w') as outfile:
             json.dump(state, outfile)
+        self._logger.debug("Writing state %s", state)
         self._experiment.write_state_to_file(self._write_dir)
 
     def get_best_candidate(self):
@@ -210,19 +228,10 @@ class ExperimentAssistant(object):
             Returns a candidate if there is a best one (which corresponds to
             at least one candidate evaluated) or None if none exists.
         """
-        return self._experiment.best_candidate
-
-    def _create_experiment_directory(self):
-        """
-        Generates an experiment directory from the base write directory.
-        """
-        global_start_date = time.time()
-        date_name = datetime.datetime.utcfromtimestamp(
-                global_start_date).strftime("%Y-%m-%d_%H:%M:%S")
-        self._experiment_directory_base = os.path.join(
-                                    self._write_dir,
-                                    self._experiment.exp_id)
-        ensure_directory_exists(self._write_dir)
+        self._logger.debug("Returning best candidate.")
+        best_candidate = self._experiment.best_candidate
+        self._logger.debug("Best candidate is %s", best_candidate)
+        return best_candidate
 
     def _best_result_per_step_dicts(self, color="b", plot_up_to=None,
                                     cutoff_percentage=1.):
@@ -239,6 +248,7 @@ class ExperimentAssistant(object):
             Two dicts, one for step_eval, one for step_best, and their
             corresponding definitions.
         """
+        self._logger.debug("Returning best result per step dicts.")
         x, step_eval, step_best = self._best_result_per_step_data(plot_up_to=
                                                                   plot_up_to)
 
@@ -257,12 +267,13 @@ class ExperimentAssistant(object):
             "type": "line",
             "color": color,
         }
-
-        return [step_eval_dict, step_best_dict]
+        result = [step_eval_dict, step_best_dict]
+        self._logger.debug("Returning %s", result)
+        return result
 
     def _best_result_per_step_data(self, plot_up_to=None):
         """
-        This internal function returns goodness of the results by step.
+        This internal function returns quality of the results by step.
         This returns an x coordinate, and for each of them a value for the
         currently evaluated result and the best found result.
         Returns
@@ -274,12 +285,14 @@ class ExperimentAssistant(object):
         step_best: list of floats
             The best result that has been found until then.
         """
+        self._logger.debug("Returning best result per step dicts.")
         x = []
         step_evaluation = []
         step_best = []
         best_candidate = None
         if plot_up_to is None:
             plot_up_to = len(self._experiment.candidates_finished)
+        self._logger.debug("Plotting %s candidates", plot_up_to)
         for i, e in enumerate(self._experiment.candidates_finished
                               [:plot_up_to]):
             x.append(i)
@@ -290,6 +303,8 @@ class ExperimentAssistant(object):
 
             else:
                 step_best.append(best_candidate.result)
+        self._logger.debug("Returning x: %s, step_eval: %s and step_best %s",
+                           x, step_evaluation, step_best)
         return x, step_evaluation, step_best
 
     def get_candidates(self):
@@ -302,9 +317,11 @@ class ExperimentAssistant(object):
             A dictionary of three lists with the keys finished, pending and
             working, with the corresponding candidates.
         """
+        self._logger.debug("Returning candidates of exp_ass.")
         result = {"finished": self._experiment.candidates_finished,
                   "pending": self._experiment.candidates_pending,
                   "working": self._experiment.candidates_working}
+        self._logger.debug("Candidates are %s", result)
         return result
 
     def plot_result_per_step(self, ax=None, color="b",
@@ -327,12 +344,15 @@ class ExperimentAssistant(object):
         ax: plt.Axes
             The Axes containing the results over the steps.
         """
+        self._logger.debug("Plotting result per step. ax %s, colors %s, "
+                           "plot_min %s, plot_max %s", ax, color, plot_min,
+                           plot_max)
         plots = self._best_result_per_step_dicts(color, cutoff_percentage=0.5)
         if self._experiment.minimization_problem:
             legend_loc = 'upper right'
         else:
             legend_loc = 'upper left'
-
+        self._logger.debug("Setting legend to %s LOC", legend_loc)
         plot_options = {
             "legend_loc": legend_loc,
             "x_label": "steps",
@@ -341,6 +361,7 @@ class ExperimentAssistant(object):
                      % (str(self._experiment.name)),
             "minimizing": self._experiment.minimization_problem
         }
+        self._logger.debug("Plot options are %s", plot_options)
         fig, ax = plot_lists(plots, ax=ax, fig_options=plot_options,
                              plot_min=plot_min, plot_max=plot_max)
 
@@ -352,12 +373,20 @@ class ExperimentAssistant(object):
 
         Currently, all that is done is that the optimizer is exited.
         """
+        self._logger.debug("Exp assistant received exit.")
         self._optimizer.exit()
+        self._logger.debug("Sent exit to optimizer.")
 
     @property
     def exp_id(self):
-        return self._experiment.exp_id
+        self._logger.debug("Returning exp id.")
+        exp_id = self._experiment.exp_id
+        self._logger.debug("Exp_id is %s", exp_id)
+        return exp_id
 
     @property
     def write_dir(self):
-        return self._write_dir
+        self._logger.debug("Returning write_dir")
+        write_dir = self._write_dir
+        self._logger.debug("write_dir is %s", write_dir)
+        return write_dir
