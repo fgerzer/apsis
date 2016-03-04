@@ -8,6 +8,7 @@ from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
 from apsis.optimizers.random_search import RandomSearch
 import time
+from apsis.models import experiment
 
 class TestExperimentAssistant(object):
     """
@@ -36,33 +37,14 @@ class TestExperimentAssistant(object):
             "multiprocessing": "none"
         }
 
-        self.EAss = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_params)
-        self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
+        exp = experiment.Experiment(name, self.param_defs, minimization)
+
+        self.EAss = ExperimentAssistant(optimizer, exp,
+                                        optimizer_arguments=optimizer_params)
 
         assert_equal(self.EAss._optimizer.__class__.__name__, optimizer)
         assert_equal(self.EAss._optimizer_arguments, optimizer_params)
         assert_equal(self.EAss._experiment.minimization_problem, minimization)
-
-    def test_init_experiment(self):
-        optimizer = "RandomSearch"
-        name = "test_init_experiment"
-        self.param_defs = {
-            "x": MinMaxNumericParamDef(0, 1),
-            "name": NominalParamDef(["A", "B", "C"])
-        }
-        minimization = True
-
-        optimizer_params = {
-            "multiprocessing": "none"
-        }
-        self.EAss = ExperimentAssistant(optimizer, optimizer_arguments=optimizer_params)
-        self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
-
-        with assert_raises(ValueError):
-            self.EAss.init_experiment(name, param_defs=self.param_defs, minimization=minimization)
-
-        with assert_raises(ValueError):
-            self.EAss.set_experiment("this value does not matter.")
 
     def teardown(self):
         self.EAss.set_exit()
