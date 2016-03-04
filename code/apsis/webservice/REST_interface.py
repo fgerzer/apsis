@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from apsis.assistants.lab_assistant import LabAssistant, ValidationLabAssistant
+from apsis.assistants.lab_assistant import LabAssistant
 from apsis.models.candidate import Candidate, from_dict
 from functools import wraps
 from apsis.utilities.param_def_utilities import dict_to_param_defs
@@ -30,7 +30,7 @@ def set_exit(_signo, _stack_frame):
 signal.signal(signal.SIGINT, set_exit)
 
 
-def start_apsis(port=5000, validation=False, cv=5):
+def start_apsis(port=5000):
     """
     Starts apsis.
 
@@ -38,10 +38,7 @@ def start_apsis(port=5000, validation=False, cv=5):
     """
     global lAss, _logger
     _logger = get_logger("REST_interface")
-    if validation:
-        lAss = ValidationLabAssistant(cv=cv)
-    else:
-        lAss = LabAssistant()
+    lAss = LabAssistant()
     app.run(host='0.0.0.0', debug=False, port=port)
     _logger.info("Finished initialization. Interface running now.")
 
