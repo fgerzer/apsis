@@ -106,12 +106,7 @@ class Candidate(object):
         """
         Stringifies this Candidate.
 
-        A stringified Candidate is of the form:
-        Candidate
-        id: XXX
-        params: XXX
-        cost: XXX
-        result XXX
+        A stringified Candidate is the stringified form of its dict.
 
         Returns
         -------
@@ -119,12 +114,8 @@ class Candidate(object):
             The stringified Candidate.
 
         """
-        string = "Candidate\n"
-        string += "cand_id: %s\n" %self.cand_id
-        string += "params: %s\n" %str(self.params)
-        if self.cost is not None:
-            string += "cost: %s\n" %self.cost
-        string += "result: %s\n" %str(self.result)
+        cand_dict = self.to_dict()
+        string = str(cand_dict)
         return string
 
     def to_csv_entry(self, delimiter=",", key_order=None):
