@@ -1,18 +1,14 @@
 __author__ = 'Frederik Diehl'
 
+import json
+import os
+import time
+import uuid
+
+import apsis.models.experiment as experiment
 from apsis.assistants.experiment_assistant import ExperimentAssistant
 from apsis.utilities.file_utils import ensure_directory_exists
-import time
-import datetime
-import os
-import json
 from apsis.utilities.logging_utils import get_logger
-from apsis.utilities.plot_utils import plot_lists, write_plot_to_file
-import matplotlib.pyplot as plt
-import uuid
-import copy
-import numpy as np
-import apsis.models.experiment as experiment
 
 # These are the colours supported by the plot.
 COLORS = ["g", "r", "c", "b", "m", "y"]
@@ -52,7 +48,7 @@ class LabAssistant(object):
         """
         self._logger = get_logger(self)
         self._logger.info("Initializing lab assistant.")
-        self._logger.info("Writing results to %s" %write_dir)
+        self._logger.info("\tWriting results to %s" %write_dir)
         self._write_dir = write_dir
 
         self._exp_assistants = {}
@@ -63,8 +59,12 @@ class LabAssistant(object):
                 with open(self._write_dir + "/lab_assistant.json", "r"):
                     pass
             else:
+                self._logger.debug("\tReloading impossible due to no "
+                                   "_write_dir specified.")
                 reloading_possible = False
         except IOError:
+            self._logger.debug("\tReloading impossible due to IOError - "
+                               "probably no lab_assistant existing.")
             reloading_possible = False
 
         if not reloading_possible:
@@ -76,6 +76,7 @@ class LabAssistant(object):
             self._global_start_date = lab_assistant_json["global_start_date"]
             for p in lab_assistant_json["exp_assistants"].values():
                 self._load_exp_assistant_from_path(p)
+            self._logger.debug("\tReloaded all exp_assistants.")
 
         self._write_state_to_file()
         self._logger.info("lab assistant successfully initialized.")
@@ -120,6 +121,13 @@ class LabAssistant(object):
             Iff there already is an experiment with the exp_id for this lab
             assistant. Does not occur if no exp_id is given.
         """
+        self._logger.debug("Initializing new experiment. Parameters: "
+                           "name: %s, optimizer: %s, param_defs: %s, "
+                           "exp_id: %s, notes: %s, optimizer_arguments: %s, "
+                           "minimization: %s" %(name, optimizer, param_defs,
+                                                exp_id, notes,
+                                                optimizer_arguments,
+                                                minimization))
         if exp_id in self._exp_assistants.keys():
             raise ValueError("Already an experiment with id %s registered."
                              %exp_id)
@@ -129,6 +137,7 @@ class LabAssistant(object):
                 exp_id = uuid.uuid4().hex
                 if exp_id not in self._exp_assistants.keys():
                     break
+            self._logger.debug("\tGenerated new exp_id: %s" %exp_id)
 
         if not self._write_dir:
             exp_assistant_write_directory = None
@@ -136,6 +145,8 @@ class LabAssistant(object):
             exp_assistant_write_directory = os.path.join(self._write_dir +
                                                      "/" + exp_id)
             ensure_directory_exists(exp_assistant_write_directory)
+        self._logger.debug("\tExp_ass directory: %s"
+                           %exp_assistant_write_directory)
 
         exp = experiment.Experiment(name,
                                     param_defs,
@@ -148,7 +159,8 @@ class LabAssistant(object):
                                       optimizer_arguments=optimizer_arguments,
                                       write_dir=exp_assistant_write_directory)
         self._exp_assistants[exp_id] = exp_ass
-        self._logger.info("Experiment initialized successfully.")
+        self._logger.info("Experiment initialized successfully with id %s."
+                          %exp_id)
         self._write_state_to_file()
         return exp_id
 
@@ -167,6 +179,7 @@ class LabAssistant(object):
             The path from which to initialize. This must contain an
             exp_assistant.json as specified.
         """
+        self._logger.debug("Loading Exp_assistant from path %s" %path)
         with open(path + "/exp_assistant.json", 'r') as infile:
             exp_assistant_json = json.load(infile)
 
@@ -174,7 +187,14 @@ class LabAssistant(object):
         optimizer_arguments = exp_assistant_json["optimizer_arguments"]
         exp_ass_write_dir = exp_assistant_json["write_dir"]
         ensure_directory_exists(exp_ass_write_dir)
+        self._logger.debug("\tLoaded exp_parameters: "
+                           "optimizer_class: %s, optimizer_arguments: %s,"
+                           "write_dir: %s" %(optimizer_class,
+                                             optimizer_arguments,
+                                             exp_ass_write_dir))
         exp = self._load_experiment(path)
+        self._logger.debug("\tLoaded Experiment. %s" %exp.to_dict())
+
 
         exp_ass = ExperimentAssistant(optimizer_class=optimizer_class,
                                       experiment=exp,
@@ -185,6 +205,7 @@ class LabAssistant(object):
             raise ValueError("Loaded exp_id is duplicated in experiment! id "
                              "is %s" %exp_ass.exp_id)
         self._exp_assistants[exp_ass.exp_id] = exp_ass
+        self._logger.info("Successfully loaded experiment from %s." %path)
 
     def _load_experiment(self, path):
         """
@@ -197,9 +218,11 @@ class LabAssistant(object):
         path : string
             The path where experiment.json is located.
         """
+        self._logger.debug("Loading experiment.")
         with open(path + "/experiment.json", 'r') as infile:
             exp_json = json.load(infile)
         exp = experiment.from_dict(exp_json)
+        self._logger.debug("\tLoaded experiment, %s" %exp.to_dict())
         return exp
 
 
@@ -211,11 +234,14 @@ class LabAssistant(object):
         dictionary of every experiment assistant, and dump this to
         self._write_dir/lab_assistant.json.
         """
+        self._logger.debug("Writing lab_assistant state to file %s"
+                           %self._write_dir)
         if not self._write_dir:
             return
         state = {"global_start_date": self._global_start_date,
                 "exp_assistants": {x.exp_id: x.write_dir for x
                                     in self._exp_assistants.values()}}
+        self._logger.debug("\tState is %s" %state)
         with open(self._write_dir + '/lab_assistant.json', 'w') as outfile:
             json.dump(state, outfile)
 
@@ -234,7 +260,10 @@ class LabAssistant(object):
             A dictionary of three lists with the keys finished, pending and
             working, with the corresponding candidates.
         """
-        return self._exp_assistants[experiment_id].get_candidates()
+        self._logger.debug("Returning candidates for exp %s" %experiment_id)
+        candidates = self._exp_assistants[experiment_id].get_candidates()
+        self._logger.debug("\tCandidates are %s" %candidates)
+        return candidates
 
     def get_next_candidate(self, experiment_id):
         """
@@ -251,7 +280,10 @@ class LabAssistant(object):
             The Candidate object that should be evaluated next. May be None,
             which is equivalent to no candidate generated.
         """
-        return self._exp_assistants[experiment_id].get_next_candidate()
+        self._logger.debug("Returning next candidate for id %s" %experiment_id)
+        next_cand = self._exp_assistants[experiment_id].get_next_candidate()
+        self._logger.debug("\tNext candidate is %s" %next_cand)
+        return next_cand
 
     def get_best_candidate(self, experiment_id):
         """
@@ -264,11 +296,14 @@ class LabAssistant(object):
 
         Returns
         -------
-        next_candidate : Candidate or None
+        best_candidate : Candidate or None
             The Candidate object that has performed best. May be None,
             which is equivalent to no candidate being evaluated.
         """
-        return self._exp_assistants[experiment_id].get_best_candidate()
+        self._logger.debug("Returning best candidate for id %s" %experiment_id)
+        best_cand = self._exp_assistants[experiment_id].get_best_candidate()
+        self._logger.debug("\tBest candidate is %s" %best_cand)
+        return best_cand
 
     def update(self, experiment_id, status, candidate):
         """
@@ -289,7 +324,9 @@ class LabAssistant(object):
             - working: The Candidate is now being worked on by a worker.
 
         """
-        return self._exp_assistants[experiment_id].update(status=status,
+        self._logger.debug("Updating exp_id %s with candidate %s with status"
+                           "%s." %(experiment_id, candidate, status))
+        self._exp_assistants[experiment_id].update(status=status,
                                                          candidate=candidate)
 
     def get_experiment_as_dict(self, exp_id):
@@ -306,7 +343,10 @@ class LabAssistant(object):
         exp_dict : dict
             The experiment dictionary as defined by Experiment.to_dict().
         """
-        return self._exp_assistants[exp_id].get_experiment_as_dict()
+        self._logger.debug("Returning experiment %s as dict." %exp_id)
+        exp_dict = self._exp_assistants[exp_id].get_experiment_as_dict()
+        self._logger.debug("\tDict is %s" %exp_dict)
+        return exp_dict
 
     def get_plot_result_per_step(self, exp_id):
         """
@@ -322,15 +362,20 @@ class LabAssistant(object):
         fig : matplotlib.figure
             The figure containing the result of each step.
         """
-        return self._exp_assistants[exp_id].plot_result_per_step()
+        self._logger.debug("Returning plot of results per step for %s."
+                           %exp_id)
+        fig = self._exp_assistants[exp_id].plot_result_per_step()
+        self._logger.debug("Figure is %s" %fig)
+        return fig
 
-    def contains_id(self, id):
+
+    def contains_id(self, exp_id):
         """
         Tests whether this lab assistant has an experiment with id.
 
         Parameters
         ----------
-        id : string
+        exp_id : string
             The ID to be tested.
 
         Returns
@@ -338,8 +383,11 @@ class LabAssistant(object):
         contains : bool
             True iff this lab assistant contains an experiment with this id.
         """
-        if id in self._exp_assistants:
+        self._logger.debug("Testing whether this contains id %s" %exp_id)
+        if exp_id in self._exp_assistants:
+            self._logger.debug("exp_id %s is contained." %exp_id)
             return True
+        self._logger.debug("exp_id %s is not contained." %exp_id)
         return False
 
     def get_ids(self):
@@ -348,11 +396,13 @@ class LabAssistant(object):
 
         Returns
         -------
-        ids : list of strings
+        exp_ids : list of strings
             All ids this lab assitant knows.
         """
-        return self._exp_assistants.keys()
-
+        self._logger.debug("Requested all exp_ids.")
+        exp_ids = self._exp_assistants.keys()
+        self._logger.debug("All exp_ids: %s" %exp_ids)
+        return exp_ids
 
     def set_exit(self):
         """
@@ -360,5 +410,7 @@ class LabAssistant(object):
 
         Currently, all that is done is exiting all exp_assistants..
         """
+        self._logger.info("Shutting down lab assistant: Setting exit.")
         for exp in self._exp_assistants.values():
             exp.set_exit()
+        self._logger.info("Shut down all experiment assistants.")
