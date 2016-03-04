@@ -48,10 +48,9 @@ def start_apsis(port=5000, continue_path=None):
             write_dir = os.path.relpath("APSIS_WRITING")
         else:
             write_dir = "/tmp/APSIS_WRITING"
-    date_name = datetime.datetime.utcfromtimestamp(
+        date_name = datetime.datetime.utcfromtimestamp(
                 time.time()).strftime("%Y-%m-%d_%H.%M.%S")
-
-    write_dir = os.path.join(write_dir, date_name)
+        write_dir = os.path.join(write_dir, date_name)
     file_utils.ensure_directory_exists(write_dir)
     lAss = LabAssistant(write_dir=write_dir)
     app.run(host='0.0.0.0', debug=False, port=port)
