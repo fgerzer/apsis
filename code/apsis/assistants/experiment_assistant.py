@@ -92,7 +92,7 @@ class ExperimentAssistant(object):
             self._write_dir = write_dir
         self._experiment = experiment
         self._init_optimizer()
-
+        self._write_state_to_file()
         self._logger.info("Experiment assistant successfully initialized.")
 
     def _init_optimizer(self):
