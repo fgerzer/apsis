@@ -72,6 +72,7 @@ class Candidate(object):
         """
         if cand_id is None:
             cand_id = uuid.uuid4().hex
+        self.cand_id = cand_id
         self._logger = get_logger(self, extra_info="cand_id " + str(cand_id))
         self._logger.debug("Initializing new candidate. Params %s, cand_id %s,"
                            "worker_info %s", params, cand_id,
@@ -127,10 +128,8 @@ class Candidate(object):
             The stringified Candidate.
 
         """
-        self._logger.debug("Stringifying candidate.")
-        cand_dict = self.to_dict()
+        cand_dict = self.to_dict(do_logging=False)
         string = str(cand_dict)
-        self._logger.debug("Candidate stringified: %s", string)
         return string
 
     def to_csv_entry(self, delimiter=",", key_order=None):
@@ -168,7 +167,7 @@ class Candidate(object):
         self._logger.debug("csv entry is %s", string)
         return string
 
-    def to_dict(self):
+    def to_dict(self, do_logging=True):
         """
         Converts this candidate to a dictionary.
 
@@ -188,16 +187,18 @@ class Candidate(object):
             "worker_information" : any jsonable or None
                 Client-settable worker information.
         """
-        self._logger.debug("Converting cand to dict.")
+        if do_logging:
+            self._logger.debug("Converting cand to dict.")
         d = {"cand_id": self.cand_id,
-             "params": self._param_defs_to_dict(),
+             "params": self._param_defs_to_dict(do_logging=do_logging),
              "result": self.result,
              "cost": self.cost,
              "worker_information": self.worker_information}
-        self._logger.debug("Generated dict %s", d)
+        if do_logging:
+            self._logger.debug("Generated dict %s", d)
         return d
 
-    def _param_defs_to_dict(self):
+    def _param_defs_to_dict(self, do_logging=True):
         """
         Returns a parameter definition dictionary representation.
 
@@ -206,11 +207,13 @@ class Candidate(object):
         d : dict
             Dictionary of the parameters.
         """
-        self._logger.debug("Converting param_def to dict.")
+        if do_logging:
+            self._logger.debug("Converting param_def to dict.")
         d = {}
         for k in self.params.keys():
             d[k] = self.params[k]
-        self._logger.debug("param_def dict is %s", d)
+        if do_logging:
+            self._logger.debug("param_def dict is %s", d)
         return d
 
 global_logger = get_logger("candidate_global")
