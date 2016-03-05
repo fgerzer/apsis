@@ -5,6 +5,7 @@ from scipy.stats import multivariate_normal
 import random
 from apsis.utilities.logging_utils import get_logger
 
+
 class AcquisitionFunction(object):
     """
     An acquisition function is used to decide which point to evaluate next.
@@ -13,8 +14,8 @@ class AcquisitionFunction(object):
     Optimization of Expensive Cost Functions, with Application to Active User
     Modeling and Hierarchical Reinforcement Learning", Brochu et.al., 2010
 
-    Internally, each AcquisitionFunction implements a couple of max_searcher and
-    multi_searcher functions. These work as follows:
+    Internally, each AcquisitionFunction implements a couple of max_searcher
+    and multi_searcher functions. These work as follows:
     A max_searcher function takes the gp, experiment and (optionally) a
     good_proposals list. It then uses these to compute a proposal maximizing
     the acquisition function, and returns a tuple of this and its score.
@@ -29,7 +30,6 @@ class AcquisitionFunction(object):
 
     _logger = None
     params = None
-    LOG_FILE_NAME = "acquisition_functions.log"
     minimizes = True
 
     default_max_searcher = "random"
@@ -46,7 +46,9 @@ class AcquisitionFunction(object):
             acquisition function. Supports at least max_searcher and
             multi_searcher.
         """
-        self._logger = get_logger(self, specific_log_name=self.LOG_FILE_NAME)
+        self._logger = get_logger(self)
+        self._logger.debug("Initializing acquisition function. params is %s",
+                           params)
         if params is None:
             params = {}
         self.params = params
@@ -85,13 +87,18 @@ class AcquisitionFunction(object):
 
         Function signature is as evaluate.
         """
+        self._logger.debug("Computing minimizing evaluate. x is %s, gp is %s,"
+                           "experiment is %s", x, gp, experiment)
         value = self.evaluate(x, gp, experiment)
         if self.minimizes:
+            self._logger.debug("Is minimizing, returning %s", value)
             return value
         else:
+            self._logger.debug("Is maximizing, returning %s", -value)
             return -value
 
-    def compute_proposals(self, gp, experiment, number_proposals=1, return_max=True):
+    def compute_proposals(self, gp, experiment, number_proposals=1,
+                          return_max=True):
         """
         Computes up to number_proposals proposals.
 
@@ -123,34 +130,66 @@ class AcquisitionFunction(object):
             parameter value. The second entry is the acquisition function score
             at that point. May return an empty list.
         """
+        self._logger.debug("Computing proposals. gp is %s, experiment is %s, "
+                           "number_proposals %s, return_max %s",
+                           gp, experiment, number_proposals, return_max)
         max_searcher = "none"
         multi_searcher = "none"
         if return_max:
-            max_searcher = self.params.get("max_searcher", self.default_max_searcher)
+            max_searcher = self.params.get("max_searcher",
+                                           self.default_max_searcher)
+            self._logger.debug("Returning maximum. Max_searcher is %s",
+                               max_searcher)
             if number_proposals > 1:
-                multi_searcher = self.params.get("multi_searcher", self.default_multi_searcher)
+                multi_searcher = self.params.get("multi_searcher",
+                                                 self.default_multi_searcher)
+                self._logger.debug("Also returning multiple results; "
+                                   "multi_searcher is %s", multi_searcher)
         else:
-            multi_searcher = self.params.get("multi_searcher", self.default_multi_searcher)
+            multi_searcher = self.params.get("multi_searcher",
+                                             self.default_multi_searcher)
+            self._logger.debug("Not returning max. multi_searcher is %s",
+                               multi_searcher)
 
         proposals = []
 
         good_results = []
 
         if max_searcher != "none":
+            self._logger.debug("Beginning to look for max.")
             max_searcher = getattr(self, "max_searcher_" + max_searcher)
+            self._logger.debug("Constructed max_search function. max_searcher "
+                               "is %s", max_searcher)
             max_prop, good_results_cur = max_searcher(gp, experiment)
+            self._logger.debug("Finished search. max_prop is %s, "
+                               "good_results_cur is %s", max_prop,
+                               good_results)
             if good_results_cur is not None:
                 good_results.extend(good_results_cur)
+                self._logger.debug("Extended known good results. Now %s",
+                                   good_results)
             proposals.append(max_prop)
+            self._logger.debug("Appended %s to max_prop, now %s", max_prop,
+                               proposals)
         if multi_searcher != "none":
+            self._logger.debug("Starting multi_search.")
             multi_searcher = getattr(self, "multi_searcher_" + multi_searcher)
+            self._logger.debug("multi_searcher function generated as %s",
+                               multi_searcher)
             multi_prop, good_results_cur = multi_searcher(gp, experiment,
-                                                          good_results=good_results,
-                                                          number_proposals=number_proposals-1)
+                                          good_results=good_results,
+                                          number_proposals=number_proposals-1)
+            self._logger.debug("Finished multi search. Multi_prop is %s, "
+                               "good_results_cur is %s", multi_prop,
+                               good_results_cur)
             if good_results_cur is not None:
                 good_results.extend(good_results_cur)
+                self._logger.debug("Appended (extend) %s to good_results. Now"
+                                   " %s", good_results_cur, good_results)
             proposals.extend(multi_prop)
-
+            self._logger.debug("Appended %s to proposals; now %s",
+                               multi_prop, proposals)
+        self._logger.debug("Returning proposals %s", proposals)
         return proposals
 
     def max_searcher_random(self, gp, experiment, good_results=None):
