@@ -112,7 +112,7 @@ class ExperimentAssistant(object):
             self._logger.debug("No candidate pending; requesting one from "
                                "optimizer.")
             candidates = self._optimizer.get_next_candidates(num_candidates=1)
-            self._logger.debug("Got %s" %candidates)
+            self._logger.debug("Got %s", [str(c) for c in candidates])
             if candidates is None:
                 to_return = None
             elif len(candidates) > 0:
@@ -123,7 +123,7 @@ class ExperimentAssistant(object):
             cand = self._experiment.candidates_pending.pop()
             self._experiment.add_working(cand)
             to_return = cand
-        self._logger.debug("Returning candidate %s" %to_return)
+        self._logger.debug("Returning candidate %s" %str(to_return))
         self._write_state_to_file()
         return to_return
 
