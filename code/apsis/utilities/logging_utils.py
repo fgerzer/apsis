@@ -9,7 +9,7 @@ import yaml
 
 logging_intitialized = False
 
-def get_logger(module, specific_log_name=None, extra_info=None):
+def get_logger(module, extra_info=None):
     """
     Abstraction from logging.getLogging, which also adds initialization.
 
@@ -28,10 +28,6 @@ def get_logger(module, specific_log_name=None, extra_info=None):
         module.__module__ + "." + module.__class__.__name__
 
         If the object is a string it will be taken as name directly.
-    specific_log_name : string, optional
-        If you want logging for this logger (and all sublogger) to a specific
-        file, this allows you to set the corresponding filename.
-
     extra_info : string, optional
         If None (the default), a usual logger is returned. If not, a
         logger_adapter is returned, which always prepends the corresponding
@@ -49,7 +45,8 @@ def get_logger(module, specific_log_name=None, extra_info=None):
     else:
         new_logger_name = module.__module__ + "." + module.__class__.__name__
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s'
+                                  ' - %(message)s')
 
     #TODO - Windows!
     LOG_ROOT = os.environ.get('APSIS_LOG_ROOT', '/tmp/APSIS_WRITING/logs')
@@ -62,17 +59,9 @@ def get_logger(module, specific_log_name=None, extra_info=None):
         log_config_file = os.path.join(project_dirname, 'config/logging.conf')
         with open(log_config_file, "r") as conf_file:
             conf_dict = yaml.load(conf_file)
-        print(conf_dict)
         logging.config.dictConfig(conf_dict)
 
-    logger_existed = False
-    if new_logger_name in logging.Logger.manager.loggerDict:
-        logger_existed = True
     logger = logging.getLogger(new_logger_name)
-    if specific_log_name is not None and not logger_existed:
-        fh = logging.FileHandler(os.path.join(LOG_ROOT, specific_log_name))
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
 
     if extra_info:
         logger = AddInfoClass(logger, {"extra_info": extra_info})
