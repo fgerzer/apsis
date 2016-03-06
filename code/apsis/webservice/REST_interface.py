@@ -3,7 +3,6 @@ from apsis.assistants.lab_assistant import LabAssistant
 from apsis.models.candidate import Candidate, from_dict
 from functools import wraps
 from apsis.utilities.param_def_utilities import dict_to_param_defs
-from apsis.utilities.logging_utils import get_logger
 import os
 import sys
 import signal
@@ -13,6 +12,7 @@ import datetime
 import time
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from apsis.utilities import file_utils
+from apsis.utilities import logging_utils
 
 CONTEXT_ROOT = ""
 
@@ -33,6 +33,7 @@ def set_exit(_signo, _stack_frame):
 
 signal.signal(signal.SIGINT, set_exit)
 
+
 def start_apsis(port=5000, continue_path=None):
     """
     Starts apsis.
@@ -40,7 +41,7 @@ def start_apsis(port=5000, continue_path=None):
     Initializes logger, LabAssistant and the REST app.
     """
     global lAss, _logger
-    _logger = get_logger("REST_interface")
+    _logger = logging_utils.get_logger("webservice.REST_interface")
     if continue_path:
         write_dir = continue_path
     else:
@@ -69,9 +70,9 @@ def exception_handler(func):
     def handle_exception(*args, **kwargs):
         try:
             return jsonify(result=func(*args, **kwargs))
-        except:
+        except Exception as e:
             _logger.exception("Exception while handling the answer. Catching "
-                              "to prevent server crash.")
+                              "to prevent server crash. Exception is %s", e)
             return jsonify(result="failed")
     return handle_exception
 
@@ -81,6 +82,7 @@ def overview_page():
     """
     This will, later, become an overview over the experiment.
     """
+    _logger.debug("Returning overview page.")
     return render_template("overview.html", experiments=lAss.get_ids())
     #experiments = lAss.exp_assistants.keys()
     #str(experiments)
@@ -116,6 +118,8 @@ def client_init_experiment():
         is minimization.
     }
     """
+    _logger.debug("Initializing experiment. Request is %s, json %s", request,
+                  request.json)
     data_received = request.get_json()
     data_received = _filter_data(data_received)
     name = data_received.get("name", None)
@@ -131,9 +135,13 @@ def client_init_experiment():
     minimization = data_received.get("minimization", True)
     param_defs = data_received.get("param_defs", None)
     param_defs = dict_to_param_defs(param_defs)
+    _logger.debug("Initializing experiment.")
     exp_id = lAss.init_experiment(name, optimizer, param_defs,
                               exp_id, notes, optimizer_arguments, minimization)
+    _logger.info("Initialized new experiment of name %s. exp_id is %s",
+                 name, exp_id)
     return exp_id
+
 
 @app.route(CONTEXT_ROOT + "/c/experiments", methods=["GET"])
 @exception_handler
@@ -141,7 +149,9 @@ def client_get_all_experiments():
     """
     This returns all experiment IDs.
     """
-    return lAss.get_ids()
+    exp_ids = lAss.get_ids()
+    _logger.debug("Asked for all experiment ids. Returning %s", exp_ids)
+    return exp_ids
 
 
 @app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>", methods=["GET"])
@@ -150,7 +160,10 @@ def client_get_experiment(experiment_id):
     """
     This will, later, return more details for a single experiment.
     """
-    return lAss.get_experiment_as_dict(experiment_id)
+    _logger.debug("Asked for experiment with id %s", experiment_id)
+    experiment_dict = lAss.get_experiment_as_dict(experiment_id)
+    _logger.debug("Returned exp_dict %s", experiment_dict)
+    return experiment_dict
 
 
 @app.route(CONTEXT_ROOT + "/experiments/<experiment_id>", methods=["GET"])
@@ -158,6 +171,8 @@ def get_experiment(experiment_id):
     """
     This will, later, return more details for a single experiment.
     """
+    _logger.debug("Asked for experiment id %s. This returns the page.",
+                  experiment_id)
     exp_dict = lAss.get_experiment_as_dict(experiment_id)
     param_defs = exp_dict["parameter_definitions"]
     finished_candidates_string = exp_dict["candidates_finished"]
@@ -171,8 +186,8 @@ def get_experiment(experiment_id):
     canvas.print_png(png_output)
     png_output = png_output.getvalue().encode("base64")
 
-
-    return render_template("experiment.html",
+    _logger.debug("Rendering template")
+    templ = render_template("experiment.html",
                            exp_name=exp_dict["name"],
                            exp_id=exp_dict["exp_id"],
                            minimization=exp_dict["minimization_problem"],
@@ -183,6 +198,9 @@ def get_experiment(experiment_id):
                            result_per_step=urllib.quote(png_output.rstrip('\n')),
                            best_candidate_string=best_candidate_string
                            )
+    _logger.debug("Returning template %s", templ)
+    return templ
+
 
 @app.route(CONTEXT_ROOT + "/c/experiments/<experiment_id>"
                           "/get_next_candidate", methods=["GET"])
@@ -203,11 +221,14 @@ def client_get_next_candidate(experiment_id):
         Returns either a Candidate (if successful), None if none is available
         or possibly "failed" if the request failed.
     """
+    _logger.debug("Should return next candidate for %s", experiment_id)
     result_cand = lAss.get_next_candidate(experiment_id)
     if result_cand is None:
+        _logger.debug("No next candidate available. Failing.")
         result = "failed"
     else:
         result = result_cand.to_dict()
+    _logger.debug("Returning next cand %s", result)
     return result
 
 
@@ -229,11 +250,14 @@ def client_get_best_candidate(experiment_id):
         Dictionary candidate representation (see get_next_candidate for the
         exact format). May be None or "failed" if no such candidate exists.
     """
+    _logger.debug("Returning best candidate for %s", experiment_id)
     result_cand = lAss.get_best_candidate(experiment_id)
     if result_cand is None:
+        _logger.debug("No best candidate available. Returning failed.")
         result = "failed"
     else:
         result = result_cand.to_dict()
+    _logger.debug("Returning best candidate %s", result)
     return result
 
 
@@ -289,10 +313,13 @@ def client_update(experiment_id):
     result : string
         Returns "success" iff successful, "failed" otherwise.
     """
+    _logger.debug("Updating client. request is %s, json %s", request,
+                  request.json)
     data_received = request.get_json()
     status = data_received["status"]
     candidate = from_dict(data_received["candidate"])
     lAss.update(experiment_id, status=status, candidate=candidate)
+    _logger.debug("Updated lAss.")
     return "success"
 
 
@@ -323,12 +350,14 @@ def client_get_all_candidates(experiment_id):
         worker is currently working.
         May return None or "failed" if failed.
     """
+    _logger.debug("Ready to return all candidates for %s", experiment_id)
     candidates = lAss.get_candidates(experiment_id)
     result = {}
     for r in ["finished", "working", "pending"]:
         result[r] = []
         for i, x in enumerate(candidates[r]):
             result[r].append(x.to_dict())
+    _logger.debug("Returning all candidates %s", result)
     return result
 
 
@@ -342,13 +371,3 @@ def _filter_data(json):
         if isinstance(json[k], unicode):
             json[k] = str(json[k])
     return json
-
-@app.route(CONTEXT_ROOT + "/experiments/<experiment_id>/fig_results_per_step",
-           methods=["GET"])
-@exception_handler
-def _get_fig_results_per_step(experiment_id):
-    """
-    Currently unused.
-    """
-    raise NotImplementedError
-    return lAss.exp_assistants[experiment_id]._best_result_per_step_dicts(color="b")
