@@ -74,13 +74,11 @@ def get_logger(module, specific_log_name=None, extra_info=None):
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
-
-
-    class AddInfoClass(logging.LoggerAdapter):
-        def process(self, msg, kwargs):
-            return '[%s] %s' % (self.extra['extra_info'], msg), kwargs
-
     if extra_info:
         logger = AddInfoClass(logger, {"extra_info": extra_info})
 
     return logger
+
+class AddInfoClass(logging.LoggerAdapter):
+        def process(self, msg, kwargs):
+            return '[%s] %s' % (self.extra['extra_info'], msg), kwargs
