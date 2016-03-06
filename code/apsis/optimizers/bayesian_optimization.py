@@ -59,8 +59,6 @@ class BayesianOptimizer(Optimizer):
     name = "BayOpt"
     return_max = True
 
-    _logger = None
-
     def __init__(self, experiment, optimizer_params=None):
         """
         Initializes a bayesian optimizer.
