@@ -32,6 +32,7 @@ def branin_func(x, y, a=1, b=5.1/(4*math.pi**2), c=5/math.pi, r=6, s=10,
         result = a*(y-b*x**2+c*x-r)**2 + s*(1-t)*math.cos(x)+s
         return result
 
+
 def gen_noise(dims, points, random_state=None):
     """
     Generates an ndarray representing random noise.
@@ -57,6 +58,7 @@ def gen_noise(dims, points, random_state=None):
     dimension_tuple = (points,)*dims
     noise_gen = random_state.rand(*dimension_tuple)
     return noise_gen
+
 
 def get_noise_value_at(x, variance, noise_gen, val_min=0, val_max=1):
     """
@@ -106,6 +108,7 @@ def get_noise_value_at(x, variance, noise_gen, val_min=0, val_max=1):
 
     return x_value
 
+
 def _calc_distance_grid(x_coords, y_indices, points):
     """
     Calculates the euclidian distance between two points for a certain grid.
@@ -131,6 +134,7 @@ def _calc_distance_grid(x_coords, y_indices, points):
         distance += (float(x_coords[i]) - float(y_indices[i])/points)**2
     return distance**0.5
 
+
 def _gen_closest_index(x, points):
     """
     Generates the closes index to the point x.
@@ -153,6 +157,7 @@ def _gen_closest_index(x, points):
     for i in range(len(x)):
         closest_index.append(int(x[i]*points))
     return tuple(closest_index)
+
 
 def _gen_close_indices(x_indices, max_dist, dims, points):
     """
@@ -186,6 +191,7 @@ def _gen_close_indices(x_indices, max_dist, dims, points):
         if acceptable:
             list_indices.append(tuple(l))
     return list_indices
+
 
 def _gen_close_indices_rec(x, max_dist, dims, points):
     """
