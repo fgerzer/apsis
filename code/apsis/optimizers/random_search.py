@@ -45,6 +45,7 @@ class RandomSearch(Optimizer):
         ValueError
             Iff the experiment is not supported.
         """
+        self._logger = logging_utils.get_logger(self)
         self._logger.debug("Initializing random search. experiment is %s,"
                            "optimizer_params %s", experiment, optimizer_params)
         if optimizer_params is None:
