@@ -269,7 +269,7 @@ class ExperimentAssistant(object):
             "color": color,
         }
         result = [step_eval_dict, step_best_dict]
-        self._logger.debug("Returning %s", result)
+        self._logger.log(5, "Returning %s", result)
         return result
 
     def _best_result_per_step_data(self, plot_up_to=None):
