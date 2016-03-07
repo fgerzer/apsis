@@ -13,6 +13,7 @@ import time
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from apsis.utilities import file_utils
 from apsis.utilities import logging_utils
+import traceback
 
 CONTEXT_ROOT = ""
 
@@ -21,6 +22,8 @@ app = Flask('apsis')
 _logger = None
 
 lAss = None
+
+should_fail_deadly = False
 
 def set_exit(_signo, _stack_frame):
     """
@@ -34,7 +37,7 @@ def set_exit(_signo, _stack_frame):
 signal.signal(signal.SIGINT, set_exit)
 
 
-def start_apsis(port=5000, continue_path=None):
+def start_apsis(port=5000, continue_path=None, fail_deadly=False):
     """
     Starts apsis.
 
@@ -42,6 +45,16 @@ def start_apsis(port=5000, continue_path=None):
     """
     global lAss, _logger
     _logger = logging_utils.get_logger("webservice.REST_interface")
+    if fail_deadly:
+        print("WARNING! Fail deadly is active. Make sure you know what you do."
+              "State of the program might be lost at any time, and the "
+              "program might crash unexpectedly.")
+        _logger.warning("WARNING! Fail deadly is active. Make sure you know "
+                        "what you do. State of the program might be lost at "
+                        "any time, and the program might crash unexpectedly.")
+
+
+
     if continue_path:
         write_dir = continue_path
     else:
@@ -52,6 +65,9 @@ def start_apsis(port=5000, continue_path=None):
         date_name = datetime.datetime.utcfromtimestamp(
                 time.time()).strftime("%Y-%m-%d_%H.%M.%S")
         write_dir = os.path.join(write_dir, date_name)
+    global should_fail_deadly
+    should_fail_deadly = fail_deadly
+
     file_utils.ensure_directory_exists(write_dir)
     lAss = LabAssistant(write_dir=write_dir)
     app.run(host='0.0.0.0', debug=False, port=port)
@@ -71,23 +87,30 @@ def exception_handler(func):
         try:
             return jsonify(result=func(*args, **kwargs))
         except Exception as e:
-            _logger.exception("Exception while handling the answer. Catching "
-                              "to prevent server crash. Exception is %s", e)
+            _logger.exception("Exception while handling the answer. Exception "
+                              "is %s", e)
+
+            if should_fail_deadly:
+                print(e)
+                request.environ.get('werkzeug.server.shutdown')()
+                lAss.set_exit()
+                raise RuntimeError("Exception raised and fail_deadly active."
+                                " Raising general exception. Original "
+                                "exception is " + str(e))
+
             return jsonify(result="failed")
     return handle_exception
 
 
 @app.route(CONTEXT_ROOT + "/", methods=["GET"])
+@exception_handler
 def overview_page():
     """
     This will, later, become an overview over the experiment.
     """
-    _logger.debug("Returning overview page.")
+    raise NotImplementedError
+    _logger.log(5, "Returning overview page.")
     return render_template("overview.html", experiments=lAss.get_ids())
-    #experiments = lAss.exp_assistants.keys()
-    #str(experiments)
-    #raise NotImplementedError
-    #TODO
 
 
 @app.route(CONTEXT_ROOT + "/c/experiments", methods=["POST"])
@@ -198,7 +221,7 @@ def get_experiment(experiment_id):
                            result_per_step=urllib.quote(png_output.rstrip('\n')),
                            best_candidate_string=best_candidate_string
                            )
-    _logger.debug("Returning template %s", templ)
+    _logger.log(5, "Returning template %s", templ)
     return templ
 
 
