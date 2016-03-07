@@ -108,7 +108,6 @@ def overview_page():
     """
     This will, later, become an overview over the experiment.
     """
-    raise NotImplementedError
     _logger.log(5, "Returning overview page.")
     return render_template("overview.html", experiments=lAss.get_ids())
 
