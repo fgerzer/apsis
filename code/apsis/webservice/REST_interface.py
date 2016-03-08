@@ -1,3 +1,10 @@
+# Fix for TclError: no display name and no $DISPLAY environment variable if
+#directly starting from start_apsis.
+import matplotlib
+matplotlib.use('Agg')
+
+
+
 from flask import Flask, request, jsonify, render_template
 from apsis.assistants.lab_assistant import LabAssistant
 from apsis.models.candidate import Candidate, from_dict
