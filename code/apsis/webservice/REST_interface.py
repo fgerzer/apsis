@@ -103,7 +103,6 @@ def exception_handler(func):
 
 
 @app.route(CONTEXT_ROOT + "/", methods=["GET"])
-@exception_handler
 def overview_page():
     """
     This will, later, become an overview over the experiment.
