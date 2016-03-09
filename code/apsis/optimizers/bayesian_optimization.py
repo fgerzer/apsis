@@ -6,6 +6,7 @@ from apsis.models.parameter_definition import *
 from apsis.utilities.randomization import check_random_state
 from apsis.models.candidate import Candidate
 from apsis.optimizers.bayesian.acquisition_functions import *
+from apsis.utilities.acquisition_utils import check_acquisition
 import GPy
 
 
@@ -111,10 +112,11 @@ class BayesianOptimizer(Optimizer):
 
         if not isinstance(optimizer_params.get('acquisition'),
                           AcquisitionFunction):
-
-            self.acquisition_function = optimizer_params.get(
-                'acquisition', ExpectedImprovement)(
-                self.acquisition_hyperparams)
+            self.acquisition_function = optimizer_params.get("acquisition",
+                                                 ExpectedImprovement)
+            self.acquisition_function = check_acquisition(
+                acquisition=self.acquisition_function,
+                acquisition_params=self.acquisition_hyperparams)
             self._logger.debug("acquisition is no AcquisitionFunction. Set "
                                "it to %s", self.acquisition_function)
         else:
