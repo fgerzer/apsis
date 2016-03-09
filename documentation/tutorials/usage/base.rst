@@ -55,6 +55,7 @@ cand is a dictionary representing one such Candidate. Let's inspect it::
     u'result': None}
 
 These fields are as follows:
+
 * `cost`: The cost of the single evaluation. This can be wallclock time, or number of operations, etc. This will later be used for expected_improvement_per_cost. This has not been implemented yet, but you can use it for statistics etc.
 * `params`: A dictionary closely mirroring the `param_defs` dictionary as defined above. It contains one entry per parameter defined, with the key being its name and the value being its proposed value. Note that this format allows you to use a sklearn-like initialization, see the example below.
 * `cand_id`: The id of the candidate. This id is unique, and allows identification of the candidate.
@@ -78,6 +79,7 @@ To update apsis with the new result, we can simply change the dictionary and ret
     conn.update(exp_id, cand, "finished")
     
 And we're done, and have evaluated a single candidate. In a loop, this looks like this::
+
     for i in range(10):
         cand = conn.get_next_candidate(exp_id)
         result = f(**cand["params"])
