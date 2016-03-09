@@ -1,21 +1,29 @@
 Bayesian Optimization with apsis - Advanced Tutorial
 *********************************
 
-apsis implements the technique called Bayesian Optimization for optimizing your hyperparameters. There are several problems involved with optimizing hyperparameters, why it took up to now for automated methods to become available. First, you usually have any assumption on the form and behaviour of the loss function you want to optimize over. Second, you are actually running a surrounding optimization loop around some other sort of optimization loop. This means that in every iteration your optimization for the hyperparameters usually includes another optimization, which is your acutal algorithm - e.g. a machine learning algorithm - for which you optimize the parameters. This makes it necessary to carefully select the next hyperparameter vector to try, since that migh involve to train your machine learning algorithm for a couple of hours or more. 
+apsis implements a technique called Bayesian Optimization for optimizing hyperparameters.
 
-Hence in Bayesian Optimization a Gaussian Process is trained as a surrogate model to approximate the loss function or whatever measure of your algorithm shall be optimized. A central role here is played by the so called acquisition function that is responsible for interpreting the surrogate model and suggest new hyperparameter vectors to sample from your original algorithm. This function is maximized and the hyperparameter vector maximizing it will be the next one to be tested.
+There are several reasons why hyperparameter optimization is difficult: Your machine learning algorithm usually takes a long time to run, punishing an excessive number of evaluations. The fitness landscape usually has a very high dimensionality. It is impossible (or very difficult) to compute gradients of the hyperparameters with respect to the final performance. And, lastly, there's little to no previous knowledge for a truly novel ML algorithm.
+
+Bayesian Optimization uses Gaussian processes to optimize hyperparameters. Intuitively, a point in the fitness landscape (that is, a certain hyperparameter configuration for your ML algorithm) should tell you something about points which are closeby - you intuitively expect the weather in London to tell you more about the weather in Oxford than the weather in Sidney. By leveraging this locality through Gaussian processes, we gain a predicted mean and a predicted variance for each point on our fitness landscape - even those we haven't seen yet. In this way, our Gaussian functions as a surrogate function to our real fitness landscape.
+
+We then try to choose points in a way that both tells us more about our fitness landscape (exploration) and minimizes or maximizes it (exploitation). Choosing the correct point is done by maximizing the so-called acquisition function, which uses the mean and variance at each point to compute its score. One example computes the expected improvement compared to the current best result. This acquisition function is far, far cheaper to evaluate than our machine learning algorithm and usually differentiable. We therefore can easily use the usual optimization methods like LBFSG.
 
 A comprehensive introduction to the field of hyperparameter optimization for machine learning algorithms can be found in 
 
-.. [1] James Bergstra, R ́emy Bardenet, Yoshua Bengio, and Balazs Kegl. Algorithms for hyper-parameter optimization. In NIPS’2011, 2011. `See here for downloading the paper. <http://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf>`_
+.. [1] James Bergstra, Rémy Bardenet, Yoshua Bengio, and Balazs Kegl. Algorithms for hyper-parameter optimization. In NIPS’2011, 2011. `See here for downloading the paper. <http://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf>`_
 
-In there you can also find a very short introduction to Bayesian Optimization. For a more clear and in-depth understanding how Bayesian Optimization itself works the following great tutorial is a must reader.
+It also includes a very short introduction to Bayesian Optimization. 
+
+For a more in-depth explanation of Bayesian Optimization, the following tutorial is a must-read:
 
 .. [2] Eric Brochu, Vlad M. Cora, and Nando de Freitas. A Tutorial on Bayesian Optimization of Expensive Cost Functions, with Application to Active User Modeling and Hierarchical Reinforcement Learning. IEEE Transactions on Reliability, 2010. `See here for downloading the paper. <http://arxiv.org/abs/1012.2599>`_
 
-Finally the following paper provides a comprehensive introduction in the usage of Bayesian Optimization for hyperparameter optimization.
+Finally the following paper provides a comprehensive introduction in the usage of Bayesian Optimization for hyperparameter optimization. It includes some tricks which we use in apsis.
 
 .. [3] Jasper Snoek, Hugo Larochelle, and Ryan P Adams. Practical bayesian optimization of machine learning algorithms. In NIPS, pages 2960–2968, 2012. `See here for downloading the paper. <http://arxiv.org/pdf/1206.2944.pdf>`_
+
+
 
 This tutorial gives an overview on how to switch around between several possibilities implemented in apsis, including how to switch acquisition functions, kernels or the way acquisition functions are optimized.
 
@@ -23,63 +31,61 @@ This tutorial gives an overview on how to switch around between several possibil
 Choosing Acquisition Functions
 ===============================
 
-So far apsis contains only two acquisition functions, the :class:`ProbabilityOfImprovement <apsis.optimizers.bayesian.acquisition_functions.ProbabilityOfImprovement>` function, as well as :class:`ExpectedImprovement <apsis.optimizers.bayesian.acquisition_functions.ExpectedImprovement>`. You can easily provide your own acquisition functions by extending to the :class:`AcquisitionFunction <apsis.optimizers.bayesian.acquisition_functions.AcquisitionFunction>` class. While Probability Of Improvement is mainly included for the sake of completeness the Expected Improvement function is the one most commonly used in Bayesian Optimization. It is said to have a good balance between exploration of unknown regions and exploitation of well-known but promising regions. 
+So far apsis contains two acquisition functions, the :class:`ProbabilityOfImprovement <apsis.optimizers.bayesian.acquisition_functions.ProbabilityOfImprovement>` function, as well as :class:`ExpectedImprovement <apsis.optimizers.bayesian.acquisition_functions.ExpectedImprovement>`. You can easily provide your own acquisition functions by extending to the :class:`AcquisitionFunction <apsis.optimizers.bayesian.acquisition_functions.AcquisitionFunction>` class. 
+Probability Of Improvement is mainly included for the sake of completeness - the Expected Improvement function is the one most commonly used in Bayesian Optimization. It is said to have a good balance between exploration of unknown regions and exploitation of well-known but promising regions. 
 
-To choose which acquisition function to use you can do so using the :class:`LabAssistant <apsis.assistants.lab_assistant.BasicLabAssistant>` or :class:`ExperimentAssistant <apsis.assistants.experiment_assistant.PrettyExperimentAssistant>` interface and passing the acquisition function name in the optimizer_arguments.::
+You can choose the acquisition function - or, indeed, most of the optimizer parameters - by passing it to init_experiment using the `optimizer_arguments` parameter. A full list of available arguments can be found in TODO!! ..TODO!..
 
-    from apsis.optimizers.bayesian.acquisition_functions import ExpectedImprovement, ProbabilityOfImprovement
-    from apsis.assistants.lab_assistant import PrettyLabAssistant
+As an example, you can use::
+    optimizer_params = {
+        "acquisition": "ExpectedImprovement"
+    }
     
-    LAss = PrettyLabAssistant()
-    LAss.init_experiment("bay_EI", "BayOpt", param_defs, minimization=True, optimizer_arguments={"acquisition": ExpectedImprovement, "initial_random_runs": 5} )
-    LAss.init_experiment("bay_POI", "BayOpt", param_defs, minimization=True, optimizer_arguments={"acquisition": ProbabilityOfImprovement, "initial_random_runs": 5} )
-    
-Furthermore an acquisition function can receive hyperparameters, e.g. for telling apsis how to optimize this function. These hyperparameters are specific to the acquisition function. :class:`ExpectedImprovement <apsis.optimizers.bayesian.acquisition_functions.ExpectedImprovement>` for example can be told to use another optimization method. More on this in the section on Acquisition Optimization.
+    exp_id = conn.init_experiment(name, optimizer, 
+                              param_defs, optimizer_arguments=optimizer_params,
+                              minimization=minimization)
 
-    LAss.init_experiment("bay_EI_BFGS", "BayOpt", param_defs, minimization=True, optimizer_arguments={"acquisition": ExpectedImprovement, "initial_random_runs": 5, "acquisition_hyperparams":{"optimization": "BFGS"}} )
+Furthermore an acquisition function can receive hyperparameters, e.g. for telling apsis how to optimize this function. These hyperparameters are specific to the acquisition function. :class:`ExpectedImprovement <apsis.optimizers.bayesian.acquisition_functions.ExpectedImprovement>` for example can be told to use another optimization method. More on this in the section on Acquisition Optimization.::
+
+    optimizer_params = {
+        "acquisition": "ExpectedImprovement",
+        "acquisition_hyperparams": {
+            "max_searcher": "random"
+        }
+    }
+    exp_id = conn.init_experiment(name, optimizer, 
+                              param_defs, optimizer_arguments=optimizer_params,
+                              minimization=minimization)
+
   
 Choosing Kernels
 =================
 
-Another central point to tweak your bayesian optimization is the kernel used. apsis supports the Matern 5-2 and the RBF kernel, whereas the first one is selected as standard choice. For both kernels the implementation of the gpY package is used. Choosing your kernel works similar to choosing your acquisition function.
+Another central point of tweaking the performance of bayesian optimization is the kernel. apsis supports the Matern 5-2 and the RBF kernel. The first one is the standard choice. Both kernels use the GPy package. Choosing your kernel works similar to choosing your acquisition function.
 
 You can either specify the kernel as one of those two strings ["matern52", "rbf"] or supply a class inheriting from the GPy.kern.Kern class.::
 
-    from apsis.assistants.lab_assistant import PrettyLabAssistant
-    impoort GPy
-    
-    LAss = PrettyLabAssistant()
-    LAss.init_experiment("bay_RBF", "BayOpt", param_defs, minimization=True, optimizer_arguments={"kernel": "rbf", "initial_random_runs": 5} )
-    LAss.init_experiment("bay_Matern52", "BayOpt", param_defs, minimization=True, optimizer_arguments={"kernel": GPy.kern.Matern52, "initial_random_runs": 5} )
-  
-A kernel can also be given parameters if necessary. For example a frequent parameter to the gpY kernels is if automatic relevance determination (ARD) shall be used or not.::
+    optimizer_params = {
+        "kernel": "Matern52",
+        "acquisition": "ExpectedImprovement",
+        "acquisition_hyperparams": {
+            "max_searcher": "random"
+        }
+    }
+    exp_id = conn.init_experiment(name, optimizer, 
+                              param_defs, optimizer_arguments=optimizer_params,
+                              minimization=minimization)
 
-    LAss.init_experiment("bay_Matern52", "BayOpt", param_defs, minimization=True, optimizer_arguments={"kernel": GPy.kern.Matern52, "kernel_params": {"ARD": True}, "initial_random_runs": 5} )
-  
 By default the Matern 5-2 kernel with ARD will be used.
 
 Minimizing or Maximizing your Objective Function
 ================================================
 
-By default apsis assumes you want to minimize your objective function, e.g. that it represents the error of your machine learning algorithm. However, apsis can easily be switched around to be used for maximization when specifying the minimization property of :class:`LabAssistant <apsis.assistants.lab_assistant.BasicLabAssistant>` or :class:`ExperimentAssistant <apsis.assistants.experiment_assistant.PrettyExperimentAssistant>`.::
+By default apsis assumes you want to minimize your objective function, e.g. that it represents the error of your machine learning algorithm. However, apsis can easily be switched to assume maximization by specifying the minimization property of :class:`LabAssistant <apsis.assistants.lab_assistant.BasicLabAssistant>` or :class:`ExperimentAssistant <apsis.assistants.experiment_assistant.PrettyExperimentAssistant>`.::
 
-    from apsis.assistants.lab_assistant import PrettyLabAssistant
-    LAss = PrettyLabAssistant()
-    LAss.init_experiment("bay_Matern52", "BayOpt", param_defs, minimization=False, optimizer_arguments={"kernel": GPy.kern.Matern52, "initial_random_runs": 5} )
-  
-Dealing with the GPs Hyperparameter
-===================================
-
-In addition to those hyperparameters that are subject of optimization the Gaussian Process used to approximate the underlying model also has hyperparameters. Especially the kernel usually has a relevance parameter influencing the shape of the distribution. This can be one parameter or several depending on if an ARD kernel is used or not. By default apsis uses maximum likelyhood as implemented by the gpY package to optimize these parameters. 
-
-Additionally you can switch to use Hybrid Monte Carlo sampling provided by the gpY package to integrate these parameters out. This will only apply for the GP and kernel hyperparameters, not for those of the acquisition function. To do so simply switch the mcmc parameter to True. ::
-
-    from apsis.assistants.lab_assistant import PrettyLabAssistant
-    LAss = PrettyLabAssistant()
-    LAss.init_experiment("bay_rand", "BayOpt", param_defs, minimization=True, optimizer_arguments={"initial_random_runs": 5, "mcmc": True})
-
-Note that using the Monte Carlo sampling takes considerably more than time than not. You should consider this option only of you are optimizing a several ours or more running ml algorithm.
-    
+    exp_id = conn.init_experiment(name, optimizer, 
+                              param_defs, minimization=False)
+      
 Expected Improvement
 ====================
 
@@ -127,6 +133,14 @@ Also the gradient has been derived for EI in order to be able to apply gradient 
 
 EI Optimization
 ---------------
+
+
+############################
+TODO: Done up to this point.
+############################
+
+
+
 
 No matter if the underlying objective function is to be maximized or minimized EI always has to be maximized since we want to do the maximum possible improvement in every step. 
 
