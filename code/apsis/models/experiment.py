@@ -4,7 +4,10 @@ from apsis.models.candidate import Candidate
 from apsis.models.parameter_definition import ParamDef
 import copy
 import uuid
-
+from apsis.utilities.param_def_utilities import dict_to_param_defs
+import json
+from apsis.models import candidate
+from apsis.utilities import logging_utils
 
 class Experiment(object):
     """
@@ -51,7 +54,10 @@ class Experiment(object):
 
     best_candidate = None
 
-    def __init__(self, name, parameter_definitions, exp_id=None, notes=None, minimization_problem=True,):
+    _logger = None
+
+    def __init__(self, name, parameter_definitions, exp_id=None, notes=None,
+                 minimization_problem=True,):
         """
         Initializes an Experiment with a certain parameter definition.
 
@@ -80,16 +86,30 @@ class Experiment(object):
         ValueError :
             Iff parameter_definitions are not a dictionary.
         """
+        self._logger = logging_utils.get_logger(self)
+        self._logger.debug("Initializing new experiment. name: %s, "
+                           "param_definition: %s, exp_id %s, notes %s, "
+                           "minimization_problem %s", name,
+                           parameter_definitions, exp_id, notes,
+                           minimization_problem)
         self.name = name
         if exp_id is None:
             exp_id = uuid.uuid4().hex
+            self._logger.debug("Had to create new exp_id, is %s", exp_id)
         self.exp_id = exp_id
         if not isinstance(parameter_definitions, dict):
-            raise ValueError("parameter_definitions are not a dict.")
+            self._logger.error("parameter_definitions are not a dict but %s."
+                             %parameter_definitions)
+            raise ValueError("parameter_definitions are not a dict but %s."
+                             %parameter_definitions)
         for p in parameter_definitions:
             if not isinstance(parameter_definitions[p], ParamDef):
-                raise ValueError("Parameter definition of %s is not a ParamDef."
-                                 %p)
+                self._logger.error("Parameter definition of %s is not a "
+                                   "ParamDef but %s."
+                                   %(p, parameter_definitions[p]))
+
+                raise ValueError("Parameter definition of %s is not a ParamDef"
+                                 "but %s." %(p, parameter_definitions[p]))
         self.parameter_definitions = parameter_definitions
 
         self.minimization_problem = minimization_problem
@@ -99,6 +119,7 @@ class Experiment(object):
         self.candidates_working = []
 
         self.notes = notes
+        self._logger.debug("Initialization of new experiment finished.")
 
     def add_finished(self, candidate):
         """
@@ -117,18 +138,17 @@ class Experiment(object):
         ValueError :
             Iff candidate is not a Candidate object.
         """
-        if not isinstance(candidate, Candidate):
-            raise ValueError("candidate is not an instance of Candidate.")
-        if not self._check_candidate(candidate):
-            raise ValueError("candidate %s is not valid." %candidate)
+        self._logger.debug("Adding finished candidate %s", candidate)
+        self._check_candidate(candidate)
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_finished.append(candidate)
-        if (self.best_candidate is None or
-                    self.better_cand(candidate, self.best_candidate)):
-            self.best_candidate = candidate
+        self._update_best()
+        self._logger.debug("Added finished candidate %s", candidate)
 
     def add_pending(self, candidate):
         """
@@ -148,11 +168,17 @@ class Experiment(object):
         ValueError :
             Iff candidate is no Candidate object.
         """
-        if not isinstance(candidate, Candidate):
-            raise ValueError("candidate is not an instance of Candidate.")
-        if not self._check_candidate(candidate):
-            raise ValueError("candidate is not valid.")
+        self._logger.debug("Adding pending candidate %s", candidate)
+        self._check_candidate(candidate)
+        if candidate in self.candidates_pending:
+            self.candidates_pending.remove(candidate)
+        if candidate in self.candidates_working:
+            self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_pending.append(candidate)
+        self._update_best()
+        self._logger.debug("Added pending candidate %s", candidate)
 
     def add_working(self, candidate):
         """
@@ -171,13 +197,17 @@ class Experiment(object):
         ValueError :
             Iff candidate is no Candidate object.
         """
-        if not isinstance(candidate, Candidate):
-            raise ValueError("candidate is not an instance of Candidate.")
-        if not self._check_candidate(candidate):
-            raise ValueError("candidate is not valid.")
+        self._logger.debug("Added working candidate %s", candidate)
+        self._check_candidate(candidate)
         if candidate in self.candidates_pending:
             self.candidates_pending.remove(candidate)
+        if candidate in self.candidates_working:
+            self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_working.append(candidate)
+        self._update_best()
+        self._logger.debug("Added working candidate %s", candidate)
 
     def add_pausing(self, candidate):
         """
@@ -197,13 +227,19 @@ class Experiment(object):
             Iff candidate is no Candidate object.
 
         """
-        if not isinstance(candidate, Candidate):
-            raise ValueError("candidate is not an instance of Candidate.")
-        if not self._check_candidate(candidate):
-            raise ValueError("candidate is not valid.")
+        self._logger.debug("Pausing candidate %s", candidate)
+        self._check_candidate(candidate)
         if candidate in self.candidates_working:
             self.candidates_working.remove(candidate)
+        if candidate in self.candidates_pending:
+            self.candidates_pending.remove(candidate)
+        if candidate in self.candidates_working:
+            self.candidates_working.remove(candidate)
+        if candidate in self.candidates_finished:
+            self.candidates_finished.remove(candidate)
         self.candidates_pending.append(candidate)
+        self._update_best()
+        self._logger.debug("Pausing candidate %s", candidate)
 
     def better_cand(self, candidateA, candidateB):
         """
@@ -233,6 +269,8 @@ class Experiment(object):
         ValueError :
             If candidateA or candidateB are no Candidates.
         """
+        self._logger.debug("Checking better candidate, %s or %s", candidateA,
+                           candidateB)
         if not isinstance(candidateA, Candidate) and candidateA is not None:
             raise ValueError("candidateA is %s, but no Candidate instance."
                              %str(candidateA))
@@ -241,8 +279,10 @@ class Experiment(object):
                              %str(candidateB))
 
         if candidateA is None:
+            self._logger.debug("candidateA is None; returning False")
             return False
         if candidateB is None:
+            self._logger.debug("candidateB is None; returning True")
             return True
 
         if not self._check_candidate(candidateA):
@@ -253,20 +293,23 @@ class Experiment(object):
         a_result = candidateA.result
         b_result = candidateB.result
 
+        comparison = None
         if a_result is None or candidateA.failed:
-            return False
-        if b_result is None or candidateB.failed:
-            return True
-        if self.minimization_problem:
+            comparison = False
+        elif b_result is None or candidateB.failed:
+            comparison = True
+        elif self.minimization_problem:
             if a_result < b_result:
-                return True
+                comparison = True
             else:
-                return False
+                comparison = False
         else:
             if a_result > b_result:
-                return True
+                comparison = True
             else:
-                return False
+                comparison = False
+        self._logger.debug("Comparison result: %s", comparison)
+        return comparison
 
     def warp_pt_in(self, params):
         """
@@ -282,9 +325,11 @@ class Experiment(object):
         warped_in : dict of string keys
             The warped-in parameters.
         """
+        self._logger.debug("Warping point in. Params: %s", params)
         warped_in = {}
         for name, value in params.iteritems():
             warped_in[name] = self.parameter_definitions[name].warp_in(value)
+        self._logger.debug("Warped-in parameters: %s", warped_in)
         return warped_in
 
     def warp_pt_out(self, params):
@@ -301,57 +346,12 @@ class Experiment(object):
         warped_out : dict of string keys
             The warped-out parameters.
         """
+        self._logger.debug("Warping point out. params: %s", params)
         warped_out = {}
         for name, value in params.iteritems():
             warped_out[name] = self.parameter_definitions[name].warp_out(value)
+        self._logger.debug("Warped-out parameters: %s", warped_out)
         return warped_out
-
-    def to_csv_results(self, delimiter=",", line_delimiter="\n", key_order=None, wHeader=True, fromIndex=0):
-        """
-        Generates a csv result string from this experiment.
-
-        Parameters
-        ----------
-            delimiter : string, optional
-                The column delimiter
-            line_delimiter : string, optional
-                The line delimiter
-            key_order : list of strings, optional
-                The order in which the parameters should be written. If None,
-                the order is defined by sorting the parameter names.
-            wHeader : bool, optional
-                Whether a header should be written. Defaults to true.
-            from_index : int, optional
-                Beginning from which result the csv should be generated.
-
-        Returns
-        -------
-            csv_string : string
-                The corresponding csv string
-            steps_included : int
-                The number of steps included in the csv.
-        """
-        csv_string = ""
-        if key_order is None:
-            key_order = sorted(self.parameter_definitions.keys())
-
-        if wHeader:
-            csv_string += "step" + delimiter + "id" + delimiter
-            for k in key_order:
-                csv_string += k + delimiter
-            csv_string += "cost" + delimiter + "result" + delimiter + \
-                          "failed" + delimiter + "best_result" + line_delimiter
-
-        steps_included = 0
-        for c in range(fromIndex, len(self.candidates_finished)):
-            cand = self.candidates_finished[c]
-            csv_string += str(c + 1) + delimiter + \
-                          cand.to_csv_entry(delimiter=delimiter,key_order=key_order) \
-                          + delimiter + str(self.best_candidate.result) + line_delimiter
-
-            steps_included += 1
-
-        return csv_string, steps_included
 
     def clone(self):
         """
@@ -362,33 +362,38 @@ class Experiment(object):
             copied_experiment : Experiment
                 A deep copy of this experiment.
         """
+        self._logger.debug("Cloning experiment.")
         copied_experiment = copy.deepcopy(self)
-
+        self._logger.debug("Cloned experiment is %s", copied_experiment)
         return copied_experiment
 
-    def _check_candidate(self, candidate):
+    def _check_candidate(self, cand):
         """
-        Checks whether candidate is valid for this experiment.
+        Checks whether cand is valid for this experiment.
 
         This checks the existence of all parameter definitions and that all
         values are acceptable.
 
         Parameter
         ---------
-        candidate : Candidate
+        cand : Candidate
             Candidate to check
 
-        Returns
-        -------
-        acceptable : bool
-            True iff the candidate is valid
         """
-        if not set(candidate.params.keys()) == set(self.parameter_definitions.keys()):
-            return False
+        if not isinstance(cand, Candidate):
+            self._logger.error("cand is not an instance of Candidate but is"
+                             "%s", cand)
+            raise ValueError("cand is not an instance of Candidate but is"
+                             "%s" % cand)
+        if not set(cand.params.keys()) == set(self.parameter_definitions.keys()):
+            self._logger.error("cand %s is not valid.", cand)
+            raise ValueError("cand %s is not valid." % cand)
 
-        for k in candidate.params:
-            if not self.parameter_definitions[k].is_in_parameter_domain(candidate.params[k]):
-                return False
+        for k in cand.params:
+            if not self.parameter_definitions[k].\
+                    is_in_parameter_domain(cand.params[k]):
+                self._logger.error("cand %s is not valid.", cand)
+                raise ValueError("cand %s is not valid." % cand)
         return True
 
     def _check_param_dict(self, param_dict):
@@ -408,12 +413,19 @@ class Experiment(object):
         acceptable : bool
             True iff the dictionary is valid
         """
+        self._logger.debug("Checking parameter dictionary %s", param_dict)
         if not set(param_dict.keys()) == set(self.parameter_definitions.keys()):
+            self._logger.debug("Returned false due to keys not being "
+                               "identical.")
             return False
 
         for k in param_dict:
             if not self.parameter_definitions[k].is_in_parameter_domain(param_dict[k]):
+                self._logger.debug("Returned false due to param_def %s not"
+                                   "being in parameter domain %s", k,
+                                   self.parameter_definitions[k])
                 return False
+        self._logger.debug("Returning True; dict acceptable.")
         return True
 
     def to_dict(self):
@@ -440,10 +452,10 @@ class Experiment(object):
                 Dictionary as defined above.
 
         """
+        self._logger.debug("Generating experiment dictionary.")
         param_defs = {}
         for k in self.parameter_definitions:
             param_defs[k] = self.parameter_definitions[k].to_dict()
-
         cand_dict_finished = [c.to_dict() for c in self.candidates_finished]
         cand_dict_pending = [c.to_dict() for c in self.candidates_pending]
         cand_dict_working = [c.to_dict() for c in self.candidates_working]
@@ -461,4 +473,55 @@ class Experiment(object):
             result_dict["best_candidate"] = self.best_candidate.to_dict()
         else:
             result_dict["best_candidate"] = None
+        self._logger.debug("Final dictionary: %s", result_dict)
         return result_dict
+
+    def _update_best(self):
+        self._logger.debug("Updating best candidate.")
+        best_candidate = None
+        for c in self.candidates_finished:
+            if self.better_cand(c, best_candidate):
+                best_candidate = c
+                self._logger.debug("Found new better candidate: %s", c)
+        self._logger.debug("Best candidate now %s", best_candidate)
+        self.best_candidate = best_candidate
+
+    def write_state_to_file(self, path):
+        self._logger.debug("Writing stats to %s", path)
+        with open(path + '/experiment.json', 'w') as outfile:
+            json.dump(self.to_dict(), outfile)
+
+global_logger = logging_utils.get_logger("models.Experiment")
+
+
+def from_dict(d):
+    global_logger.debug("Reconstructing experiment from dict %d", d)
+    name = d["name"]
+    param_defs = dict_to_param_defs(d["parameter_definitions"])
+    minimization_problem = d["minimization_problem"]
+    notes = d["notes"]
+    exp_id = d["exp_id"]
+    global_logger.debug("Reconstructed attributes.")
+    cand_dict_finished = d["candidates_finished"]
+    cands_finished = []
+    for c in cand_dict_finished:
+        cands_finished.append(candidate.from_dict(c))
+    cand_dict_pending = d["candidates_pending"]
+    cands_pending = []
+    for c in cand_dict_pending:
+        cands_pending.append(candidate.from_dict(c))
+    cand_dict_working = d["candidates_working"]
+    cands_working = []
+    for c in cand_dict_working:
+        cands_working.append(candidate.from_dict(c))
+    global_logger.debug("Reconstructed candidates.")
+    best_candidate = d["best_candidate"]
+
+    exp = Experiment(name, param_defs, exp_id, notes, minimization_problem)
+
+    exp.candidates_finished = cands_finished
+    exp.candidates_pending = cands_pending
+    exp.candidates_working = exp.candidates_working
+    exp._update_best()
+    global_logger.debug("Finished reconstruction. Exp is %s.", exp)
+    return exp

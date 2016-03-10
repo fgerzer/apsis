@@ -92,9 +92,9 @@ class Connection(object):
         start_time = time.time()
         while timeout is None or timeout <= 0 or time.time()-start_time < timeout:
             if json is None:
-                r = request(url=url)
+                r = request(url=url, timeout=timeout)
             else:
-                r = request(url=url, json=json)
+                r = request(url=url, json=json, timeout=timeout)
             if blocking:
                 if r.json()["result"] is None or r.json()["result"] == "failed":
                     time.sleep(self.repeat_time)
@@ -362,7 +362,7 @@ class Connection(object):
             empty.
             The three lists are:
             "finished": The list of finished candidates.
-            "workign": The list of candidates on which workers are currently
+            "working": The list of candidates on which workers are currently
             working.
             "pending": The list of not-yet finished candidates on which no
             worker is currently working.

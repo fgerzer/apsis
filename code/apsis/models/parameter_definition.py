@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
-import random
 import math
 import sys
+from apsis.utilities import logging_utils
 
 class ParamDef(object):
     """
@@ -12,6 +12,11 @@ class ParamDef(object):
     domain.
     """
     __metaclass__ = ABCMeta
+
+    _logger = None
+
+    def __init__(self):
+        self._logger = logging_utils.get_logger(self)
 
     @abstractmethod
     def is_in_parameter_domain(self, value):
@@ -41,7 +46,9 @@ class ParamDef(object):
         In this case, it's 0 iff valueA == valueB, 1 otherwise.
         """
         if valueA == valueB:
+            self._logger.debug("Values are identical; returning distance 0")
             return 0
+        self._logger.debug("Values are different; returning distance 1")
         return 1
 
     def to_dict(self):
@@ -54,8 +61,11 @@ class ParamDef(object):
         dict : dictionary
             The dictionary from which we can rebuild this parameter definition.
         """
-        result_dict = self.__dict__
+        self._logger.debug("Converting param_def to dict")
+        result_dict = dict(self.__dict__)
+        del result_dict["_logger"]
         result_dict["type"] = self.__class__.__name__
+        self._logger.debug("Final converted param_def dict %s", result_dict)
         return result_dict
 
     @abstractmethod
@@ -112,9 +122,6 @@ class ComparableParamDef(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self):
-        pass
-
     @abstractmethod
     def compare_values(self, one, two):
         """
@@ -167,6 +174,10 @@ class NominalParamDef(ParamDef):
         ValueError :
             Iff values is not a list, or values is an empty list.
         """
+
+        super(NominalParamDef, self).__init__()
+        self._logger.debug("Initializing nominal param def with values %s",
+                           values)
         if not isinstance(values, list):
             raise ValueError(
                 "You created a NominalParameterDef object without "
@@ -186,19 +197,29 @@ class NominalParamDef(ParamDef):
         Tests whether value is in self.values as defined during the init
         function.
         """
-        return value in self.values
+        self._logger.debug("Testing whether %s is in param domain", value)
+        is_in_param_domain = value in self.values
+        self._logger.debug("In param domain: %s", is_in_param_domain)
+        return is_in_param_domain
 
     def warp_in(self, unwarped_value):
+        self._logger.debug("Warping in %s", unwarped_value)
         warped_value = [0]*len(self.values)
         warped_value[self.values.index(unwarped_value)] = 1
+        self._logger.debug("Results in %s", warped_value)
         return warped_value
 
     def warp_out(self, warped_value):
+        self._logger.debug("Warping out %s", warped_value)
         warped_value = list(warped_value)
-        return self.values[warped_value.index(max(warped_value))]
+        unwarped_value = self.values[warped_value.index(max(warped_value))]
+        self._logger.debug("Results in %s", unwarped_value)
+        return unwarped_value
 
     def warped_size(self):
-        return len(self.values)
+        warped_size = len(self.values)
+        self._logger.debug("Warped size: %s", warped_size)
+        return warped_size
 
 
 class OrdinalParamDef(NominalParamDef, ComparableParamDef):
@@ -223,23 +244,27 @@ class OrdinalParamDef(NominalParamDef, ComparableParamDef):
         considered smaller than '1' and '1' bigger than '5' because the index
         of '1' in this list is higher than the index of '5'.
         """
+        self._logger.debug("Comparing %s and %s", one, two)
         if one not in self.values or two not in self.values:
             raise ValueError(
                 "Values not comparable! Either one or the other is not in the "
                 "values domain")
 
+        comparison = 0
         if self.values.index(one) < self.values.index(two):
-            return -1
+            comparison = -1
         if self.values.index(one) > self.values.index(two):
-            return 1
-
-        return 0
+            comparison = 1
+        self._logger.debug("Results in %s", comparison)
+        return comparison
 
     def distance(self, valueA, valueB):
         """
         This distance is defined as the absolute difference between the values'
         position in the list, normed to the [0, 1] hypercube.
         """
+        self._logger.debug("Computing distance between %s and %s",
+                           valueA, valueB)
         if valueA not in self.values or valueB not in self.values:
             raise ValueError(
                 "Values not comparable! Either one or the other is not in the "
@@ -247,7 +272,9 @@ class OrdinalParamDef(NominalParamDef, ComparableParamDef):
         indexA = self.values.index(valueA)
         indexB = self.values.index(valueB)
         diff = abs(indexA - indexB)
-        return float(diff)/len(self.values)
+        dist = float(diff)/len(self.values)
+        self._logger.debug("Distance is %s", dist)
+        return dist
 
 
 class NumericParamDef(ParamDef, ComparableParamDef):
@@ -284,41 +311,57 @@ class NumericParamDef(ParamDef, ComparableParamDef):
         """
         Uses the warp_out function for tests.
         """
+        self._logger.debug("Testing whether %s is in param_domain", value)
         if 0 <= self.warp_in(value)[0] <= 1:
+            self._logger.debug("It is.")
             return True
+        self._logger.debug("It is not.")
         return False
 
     def warp_in(self, unwarped_value):
-        return [self.warping_in(unwarped_value)]
+        self._logger.debug("Warping %s in.", unwarped_value)
+        warped_value = [self.warping_in(unwarped_value)]
+        self._logger.debug("Results in %s", warped_value)
+        return warped_value
 
     def warp_out(self, warped_value):
-        return self.warping_out(warped_value[0])
+        self._logger.debug("Warping %s out", warped_value)
+        warped_out = self.warping_out(warped_value[0])
+        self._logger.debug("Warped out: %s", warped_out)
+        return warped_out
 
     def warped_size(self):
+        self._logger.debug("Warped size is always 1.")
         return 1
 
     def compare_values(self, one, two):
+        self._logger.debug("Comparing %s and %s", one, two)
         if not self.is_in_parameter_domain(one):
             raise ValueError("Parameter one = " + str(one) + " not in value "
                 "domain.")
         if not self.is_in_parameter_domain(two):
             raise ValueError("Parameter two = " + str(two) + " not in value "
                 "domain.")
+        comparison = 0
         if one < two:
-            return -1
+            comparison = -1
         elif one > two:
-            return 1
-        else:
-            return 0
+            comparison = 1
+        self._logger.debug("Comparison is %s", comparison)
+        return comparison
 
     def distance(self, valueA, valueB):
+        self._logger.debug("Computing distance between %s and %s", valueA,
+                           valueB)
         if not self.is_in_parameter_domain(valueA):
             raise ValueError("Parameter one = " + str(valueA) + " not in value "
                 "domain.")
         if not self.is_in_parameter_domain(valueB):
             raise ValueError("Parameter two = " + str(valueB) + " not in value "
                 "domain.")
-        return self.warp_in(valueB)[0] - self.warp_in(valueA)[0]
+        dist = self.warp_in(valueB)[0] - self.warp_in(valueA)[0]
+        self._logger.debug("Distance is %s", dist)
+        return dist
 
 
 class MinMaxNumericParamDef(NumericParamDef):
@@ -360,6 +403,12 @@ class MinMaxNumericParamDef(NumericParamDef):
             bound. By default, this is ten times the system's float epsilon.
 
         """
+        self._logger = logging_utils.get_logger(self)
+        self._logger.debug("Initializing MinMaxParamDef. Parameters are "
+                           "lower bound %s, upper_bound %s, include_lower %s,"
+                           "include_upper %s and epsilon %s",
+                           lower_bound, upper_bound, include_lower,
+                           include_upper, epsilon)
         try:
             lower_bound = float(lower_bound)
             upper_bound = float(upper_bound)
@@ -372,31 +421,42 @@ class MinMaxNumericParamDef(NumericParamDef):
         self.upper_bound = upper_bound
         self.include_lower = include_lower
         self.include_upper = include_upper
+        self._logger.debug("Initialized MinMaxParamDef.")
 
     def warp_in(self, unwarped_value):
+        self._logger.debug("Warping in %s", unwarped_value)
         modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
         modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
         result = ((unwarped_value - (modifed_lower))/
                   (modifed_upper-modifed_lower))
-        return [float(result)]
+        result = [float(result)]
+        self._logger.debug("Warped out to %s", result)
+        return result
 
     def warp_out(self, warped_value):
+        self._logger.debug("Warping out %s", warped_value)
         modifed_lower = self.lower_bound + (0 if self.include_lower else self.epsilon )
         modifed_upper = self.upper_bound - (0 if self.include_upper else self.epsilon )
         result = warped_value[0]*(modifed_upper - modifed_lower) + modifed_lower
-        return float(result)
+        result = float(result)
+        self._logger.debug("Warped out to %s", result)
+        return result
 
     def warped_size(self):
+        self._logger.debug("Warped size is always 1.")
         return 1
 
     def is_in_parameter_domain(self, value):
+        self._logger.debug("Testing whether %s is in parameter domain", value)
         if not (self.lower_bound < value or
                     (self.lower_bound <= value and self.include_lower)):
+            self._logger.debug("Is too small.")
             return False
         if not (self.upper_bound > value or
                     (self.upper_bound >= value and self.include_upper)):
-
+            self._logger.debug("Is too big.")
             return False
+        self._logger.debug("Seems to fit.")
         return True
 
 
@@ -420,14 +480,19 @@ class PositionParamDef(OrdinalParamDef):
         """
         assert len(values) == len(positions)
         super(PositionParamDef, self).__init__(values)
+        self._logger.debug("Initializing position_param_def with values %s and"
+                           "positions %s", values, positions)
         self.positions = positions
 
     def warp_in(self, unwarped_value):
+        self._logger.debug("Warping in %s", unwarped_value)
         pos = self.positions[self.values.index(unwarped_value)]
         warped_value = float(pos - min(self.positions))/(max(self.positions) - min(self.positions))
+        self._logger.debug("Warped into %s", [warped_value])
         return [warped_value]
 
     def warp_out(self, warped_value):
+        self._logger.debug("Warping out %s", warped_value)
         warped_value = warped_value[0]
         if warped_value > 1:
             return self.values[-1]
@@ -438,13 +503,17 @@ class PositionParamDef(OrdinalParamDef):
         for i, p in enumerate(self.positions):
             if abs(p - pos) < abs(self.positions[min_pos_idx] - pos):
                 min_pos_idx = i
-
-        return self.values[min_pos_idx]
+        result = self.values[min_pos_idx]
+        self._logger.debug("Warped out to %s", result)
+        return result
 
     def warped_size(self):
+        self._logger.debug("Warped size is always 1.")
         return 1
 
     def distance(self, valueA, valueB):
+        self._logger.debug("Computing distance between %s and %s", valueA,
+                           valueB)
         if valueA not in self.values or valueB not in self.values:
             raise ValueError(
                 "Values not comparable! Either one or the other is not in the "
@@ -452,6 +521,7 @@ class PositionParamDef(OrdinalParamDef):
         pos_a = self.positions[self.values.index(valueA)]
         pos_b = self.positions[self.values.index(valueB)]
         diff = abs(pos_a - pos_b)
+        self._logger.debug("Distance is %s", diff)
         return float(diff)
 
 
@@ -466,10 +536,14 @@ class FixedValueParamDef(PositionParamDef):
             pos = v
             positions.append(pos)
         super(FixedValueParamDef, self).__init__(values, positions)
+        self._logger.debug("Initialized FixedValue with %s", values)
 
     def to_dict(self):
-        return {"values": self.values,
+
+        param_dict = {"values": self.values,
                 "type": self.__class__.__name__}
+        self._logger.debug("Converting to dict: %s", param_dict)
+        return param_dict
 
 
 class RangeParamDef(FixedValueParamDef):
@@ -508,6 +582,9 @@ class RangeParamDef(FixedValueParamDef):
         - range(kwargs) where it receives exactly four kwargs (used for
         reconstruction).
         """
+        self._logger = logging_utils.get_logger(self)
+        self._logger.debug("Building a RangeParamDef. *args are %s, *kwargs "
+                           "%s", args, kwargs)
         self._start = 0
         self._stop = None
         self._step = 1
@@ -567,13 +644,16 @@ class RangeParamDef(FixedValueParamDef):
             cur_value += self._step
 
         super(RangeParamDef, self).__init__(values)
+        self._logger.debug("Finished RangeParamDef.")
 
     def to_dict(self):
-        return {"start": self._start,
+        param_dict = {"start": self._start,
                 "stop": self._stop,
                 "step": self._step,
                 "ints": self._ints,
                 "type": self.__class__.__name__}
+        self._logger.debug("Converted to param_dict %s", param_dict)
+        return param_dict
 
 
 
@@ -633,33 +713,51 @@ class AsymptoticNumericParamDef(NumericParamDef):
         border : float
             The non-asymptotic border.
         """
+        self._logger = logging_utils.get_logger(self)
+        self._logger.debug("Initializing asymptotic param def with asym_border"
+                           " %s and border %s", asymptotic_border, border)
         self.asymptotic_border = float(asymptotic_border)
         self.border = float(border)
 
     def warp_in(self, unwarped_value):
+        self._logger.debug("Warping in %s", unwarped_value)
         if not min(self.asymptotic_border, self.border) <= unwarped_value:
             unwarped_value = min(self.asymptotic_border, self.border)
         if not unwarped_value <= max(self.asymptotic_border, self.border):
             unwarped_value = max(self.asymptotic_border, self.border)
         if unwarped_value == self.border:
+            self._logger.debug("Special case: Is border. Returning [0].")
             return [0]
         elif unwarped_value == self.asymptotic_border:
+            self._logger.debug("Special case: Asymptotic border. Returning "
+                               "[1]")
             return [1]
-        return [(1-2**(math.log(unwarped_value, 10))) *
+        warped_value = [(1-2**(math.log(unwarped_value, 10))) *
                 (self.border-self.asymptotic_border)+self.asymptotic_border]
+        self._logger.debug("Normal case. Warped is %s", warped_value)
+        return warped_value
 
     def warp_out(self, warped_value):
+        self._logger.debug("Warping out %s", warped_value)
         warped_value_single = warped_value[0]
         if warped_value_single < 0:
             warped_value_single = 0
         if warped_value_single > 1:
             warped_value_single = 1
         if warped_value_single == 1:
+            self._logger.debug("Special case: Value was 1, therefore "
+                               "asymptotic border.")
             return self.asymptotic_border
         elif warped_value_single == 0:
+            self._logger.debug("Special case: Value was 0, therefore "
+                               "border.")
             return self.border
-        return 10**math.log(1-(warped_value_single-self.asymptotic_border)/
+        unwarped_value = 10**math.log(1-(warped_value_single-
+                                         self.asymptotic_border)/
                             (self.border-self.asymptotic_border), 2)
+        self._logger.debug("Normal case. Warped out is %s", unwarped_value)
+        return unwarped_value
 
     def warped_size(self):
+        self._logger.debug("Warped size is always 1.")
         return 1

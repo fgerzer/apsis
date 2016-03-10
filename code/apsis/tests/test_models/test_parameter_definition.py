@@ -4,6 +4,7 @@ from apsis.models.parameter_definition import *
 from nose.tools import assert_equal, assert_raises, assert_items_equal, \
     assert_true, assert_false, assert_almost_equal, assert_less_equal, \
     assert_greater_equal
+import random
 
 class TestParameterDefinitions(object):
 

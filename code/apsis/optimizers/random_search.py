@@ -23,6 +23,7 @@ class RandomSearch(Optimizer):
 
     random_state = None
     logger = None
+    name = "RandomSearch"
 
     def __init__(self, experiment, optimizer_params=None):
         """
@@ -44,15 +45,21 @@ class RandomSearch(Optimizer):
         ValueError
             Iff the experiment is not supported.
         """
+        self._logger = logging_utils.get_logger(self)
+        self._logger.debug("Initializing random search. experiment is %s,"
+                           "optimizer_params %s", experiment, optimizer_params)
         if optimizer_params is None:
             optimizer_params = {}
         self.random_state = optimizer_params.get("random_state", None)
+        self._logger.debug("Initialized random state to %s", self.random_state)
         Optimizer.__init__(self, experiment, optimizer_params)
 
     def get_next_candidates(self, num_candidates=1):
+        self._logger.debug("Returning next %s candidates", num_candidates)
         candidate_list = []
         for i in range(num_candidates):
             candidate_list.append(self._gen_one_candidate())
+        self._logger.debug("Generated candidates: %s", candidate_list)
         return candidate_list
 
     def _gen_one_candidate(self):
@@ -67,11 +74,14 @@ class RandomSearch(Optimizer):
         candidate : Candidate
             The generated candidate
         """
+        self._logger.debug("Generating single candidate.")
         self.random_state = check_random_state(self.random_state)
         value_dict = {}
         for key, param_def in self._experiment.parameter_definitions.iteritems():
             value_dict[key] = self._gen_param_val(param_def)
-        return Candidate(value_dict)
+        generated_candidate = Candidate(value_dict)
+        self._logger.debug("Generated candidate: %s", generated_candidate)
+        return generated_candidate
 
     def _gen_param_val(self, param_def):
         """
@@ -89,4 +99,5 @@ class RandomSearch(Optimizer):
         param_val:
             The generated parameter value.
         """
-        return param_def.warp_out(list(self.random_state.uniform(0, 1, param_def.warped_size())))
+        return param_def.warp_out(list(
+            self.random_state.uniform(0, 1, param_def.warped_size())))

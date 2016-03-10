@@ -47,7 +47,7 @@ class TestCandidate(object):
         cand2 = Candidate(params)
 
         assert_not_equal(cand1, cand2)
-        cand3 = Candidate(params2, cand_id=cand1.id)
+        cand3 = Candidate(params2, cand_id=cand1.cand_id)
         assert_true(cand1.__eq__(cand3))
 
         assert_false(cand1.__eq__(False))
@@ -64,18 +64,6 @@ class TestCandidate(object):
         cand1.cost = 2
         str(cand1)
 
-    def test_to_csv_entry(self):
-        """
-        Tests the correctness of the csv entry generation
-        """
-        params = {
-            "x": 1,
-            "name": "B"
-        }
-        cand1 = Candidate(params)
-        entry = cand1.to_csv_entry()
-        assert_equal(entry, "%s,B,1,None,None,False" %cand1.id)
-
     def test_dict(self):
         """
         Tests the to-dict and from-dict methods.
@@ -91,7 +79,7 @@ class TestCandidate(object):
              "cost": None,
              "worker_information": None,
              "failed": False,
-             "id": cand1.id}
+             "cand_id": cand1.cand_id}
         assert_dict_equal(entry, d)
 
         cand2 = from_dict(entry)
