@@ -2,8 +2,7 @@ __author__ = 'Frederik Diehl'
 
 from abc import ABCMeta, abstractmethod
 from time import sleep
-import multiprocessing
-import Queue
+from apsis.utilities import logging_utils
 import threading
 import Queue
 
@@ -33,6 +32,8 @@ class Optimizer(object):
     SUPPORTED_PARAM_TYPES = []
 
     _experiment = None
+    name = None
+    _logger = None
 
     def __init__(self, experiment, optimizer_params):
         """
@@ -51,6 +52,7 @@ class Optimizer(object):
         ValueError
             Iff the experiment is not supported.
         """
+        self._logger = logging_utils.get_logger(self)
         if not self._is_experiment_supported(experiment):
             raise ValueError("Experiment contains unsupported parameters. "
                              "Optimizer %s supports %s, experiment parameters "
@@ -84,6 +86,7 @@ class Optimizer(object):
                                          self.SUPPORTED_PARAM_TYPES,
                                          experiment.parameter_definitions))
         self._experiment = experiment
+
 
     @abstractmethod
     def get_next_candidates(self, num_candidates=1):
@@ -134,9 +137,14 @@ class Optimizer(object):
             False iff one or more of experiment's parameter definitions are not
             supported.
         """
+        self._logger.debug("Testing whether experiment %s is supported.",
+                           experiment)
         for name, pd in experiment.parameter_definitions.iteritems():
             if not self._is_supported_param_type(pd):
+                self._logger.debug("It is not.")
                 return False
+
+        self._logger.debug("It is.")
         return True
 
     def _is_supported_param_type(self, param):
@@ -153,11 +161,15 @@ class Optimizer(object):
         is_supported : bool
             True iff param is supported by this optimizer.
         """
+        self._logger.debug("Testing whether param %s is supported.",
+                           param)
         if isinstance(self.SUPPORTED_PARAM_TYPES, list):
             for sup in self.SUPPORTED_PARAM_TYPES:
                 if isinstance(param, sup):
+                    self._logger.debug("It is.")
                     return True
 
+        self._logger.debug("It is not.")
         return False
 
 
@@ -189,6 +201,8 @@ class QueueBasedOptimizer(Optimizer):
 
     _manager = None
 
+    _optimizer_class = None
+
     def __init__(self, optimizer_class, experiment, optimizer_params=None):
         """
         Initializes a new QueueBasedOptimizer class.
@@ -208,27 +222,51 @@ class QueueBasedOptimizer(Optimizer):
             Supports the parameter "update_time", which sets the minimum time
             in seconds between checking for updates. Default is 0.1s
         """
+        self._logger = logging_utils.get_logger(self)
+        self._logger.debug("Initializing new QueueBasedLogger. "
+                           "optimizer_class is %s, experiment %s, "
+                           "optimizer_params %s", optimizer_class,
+                           experiment, optimizer_params)
         self._optimizer_in_queue = Queue.Queue()
         self._optimizer_out_queue = Queue.Queue()
+        self._optimizer_class = optimizer_class
         self.SUPPORTED_PARAM_TYPES = optimizer_class.SUPPORTED_PARAM_TYPES
+
+        self._logger.debug("Initialized queues. in_queue is %s, out_queue %s",
+                           self._optimizer_in_queue, self._optimizer_out_queue)
+
         p = threading.Thread(target=dispatch_queue_backend,
-                                    args=(optimizer_class, optimizer_params, experiment,
-                                          self._optimizer_out_queue, self._optimizer_in_queue))
+                                    args=(optimizer_class, optimizer_params,
+                                          experiment,
+                                          self._optimizer_out_queue,
+                                          self._optimizer_in_queue))
         p.start()
+        self._logger.debug("Started thread.")
         super(QueueBasedOptimizer, self).__init__(experiment, optimizer_params)
 
     def get_next_candidates(self, num_candidates=1):
+        self._logger.debug("Returning next %s candidates", num_candidates)
         next_candidates = []
         try:
             for i in range(num_candidates):
                 new_candidate = self._optimizer_out_queue.get_nowait()
                 next_candidates.append(new_candidate)
         except Queue.Empty:
+            self._logger.debug("Queue of new candidates is empty.")
             pass
+        self._logger.debug("Generated next_candidates %s", next_candidates)
         return next_candidates
 
+    @property
+    def name(self):
+        if isinstance(self._optimizer_class, basestring):
+            return self._optimizer_class
+        else:
+            return self._optimizer_class.name
 
     def update(self, experiment):
+        self._logger.debug("Putting experiment %s into the queue",
+                           experiment)
         self._optimizer_in_queue.put(experiment)
 
     def exit(self):
@@ -237,7 +275,9 @@ class QueueBasedOptimizer(Optimizer):
 
         It does so by putting "exit" into the in_queue and closing both queues.
         """
+        self._logger.debug("Exiting.")
         if self._optimizer_in_queue is not None:
+            self._logger.debug("Put exit into the optimizer queue.")
             self._optimizer_in_queue.put("exit")
 
 
@@ -272,7 +312,10 @@ class QueueBackend(object):
     _exited = None
     _update_time = None
 
-    def __init__(self, optimizer_class, experiment, out_queue, in_queue, optimizer_params=None):
+    _logger = None
+
+    def __init__(self, optimizer_class, experiment, out_queue, in_queue,
+                 optimizer_params=None):
         """
         Initializes this backend.
 
@@ -293,6 +336,13 @@ class QueueBackend(object):
         in_queue : Queue
             The queue on which to receive the new experiments.
         """
+        self._logger = logging_utils.get_logger(self)
+        self._logger.debug("Initializing queue backend. Parameters: "
+                           "optimizer_class %s, experiment %s, out_queue %s, "
+                           "in_queue %s, optimizer_params %s",
+                           optimizer_class, experiment, out_queue, in_queue,
+                           optimizer_params)
+
         self._out_queue = out_queue
         self._in_queue = in_queue
         if optimizer_params is None:
@@ -302,6 +352,13 @@ class QueueBackend(object):
         self._optimizer = optimizer_class(experiment, optimizer_params)
         self._exited = False
         self._experiment = experiment
+        self._logger.debug("Had set the parameters to: out_queue is %s, "
+                           "in_queue %s, optimizer_params %s, "
+                           "min_candidates %s, update_time %s,"
+                           " optimizer %s, exited %s, experiment %s",
+                           out_queue, in_queue, optimizer_params,
+                           self._min_candidates, self._update_time,
+                           self._optimizer, self._exited, self._experiment)
         #multiprocessing.Process.__init__(self)
 
     def run(self):
@@ -338,9 +395,11 @@ class QueueBackend(object):
         while not self._in_queue.empty():
             try:
                 new_update = self._in_queue.get_nowait()
+                self._logger.debug("Received new update: %s", new_update)
             except Queue.Empty:
                 pass
             if new_update == "exit":
+                self._logger.debug("Update received was exit.")
                 self._exited = True
                 return
         if new_update is not None:
@@ -348,10 +407,12 @@ class QueueBackend(object):
             try:
                 while not self._out_queue.empty():
                     self._out_queue.get_nowait()
+                self._logger.debug("Cleared out the update queue.")
             except Queue.Empty:
                 pass
             self._experiment = new_update
             self._optimizer.update(self._experiment)
+            self._logger.debug("Finished updating.")
 
     def _check_generation(self):
         """
@@ -366,6 +427,8 @@ class QueueBackend(object):
                            self._out_queue.qsize < self._min_candidates):
                 new_candidates = self._optimizer.get_next_candidates(
                     num_candidates=self._min_candidates)
+                self._logger.debug("Needed to generate new candidates. "
+                                   "Generated %s", new_candidates)
                 if new_candidates is None:
                     return
                 for c in new_candidates:
@@ -374,7 +437,8 @@ class QueueBackend(object):
             return
 
 
-def dispatch_queue_backend(optimizer_class, optimizer_params, experiment, out_queue, in_queue):
+def dispatch_queue_backend(optimizer_class, optimizer_params, experiment,
+                           out_queue, in_queue):
     optimizer = QueueBackend(optimizer_class, experiment, out_queue,
                                  in_queue, optimizer_params)
     optimizer.run()

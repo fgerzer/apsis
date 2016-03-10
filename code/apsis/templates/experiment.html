@@ -31,7 +31,7 @@
                 <th>worker_information</th>
             </tr>
             <tr>
-            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+            {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ best_candidate_string[i] }}</td>
             {% endfor %}
             </tr>
@@ -49,7 +49,7 @@
             </tr>
         {% for c in finished_candidates_string%}
             <tr>
-            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+            {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
             </tr>
@@ -70,7 +70,7 @@
             </tr>
         {% for c in working_candidates_string%}
             <tr>
-            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+            {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
             </tr>

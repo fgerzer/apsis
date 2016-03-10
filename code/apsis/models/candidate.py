@@ -1,6 +1,7 @@
 __author__ = 'Frederik Diehl'
 
 import uuid
+from apsis.utilities.logging_utils import get_logger
 
 class Candidate(object):
     """
@@ -42,6 +43,7 @@ class Candidate(object):
     result = None
     cost = None
     worker_information = None
+    _logger = None
 
     def __init__(self, params, cand_id=None, worker_information=None):
         """
@@ -71,10 +73,19 @@ class Candidate(object):
         if cand_id is None:
             cand_id = uuid.uuid4().hex
         self.cand_id = cand_id
+        self._logger = get_logger(self, extra_info="cand_id " + str(cand_id))
+        self._logger.debug("Initializing new candidate. Params %s, cand_id %s,"
+                           "worker_info %s", params, cand_id,
+                           worker_information)
+
         if not isinstance(params, dict):
-            raise ValueError("No parameter dictionary given.")
+            self._logger.error("No parameter dict given, received %s instead",
+                               params)
+            raise ValueError("No parameter dictionary given, received %s "
+                             "instead" %params)
         self.params = params
         self.worker_information = worker_information
+        self._logger.debug("Finished initializing the candidate.")
 
     def __eq__(self, other):
         """
@@ -94,24 +105,22 @@ class Candidate(object):
         equality : bool
             True iff other is a Candidate instance and their ids are equal.
         """
-
+        self._logger.debug("Comparing candidates self (%s) with %s.", self,
+                           other)
         if not isinstance(other, Candidate):
-            return False
-
-        if self.cand_id == other.cand_id:
-            return True
-        return False
+            equality = False
+        elif self.cand_id == other.cand_id:
+            equality = True
+        else:
+            equality = False
+        self._logger.debug("Equality: %s", equality)
+        return equality
 
     def __str__(self):
         """
         Stringifies this Candidate.
 
-        A stringified Candidate is of the form:
-        Candidate
-        id: XXX
-        params: XXX
-        cost: XXX
-        result XXX
+        A stringified Candidate is the stringified form of its dict.
 
         Returns
         -------
@@ -119,12 +128,8 @@ class Candidate(object):
             The stringified Candidate.
 
         """
-        string = "Candidate\n"
-        string += "cand_id: %s\n" %self.cand_id
-        string += "params: %s\n" %str(self.params)
-        if self.cost is not None:
-            string += "cost: %s\n" %self.cost
-        string += "result: %s\n" %str(self.result)
+        cand_dict = self.to_dict(do_logging=False)
+        string = str(cand_dict)
         return string
 
     def to_csv_entry(self, delimiter=",", key_order=None):
@@ -148,17 +153,21 @@ class Candidate(object):
             string : string
                 The (one-line) string representing this Candidate as a csv line
         """
+        self._logger.debug("Generating candidate csv entry. Delimiter %s,"
+                           "key_order %s", delimiter, key_order)
         if key_order is None:
             key_order = sorted(self.params.keys())
+            self._logger.debug("Generated new key order; is %s", key_order)
         string = ""
         string += str(self.cand_id) + delimiter
         for k in key_order:
             string += str(self.params[k]) + delimiter
         string += str(self.cost) + delimiter
         string += str(self.result)
+        self._logger.debug("csv entry is %s", string)
         return string
 
-    def to_dict(self):
+    def to_dict(self, do_logging=True):
         """
         Converts this candidate to a dictionary.
 
@@ -178,14 +187,18 @@ class Candidate(object):
             "worker_information" : any jsonable or None
                 Client-settable worker information.
         """
+        if do_logging:
+            self._logger.debug("Converting cand to dict.")
         d = {"cand_id": self.cand_id,
-             "params": self._param_defs_to_dict(),
+             "params": self._param_defs_to_dict(do_logging=do_logging),
              "result": self.result,
              "cost": self.cost,
              "worker_information": self.worker_information}
+        if do_logging:
+            self._logger.debug("Generated dict %s", d)
         return d
 
-    def _param_defs_to_dict(self):
+    def _param_defs_to_dict(self, do_logging=True):
         """
         Returns a parameter definition dictionary representation.
 
@@ -194,13 +207,19 @@ class Candidate(object):
         d : dict
             Dictionary of the parameters.
         """
+        if do_logging:
+            self._logger.debug("Converting param_def to dict.")
         d = {}
         for k in self.params.keys():
             d[k] = self.params[k]
+        if do_logging:
+            self._logger.debug("param_def dict is %s", d)
         return d
 
+global_logger = get_logger("candidate_global")
 
-def from_dict(dict):
+
+def from_dict(d):
     """
     Builds a new candidate from a dictionary.
 
@@ -214,11 +233,13 @@ def from_dict(dict):
     c : Candidate
         The corresponding candidate.
     """
+    global_logger.debug("Constructing new candidate from dict %s.", d)
     cand_id = None
-    if "cand_id" in dict:
-        cand_id = dict["cand_id"]
-    c = Candidate(dict["params"], cand_id=cand_id)
-    c.result = dict.get("result", None)
-    c.cost = dict.get("cost", None)
-    c.worker_information = dict.get("worker_information", None)
+    if "cand_id" in d:
+        cand_id = d["cand_id"]
+    c = Candidate(d["params"], cand_id=cand_id)
+    c.result = d.get("result", None)
+    c.cost = d.get("cost", None)
+    c.worker_information = d.get("worker_information", None)
+    global_logger.debug("Constructed candidate is %s", c)
     return c

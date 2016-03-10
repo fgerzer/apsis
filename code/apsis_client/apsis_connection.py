@@ -362,7 +362,7 @@ class Connection(object):
             empty.
             The three lists are:
             "finished": The list of finished candidates.
-            "workign": The list of candidates on which workers are currently
+            "working": The list of candidates on which workers are currently
             working.
             "pending": The list of not-yet finished candidates on which no
             worker is currently working.

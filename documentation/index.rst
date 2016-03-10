@@ -8,7 +8,7 @@ Welcome to apsis's documentation!
 
 A toolkit for hyperparameter optimization for machine learning algorithms.
 
-Our goal is to provide a flexible, simple and scaleable approach - parallel, on clusters and/or on your own machine. Check out our usage tutorials to get started or the design pages to understand how apsis works.
+Our goal is to provide a flexible, simple and scaleable approach - parallel, on clusters and/or on your own machine. Check out our usage tutorials to get started, or the design pages to understand how apsis works.
 
 
 Contents
@@ -54,9 +54,9 @@ We are currently in beta state. Most of the structure has been implemented, as h
 Scientific Project Description
 ------------------------------
 
-If you want to learn more on the project and are interested in the theoretical background on hyperparameter optimization used in apsis you may want to check out the `scientific project documentation <https://github.com/FrederikDiehl/apsis/raw/master/paper.pdf>`_.
+If you want to learn more on the project and are interested in the theoretical background on hyperparameter optimization used in apsis you may want to check out the `scientific project documentation <https://github.com/FrederikDiehl/apsis/raw/master/paper.pdf>`_. This is currently still referencing v0.1.
 
-Furthermore, a presentation slide deck is available at `slideshare <http://www.slideshare.net/andi1400/apsis-automatic-hyperparameter-optimization-framework-for-machine-learning>`_.
+Furthermore, a presentation slide deck is available at `slideshare <http://www.slideshare.net/andi1400/apsis-automatic-hyperparameter-optimization-framework-for-machine-learning>`_. This presentation is currently still referencing v0.1.
 
 License
 -------
