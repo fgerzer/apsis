@@ -300,13 +300,19 @@ class ExperimentAssistant(object):
         for i, e in enumerate(self._experiment.candidates_finished
                               [:plot_up_to]):
             x.append(i)
-            step_evaluation.append(e.result)
-            if self._experiment.better_cand(e, best_candidate):
-                best_candidate = e
-                step_best.append(e.result)
-
+            if not e.failed:
+                step_evaluation.append(e.result)
+                if self._experiment.better_cand(e, best_candidate):
+                    best_candidate = e
+                    step_best.append(e.result)
+                else:
+                    step_best.append(best_candidate.result)
             else:
-                step_best.append(best_candidate.result)
+                step_evaluation.append(float("NaN"))
+                if best_candidate is None:
+                    step_best.append(float("NaN"))
+                else:
+                    step_best.append(best_candidate.result)
         self._logger.debug("Returning x: %s, step_eval: %s and step_best %s",
                            x, step_evaluation, step_best)
         return x, step_evaluation, step_best
