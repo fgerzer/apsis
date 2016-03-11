@@ -78,21 +78,23 @@ def create_cand_matrix_vector(experiment, failed_treat):
 
     param_names = sorted(experiment.parameter_definitions.keys())
 
-    best_candidate = None
-    worst_candidate = None
+    best_candidate = experiment.candidates_finished[0]
+    worst_candidate = experiment.candidates_finished[0]
 
     for c in experiment.candidates_finished:
-        if experiment.better_cand(c, best_candidate):
-            best_candidate = c
-        if experiment.better_cand(worst_candidate, c):
-            worst_candidate = c
-    failed_value = 0
+        if not c.failed:
+            if experiment.better_cand(c, best_candidate):
+                best_candidate = c
+            if experiment.better_cand(worst_candidate, c):
+                worst_candidate = c
+
     if failed_treat[0] == "fixed_value":
         failed_value = failed_treat[1]
-    elif failed_treat[1] == "worst_mult":
+    elif failed_treat[0] == "worst_mult":
         failed_value = (worst_candidate.result - best_candidate.result) * \
                        failed_treat[1] + worst_candidate.result
-
+    else:
+        raise ValueError("failed_treat %s is not supported." %failed_treat)
 
     for i, c in enumerate(experiment.candidates_finished):
         warped_in = experiment.warp_pt_in(c.params)
