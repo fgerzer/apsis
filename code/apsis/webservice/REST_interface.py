@@ -21,6 +21,9 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from apsis.utilities import file_utils
 from apsis.utilities import logging_utils
 import traceback
+from tornado.wsgi import WSGIContainer
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
 
 CONTEXT_ROOT = ""
 
@@ -77,7 +80,11 @@ def start_apsis(port=5000, continue_path=None, fail_deadly=False):
 
     file_utils.ensure_directory_exists(write_dir)
     lAss = LabAssistant(write_dir=write_dir)
-    app.run(host='0.0.0.0', debug=False, port=port)
+
+
+    http_server = HTTPServer(WSGIContainer(app))
+    http_server.listen(port)
+    IOLoop.instance().start()
     _logger.info("Finished initialization. Interface running now.")
 
 
