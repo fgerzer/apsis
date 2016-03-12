@@ -21,12 +21,18 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from apsis.utilities import file_utils
 from apsis.utilities import logging_utils
 import traceback
+from tornado.wsgi import WSGIContainer
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
 
 CONTEXT_ROOT = ""
 
 app = Flask('apsis')
 
 _logger = None
+
+exited = False
+http_server = None
 
 lAss = None
 
@@ -38,7 +44,11 @@ def set_exit(_signo, _stack_frame):
     """
     _logger.warning("Shutting down apsis server, due to signal %s with "
                     "stackframe %s" %(_signo, _stack_frame))
+    IOLoop.instance().stop()
     lAss.set_exit()
+    http_server.stop()
+    global exited
+    exited = True
     sys.exit()
 
 signal.signal(signal.SIGINT, set_exit)
@@ -72,13 +82,17 @@ def start_apsis(port=5000, continue_path=None, fail_deadly=False):
         date_name = datetime.datetime.utcfromtimestamp(
                 time.time()).strftime("%Y-%m-%d_%H.%M.%S")
         write_dir = os.path.join(write_dir, date_name)
-    global should_fail_deadly
+    global should_fail_deadly, http_server, exited
     should_fail_deadly = fail_deadly
-
+    exited = False
     file_utils.ensure_directory_exists(write_dir)
     lAss = LabAssistant(write_dir=write_dir)
-    app.run(host='0.0.0.0', debug=False, port=port)
-    _logger.info("Finished initialization. Interface running now.")
+
+
+    http_server = HTTPServer(WSGIContainer(app))
+    http_server.listen(port)
+    _logger.info("Finished initialization. Starting tornado..")
+    IOLoop.instance().start()
 
 
 def exception_handler(func):
@@ -91,6 +105,7 @@ def exception_handler(func):
     """
     @wraps(func)
     def handle_exception(*args, **kwargs):
+        global exited
         try:
             return jsonify(result=func(*args, **kwargs))
         except Exception as e:
@@ -104,6 +119,8 @@ def exception_handler(func):
                 raise RuntimeError("Exception raised and fail_deadly active."
                                 " Raising general exception. Original "
                                 "exception is " + str(e))
+            elif exited:
+                raise SystemExit()
 
             return jsonify(result="failed")
     return handle_exception
