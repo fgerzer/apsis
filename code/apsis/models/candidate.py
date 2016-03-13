@@ -189,7 +189,7 @@ class Candidate(object):
             self._logger.debug("param_def dict is %s", d)
         return d
 
-global_logger = get_logger("candidate_global")
+global_logger = get_logger("models.candidate")
 
 
 def from_dict(d):
@@ -206,7 +206,7 @@ def from_dict(d):
     c : Candidate
         The corresponding candidate.
     """
-    global_logger.debug("Constructing new candidate from dict %s.", d)
+    global_logger.log(5, "Constructing new candidate from dict %s.", d)
     cand_id = None
     if "cand_id" in d:
         cand_id = d["cand_id"]
@@ -215,5 +215,5 @@ def from_dict(d):
     c.cost = d.get("cost", None)
     c.failed = d.get("failed", False)
     c.worker_information = d.get("worker_information", None)
-    global_logger.debug("Constructed candidate is %s", c)
+    global_logger.log(5, "Constructed candidate is %s", c)
     return c

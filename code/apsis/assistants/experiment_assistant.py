@@ -141,7 +141,7 @@ class ExperimentAssistant(object):
         """
         self._logger.debug("Returning experiment as dict.")
         exp_dict = self._experiment.to_dict()
-        self._logger.debug("Exp_dict is %s" %exp_dict)
+        self._logger.log(5, "Exp_dict is %s" %exp_dict)
         return exp_dict
 
     def update(self, candidate, status="finished"):
