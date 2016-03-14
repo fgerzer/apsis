@@ -19,7 +19,7 @@ def start_rest(save_path, port=5000, fail_deadly=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", help="Set the apsis server's port.")
-    parser.add_argument("save-path", help="Set a path to store logging and "
+    parser.add_argument("save_path", help="Set a path to store logging and "
                                        "continuation information.")
     parser.add_argument("--fail_deadly", help="Fails with every exception "
                                               "instead of catching them. "
@@ -32,8 +32,8 @@ if __name__ == "__main__":
         port = args.port
     save_path = None
     fail_deadly = False
-    if save_path.path:
-        path = args.save_path
+    if args.save_path:
+        save_path = args.save_path
     if args.fail_deadly:
         fail_deadly = True
-    start_rest(port, save_path, fail_deadly)
+    start_rest(save_path, port, fail_deadly)
