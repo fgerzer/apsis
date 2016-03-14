@@ -9,17 +9,17 @@ import REST_interface
 import argparse
 
 
-def start_rest(port=5000, save_path=None, fail_deadly=False):
+def start_rest(save_path, port=5000, fail_deadly=False):
     print("Initialized apsis on port %s" %port)
     print("Fail_deadly is %s" %fail_deadly)
-    REST_interface.start_apsis(port, save_path=save_path,
+    REST_interface.start_apsis(save_path, port,
                                fail_deadly=fail_deadly)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", help="Set the apsis server's port.")
-    parser.add_argument("--save-path", help="Set a path to store logging and "
+    parser.add_argument("save-path", help="Set a path to store logging and "
                                        "continuation information.")
     parser.add_argument("--fail_deadly", help="Fails with every exception "
                                               "instead of catching them. "
