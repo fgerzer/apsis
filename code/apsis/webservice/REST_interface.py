@@ -54,7 +54,7 @@ def set_exit(_signo, _stack_frame):
 signal.signal(signal.SIGINT, set_exit)
 
 
-def start_apsis(port=5000, continue_path=None, fail_deadly=False):
+def start_apsis(port=5000, save_path=None, fail_deadly=False):
     """
     Starts apsis.
 
@@ -70,22 +70,17 @@ def start_apsis(port=5000, continue_path=None, fail_deadly=False):
                         "what you do. State of the program might be lost at "
                         "any time, and the program might crash unexpectedly.")
 
+    if save_path:
+        write_dir = save_path
+        file_utils.ensure_directory_exists(write_dir)
 
-
-    if continue_path:
-        write_dir = continue_path
     else:
-        if os.name == "nt":
-            write_dir = os.path.relpath("APSIS_WRITING")
-        else:
-            write_dir = "/tmp/APSIS_WRITING"
-        date_name = datetime.datetime.utcfromtimestamp(
-                time.time()).strftime("%Y-%m-%d_%H.%M.%S")
-        write_dir = os.path.join(write_dir, date_name)
+        write_dir = None
+
     global should_fail_deadly, http_server, exited
     should_fail_deadly = fail_deadly
     exited = False
-    file_utils.ensure_directory_exists(write_dir)
+
     lAss = LabAssistant(write_dir=write_dir)
 
 
