@@ -87,7 +87,7 @@ class Optimizer(object):
                 else:
                     second_value = 1e-6
             elif self.treat_failed == "worst_mult":
-                second_value = 10
+                second_value = 2
             self.treat_failed = (self.treat_failed, second_value)
 
     def update(self, experiment):
