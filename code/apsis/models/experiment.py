@@ -546,13 +546,10 @@ class Experiment(object):
             json.dump(self.to_dict(), outfile)
 
 
-global_logger = None
+global_logger = logging_utils.get_logger("experiment.py")
+
 
 def from_dict(d):
-    global global_logger
-    if not global_logger:
-        global_logger = logging_utils.get_logger("experiment.py")
-
     global_logger.debug("Reconstructing experiment from dict %d", d)
     name = d["name"]
     param_defs = dict_to_param_defs(d["parameter_definitions"])
