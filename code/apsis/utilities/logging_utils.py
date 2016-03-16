@@ -8,15 +8,14 @@ import apsis
 import yaml
 
 logging_intitialized = False
+testing = False
+
 
 def get_logger(module, extra_info=None, save_path=None):
     """
     Abstraction from logging.getLogging, which also adds initialization.
 
-    Logging is configured directly at root level (in the standard usecase, at
-    least).
-    Currently, nothing is configurable from the outside. This is planned to be
-    changed.
+    This loads the logging config from config/logging.conf.
 
     Parameters
     ----------
@@ -49,8 +48,10 @@ def get_logger(module, extra_info=None, save_path=None):
     else:
         new_logger_name = module.__module__ + "." + module.__class__.__name__
 
+    global testing
+
     global logging_intitialized
-    if not logging_intitialized:
+    if not logging_intitialized and not testing:
         logging_intitialized = True
 
         # Look for the logging config file.
@@ -76,6 +77,12 @@ def get_logger(module, extra_info=None, save_path=None):
         logger = AddInfoClass(logger, {"extra_info": extra_info})
 
     return logger
+
+
+def logging_tests():
+    global testing
+    print("Setting logging to testing.")
+    testing = True
 
 
 class AddInfoClass(logging.LoggerAdapter):
