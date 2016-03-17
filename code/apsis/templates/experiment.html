@@ -29,29 +29,33 @@
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
             <tr>
             {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ best_candidate_string[i] }}</td>
             {% endfor %}
+                <td>{{format_datetime(best_candidate_string["last_update_time"])}}</td>
             </tr>
          </table>
         <br>
 
         <h3>finished candidates: {{finished_candidates_string|length}}</h3>
-        <table>
+        <table class="sortable">
             <tr>
                 <th>result</th>
                 <th>params</th>
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
         {% for c in finished_candidates_string%}
             <tr>
             {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
+                <td>{{format_datetime(c["last_update_time"])}}</td>
             </tr>
         {% endfor %}
          </table>
@@ -60,19 +64,21 @@
 
 
         <h3>working candidates: {{working_candidates_string|length}}</h3>
-        <table>
+        <table class="sortable">
             <tr>
                 <th>result</th>
                 <th>params</th>
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
         {% for c in working_candidates_string%}
             <tr>
             {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
+                <td>{{format_datetime(c["last_update_time"])}}</td>
             </tr>
         {% endfor %}
          </table>
@@ -81,19 +87,21 @@
 
 
         <h3>pending candidates: {{pending_candidates_string|length}}</h3>
-        <table>
+        <table class="sortable">
             <tr>
                 <th>result</th>
                 <th>params</th>
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
         {% for c in pending_candidates_string%}
             <tr>
-            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+            {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
+                <td>{{format_datetime(c["last_update_time"])}}</td>
             </tr>
         {% endfor %}
          </table>

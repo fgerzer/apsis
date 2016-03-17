@@ -416,3 +416,12 @@ def _filter_data(json):
         if isinstance(json[k], unicode):
             json[k] = str(json[k])
     return json
+
+
+
+
+@app.context_processor
+def client_date_formatting():
+    def format_datetime(float_time):
+        return time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(float_time))
+    return dict(format_datetime=format_datetime)
