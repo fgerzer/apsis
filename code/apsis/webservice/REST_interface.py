@@ -235,6 +235,7 @@ def get_experiment(experiment_id):
     templ = render_template("experiment.html",
                            exp_name=exp_dict["name"],
                            exp_id=exp_dict["exp_id"],
+                           exp_last_update=exp_dict["last_update_time"],
                            minimization=exp_dict["minimization_problem"],
                            param_defs=param_defs,
                            finished_candidates_string=finished_candidates_string,
