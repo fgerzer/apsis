@@ -13,6 +13,8 @@
       id: {{exp_id}}
       <br>
       minimization: {{minimization}}
+      <br>
+      last update: {{format_datetime(exp_last_update)}}
       <h4>Parameter Definitions</h4>
       {% for p in param_defs%}
         <li>{{p ~ ": " ~ param_defs[p]}}</li>
