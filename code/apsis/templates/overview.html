@@ -9,9 +9,24 @@
       <h1>Apsis overview page</h1>
       <br>
       Currently running experiments:
-      {% for exp in experiments %}
-        <li><a href={{"/experiments/" ~ exp}}>{{exp}}</a></li>
-      {% endfor %}
+      <table>
+            <tr>
+                <th>name</th>
+                <th>id</th>
+                <th>last updated</th>
+                <th>notes</th>
+            </tr>
+            {% for e in experiments%}
+        <tr>
+              <th>{{e["name"]}}</th>
+              <th><a href={{ "/experiments/" ~ e["exp_id"]}}> {{e["exp_id"]}}</a></th>
+              <th>{{format_datetime(e["last_update_time"])}}</th>
+              <th>{{e["notes"]}}</th>
+          </tr>
+            {% endfor %}
+         </table>
     </div>
   </body>
 </html>
+
+
