@@ -33,12 +33,15 @@
                 <th>worker_information</th>
                 <th>last updated</th>
             </tr>
-            <tr>
-            {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
-                <td>{{ best_candidate_string[i] }}</td>
-            {% endfor %}
-                <td>{{format_datetime(best_candidate_string["last_update_time"])}}</td>
-            </tr>
+
+            {% if best_candidate_string != None %}
+                <tr>
+                {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
+                    <td>{{ best_candidate_string[i] }}</td>
+                {% endfor %}
+                    <td>{{format_datetime(best_candidate_string["last_update_time"])}}</td>
+                </tr>
+            {% endif %}
          </table>
         <br>
 
