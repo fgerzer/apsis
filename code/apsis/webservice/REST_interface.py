@@ -132,7 +132,10 @@ def overview_page():
     This will, later, become an overview over the experiment.
     """
     _logger.log(5, "Returning overview page.")
-    return render_template("overview.html", experiments=lAss.get_ids())
+    experiment_dicts = []
+    for exp_id in lAss.get_ids():
+        experiment_dicts.append(lAss.get_experiment_as_dict(exp_id))
+    return render_template("overview.html", experiments=experiment_dicts)
 
 
 @app.route(CONTEXT_ROOT + "/c/experiments", methods=["POST"])
@@ -235,6 +238,7 @@ def get_experiment(experiment_id):
     templ = render_template("experiment.html",
                            exp_name=exp_dict["name"],
                            exp_id=exp_dict["exp_id"],
+                           exp_last_update=exp_dict["last_update_time"],
                            minimization=exp_dict["minimization_problem"],
                            param_defs=param_defs,
                            finished_candidates_string=finished_candidates_string,
@@ -416,3 +420,14 @@ def _filter_data(json):
         if isinstance(json[k], unicode):
             json[k] = str(json[k])
     return json
+
+
+
+
+@app.context_processor
+def client_date_formatting():
+    def format_datetime(float_time):
+        if float_time is None:
+            return ""
+        return time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(float_time))
+    return dict(format_datetime=format_datetime)
