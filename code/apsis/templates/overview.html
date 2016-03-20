@@ -3,13 +3,14 @@
   <head>
     <title>apsis overview</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <script src={{url_for('static', filename='sorttable.js')}}></script>
   </head>
   <body>
     <div class="container">
       <h1>Apsis overview page</h1>
       <br>
       Currently running experiments:
-      <table>
+      <table class="sortable">
             <tr>
                 <th>name</th>
                 <th>id</th>
