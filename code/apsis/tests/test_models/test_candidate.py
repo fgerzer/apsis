@@ -89,6 +89,7 @@ class TestCandidate(object):
         d = {"params": params,
              "result": None,
              "cost": None,
+             "last_update_time": cand1.last_update_time,
              "worker_information": None,
              "cand_id": cand1.cand_id}
         assert_dict_equal(entry, d)

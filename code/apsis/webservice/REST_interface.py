@@ -11,6 +11,7 @@ from functools import wraps
 from apsis.utilities.param_def_utilities import dict_to_param_defs
 import sys
 import signal
+import time
 import urllib
 import StringIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -123,7 +124,10 @@ def overview_page():
     This will, later, become an overview over the experiment.
     """
     _logger.log(5, "Returning overview page.")
-    return render_template("overview.html", experiments=lAss.get_ids())
+    experiment_dicts = []
+    for exp_id in lAss.get_ids():
+        experiment_dicts.append(lAss.get_experiment_as_dict(exp_id))
+    return render_template("overview.html", experiments=experiment_dicts)
 
 
 @app.route(CONTEXT_ROOT + "/c/experiments", methods=["POST"])
@@ -225,17 +229,17 @@ def get_experiment(experiment_id):
 
     _logger.debug("Rendering template")
     templ = render_template("experiment.html",
-                            exp_name=exp_dict["name"],
-                            exp_id=exp_dict["exp_id"],
-                            minimization=exp_dict["minimization_problem"],
-                            param_defs=param_defs,
-                            finished_candidates_string=finished_candidates_string,
-                            pending_candidates_string=pending_candidates_string,
-                            working_candidates_string=working_candidates_string,
-                            result_per_step=urllib.quote(
-                                png_output.rstrip('\n')),
-                            best_candidate_string=best_candidate_string
-                            )
+                           exp_name=exp_dict["name"],
+                           exp_id=exp_dict["exp_id"],
+                           exp_last_update=exp_dict["last_update_time"],
+                           minimization=exp_dict["minimization_problem"],
+                           param_defs=param_defs,
+                           finished_candidates_string=finished_candidates_string,
+                           pending_candidates_string=pending_candidates_string,
+                           working_candidates_string=working_candidates_string,
+                           result_per_step=urllib.quote(png_output.rstrip('\n')),
+                           best_candidate_string=best_candidate_string
+                           )
     _logger.log(5, "Returning template %s", templ)
     return templ
 
@@ -409,3 +413,11 @@ def _filter_data(json):
         if isinstance(json[k], unicode):
             json[k] = str(json[k])
     return json
+
+@app.context_processor
+def client_date_formatting():
+    def format_datetime(float_time):
+        if float_time is None:
+            return ""
+        return time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(float_time))
+    return dict(format_datetime=format_datetime)
