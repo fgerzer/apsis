@@ -4,10 +4,12 @@ from apsis.models.candidate import Candidate
 from apsis.models.parameter_definition import ParamDef
 import copy
 import uuid
+import time
 from apsis.utilities.param_def_utilities import dict_to_param_defs
 import json
 from apsis.models import candidate
 from apsis.utilities import logging_utils
+
 
 class Experiment(object):
     """
@@ -39,6 +41,8 @@ class Experiment(object):
     note : string, optional
         The note can be used to add additional human-readable information to
         the experiment.
+    last_update_time : float
+        The time the last update happened.
     """
     name = None
 
@@ -53,6 +57,8 @@ class Experiment(object):
     candidates_finished = None
 
     best_candidate = None
+
+    last_update_time = None
 
     _logger = None
 
@@ -118,6 +124,8 @@ class Experiment(object):
         self.candidates_pending = []
         self.candidates_working = []
 
+        self.last_update_time = time.time()
+
         self.notes = notes
         self._logger.debug("Initialization of new experiment finished.")
 
@@ -146,6 +154,10 @@ class Experiment(object):
             self.candidates_working.remove(candidate)
         if candidate in self.candidates_finished:
             self.candidates_finished.remove(candidate)
+
+        cur_time = time.time()
+        candidate.last_update_time = cur_time
+        self.last_update_time = cur_time
         self.candidates_finished.append(candidate)
         self._update_best()
         self._logger.debug("Added finished candidate %s", candidate)
@@ -176,7 +188,13 @@ class Experiment(object):
             self.candidates_working.remove(candidate)
         if candidate in self.candidates_finished:
             self.candidates_finished.remove(candidate)
+
+        cur_time = time.time()
+        candidate.last_update_time = cur_time
+        self.last_update_time = cur_time
+
         self.candidates_pending.append(candidate)
+
         self._update_best()
         self._logger.debug("Added pending candidate %s", candidate)
 
@@ -205,6 +223,11 @@ class Experiment(object):
             self.candidates_working.remove(candidate)
         if candidate in self.candidates_finished:
             self.candidates_finished.remove(candidate)
+
+        cur_time = time.time()
+        candidate.last_update_time = cur_time
+        self.last_update_time = cur_time
+
         self.candidates_working.append(candidate)
         self._update_best()
         self._logger.debug("Added working candidate %s", candidate)
@@ -237,6 +260,11 @@ class Experiment(object):
             self.candidates_working.remove(candidate)
         if candidate in self.candidates_finished:
             self.candidates_finished.remove(candidate)
+
+        cur_time = time.time()
+        candidate.last_update_time = cur_time
+        self.last_update_time = cur_time
+
         self.candidates_pending.append(candidate)
         self._update_best()
         self._logger.debug("Pausing candidate %s", candidate)
@@ -467,7 +495,8 @@ class Experiment(object):
                 "exp_id": self.exp_id,
                 "candidates_finished": cand_dict_finished,
                 "candidates_pending": cand_dict_pending,
-                "candidates_working": cand_dict_working
+                "candidates_working": cand_dict_working,
+                "last_update_time": self.last_update_time
                 }
         if self.best_candidate is not None:
             result_dict["best_candidate"] = self.best_candidate.to_dict()
@@ -490,6 +519,7 @@ class Experiment(object):
         self._logger.debug("Writing stats to %s", path)
         with open(path + '/experiment.json', 'w') as outfile:
             json.dump(self.to_dict(), outfile)
+
 
 global_logger = logging_utils.get_logger("models.Experiment")
 
@@ -523,5 +553,9 @@ def from_dict(d):
     exp.candidates_pending = cands_pending
     exp.candidates_working = exp.candidates_working
     exp._update_best()
+    exp.last_update_time = d.get("last_update_time", time.time())
+
+
     global_logger.log(5, "Finished reconstruction. Exp is %s.", exp)
+
     return exp

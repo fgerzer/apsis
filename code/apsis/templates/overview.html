@@ -3,15 +3,31 @@
   <head>
     <title>apsis overview</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <script src={{url_for('static', filename='sorttable.js')}}></script>
   </head>
   <body>
     <div class="container">
       <h1>Apsis overview page</h1>
       <br>
       Currently running experiments:
-      {% for exp in experiments %}
-        <li><a href={{"/experiments/" ~ exp}}>{{exp}}</a></li>
-      {% endfor %}
+      <table class="sortable">
+            <tr>
+                <th>name</th>
+                <th>id</th>
+                <th>last updated</th>
+                <th>notes</th>
+            </tr>
+            {% for e in experiments%}
+        <tr>
+              <th>{{e["name"]}}</th>
+              <th><a href={{ "/experiments/" ~ e["exp_id"]}}> {{e["exp_id"]}}</a></th>
+              <th>{{format_datetime(e["last_update_time"])}}</th>
+              <th>{{e["notes"]}}</th>
+          </tr>
+            {% endfor %}
+         </table>
     </div>
   </body>
 </html>
+
+

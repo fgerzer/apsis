@@ -3,6 +3,7 @@
   <head>
     <title>apsis experiment overview</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src={{url_for('static', filename='sorttable.js')}}></script>
   </head>
   <body>
     <div class="container">
@@ -13,6 +14,8 @@
       id: {{exp_id}}
       <br>
       minimization: {{minimization}}
+      <br>
+      last update: {{format_datetime(exp_last_update)}}
       <h4>Parameter Definitions</h4>
       {% for p in param_defs%}
         <li>{{p ~ ": " ~ param_defs[p]}}</li>
@@ -29,29 +32,35 @@
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
-            <tr>
-            {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
-                <td>{{ best_candidate_string[i] }}</td>
-            {% endfor %}
-            </tr>
+            {% if best_candidate_string != None %}
+                <tr>
+                {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
+                    <td>{{ best_candidate_string[i] }}</td>
+                {% endfor %}
+                    <td>{{format_datetime(best_candidate_string["last_update_time"])}}</td>
+                </tr>
+            {% endif %}
          </table>
         <br>
 
         <h3>finished candidates: {{finished_candidates_string|length}}</h3>
-        <table>
+        <table class="sortable">
             <tr>
                 <th>result</th>
                 <th>params</th>
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
         {% for c in finished_candidates_string%}
             <tr>
             {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
+                <td>{{format_datetime(c["last_update_time"])}}</td>
             </tr>
         {% endfor %}
          </table>
@@ -60,19 +69,21 @@
 
 
         <h3>working candidates: {{working_candidates_string|length}}</h3>
-        <table>
+        <table class="sortable">
             <tr>
                 <th>result</th>
                 <th>params</th>
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
         {% for c in working_candidates_string%}
             <tr>
             {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
+                <td>{{format_datetime(c["last_update_time"])}}</td>
             </tr>
         {% endfor %}
          </table>
@@ -81,19 +92,21 @@
 
 
         <h3>pending candidates: {{pending_candidates_string|length}}</h3>
-        <table>
+        <table class="sortable">
             <tr>
                 <th>result</th>
                 <th>params</th>
                 <th>cost</th>
                 <th>id</th>
                 <th>worker_information</th>
+                <th>last updated</th>
             </tr>
         {% for c in pending_candidates_string%}
             <tr>
-            {% for i in ["result", "params", "cost", "id", "worker_information"] %}
+            {% for i in ["result", "params", "cost", "cand_id", "worker_information"] %}
                 <td>{{ c[i] }}</td>
             {% endfor %}
+                <td>{{format_datetime(c["last_update_time"])}}</td>
             </tr>
         {% endfor %}
          </table>

@@ -2,6 +2,7 @@ __author__ = 'Frederik Diehl'
 
 import uuid
 from apsis.utilities.logging_utils import get_logger
+import time
 
 class Candidate(object):
     """
@@ -39,6 +40,9 @@ class Candidate(object):
         This is worker-settable information which might be used for
         communicating things necessary for resuming evaluations et cetera. This
         is never touched in apsis.
+
+    last_update_time : float
+        The time the last update to this candidate happened.
     """
 
     cand_id = None
@@ -49,6 +53,8 @@ class Candidate(object):
     worker_information = None
     _logger = None
 
+    last_update_time = None
+
     def __init__(self, params, cand_id=None, worker_information=None):
         """
         Initializes the unevaluated candidate object.
@@ -58,13 +64,14 @@ class Candidate(object):
         params : dict of string keys
             A dictionary of parameter value. The keys must correspond to the
             problem definition.
-            The dictionary requires one key - and value - per parameter defined.
+            The dictionary requires one key - and value - per parameter
+            defined.
         cand_id : uuid.UUID, optional
-            The uuid identifying this candidate. This is used to compare candidates
-            over server and client borders.
-            Note that this should only be set explicitly if you are instantiating
-             an already known candidate with its already known UUID. Do not
-             explicitely set the uuid for a new candidate!
+            The uuid identifying this candidate. This is used to compare
+            candidates over server and client borders.
+            Note that this should only be set explicitly if you are
+            instantiating an already known candidate with its already known
+            UUID. Do not explicitly set the uuid for a new candidate!
         worker_information : string, optional
             This is worker-settable information which might be used for
             communicating things necessary for resuming evaluations et cetera.
@@ -90,6 +97,7 @@ class Candidate(object):
         self.failed = False
         self.params = params
         self.worker_information = worker_information
+        self.last_update_time = time.time()
         self._logger.debug("Finished initializing the candidate.")
 
     def __eq__(self, other):
@@ -166,6 +174,7 @@ class Candidate(object):
              "result": self.result,
              "failed": self.failed,
              "cost": self.cost,
+             "last_update_time": self.last_update_time,
              "worker_information": self.worker_information}
         if do_logging:
             self._logger.debug("Generated dict %s", d)
@@ -214,6 +223,7 @@ def from_dict(d):
     c.result = d.get("result", None)
     c.cost = d.get("cost", None)
     c.failed = d.get("failed", False)
+    c.last_update_time = d.get("last_update_time")
     c.worker_information = d.get("worker_information", None)
     global_logger.log(5, "Constructed candidate is %s", c)
     return c
