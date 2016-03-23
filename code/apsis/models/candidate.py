@@ -40,6 +40,9 @@ class Candidate(object):
 
     last_update_time : float
         The time the last update to this candidate happened.
+
+    generated_time : float
+        The time this candidate has been generated.
     """
 
     cand_id = None
@@ -50,6 +53,7 @@ class Candidate(object):
     _logger = None
 
     last_update_time = None
+    generated_time = None
 
     def __init__(self, params, cand_id=None, worker_information=None):
         """
