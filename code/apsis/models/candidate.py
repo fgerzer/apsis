@@ -97,6 +97,7 @@ class Candidate(object):
         self.params = params
         self.worker_information = worker_information
         self.last_update_time = time.time()
+        self.generated_time = time.time()
         self._logger.debug("Finished initializing the candidate.")
 
     def __eq__(self, other):
