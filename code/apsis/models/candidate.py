@@ -207,6 +207,7 @@ class Candidate(object):
              "result": self.result,
              "cost": self.cost,
              "last_update_time": self.last_update_time,
+             "generated_time": self.generated_time,
              "worker_information": self.worker_information}
         if do_logging:
             self._logger.debug("Generated dict %s", d)
@@ -255,6 +256,7 @@ def from_dict(d):
     c.result = d.get("result", None)
     c.cost = d.get("cost", None)
     c.last_update_time = d.get("last_update_time")
+    c.generated_time = d.get("generated_time")
     c.worker_information = d.get("worker_information", None)
     global_logger.debug("Constructed candidate is %s", c)
     return c

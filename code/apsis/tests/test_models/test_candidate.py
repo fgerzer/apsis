@@ -91,6 +91,7 @@ class TestCandidate(object):
              "cost": None,
              "last_update_time": cand1.last_update_time,
              "worker_information": None,
+             "generated_time": cand1.generated_time,
              "cand_id": cand1.cand_id}
         assert_dict_equal(entry, d)
 
