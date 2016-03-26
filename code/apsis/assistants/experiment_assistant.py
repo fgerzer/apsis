@@ -235,7 +235,8 @@ class ExperimentAssistant(object):
         return best_candidate
 
     def _best_result_per_step_dicts(self, color="b", plot_up_to=None,
-                                    cutoff_percentage=1.):
+                                    cutoff_percentage=1.,
+                                    non_finished_color="g"):
         """
         Returns a dict to use with plot_utils.
         Parameters
@@ -250,7 +251,8 @@ class ExperimentAssistant(object):
             corresponding definitions.
         """
         self._logger.debug("Returning best result per step dicts.")
-        x, step_eval, step_best = self._best_result_per_step_data(plot_up_to=
+        x, step_eval, step_best, non_finished_xs, \
+            non_finished_evals = self._best_result_per_step_data(plot_up_to=
                                                                   plot_up_to)
 
         step_eval_dict = {
@@ -262,13 +264,21 @@ class ExperimentAssistant(object):
             "cutoff_percent": cutoff_percentage
         }
 
+        non_finished_dict = {
+            "x": non_finished_xs,
+            "y": non_finished_evals,
+            "type": "scatter",
+            "label": "future %s" % (str(self._experiment.name)),
+            "color": non_finished_color,
+        }
+
         step_best_dict = {
             "x": x,
             "y": step_best,
             "type": "line",
             "color": color,
         }
-        result = [step_eval_dict, step_best_dict]
+        result = [step_eval_dict, step_best_dict, non_finished_dict]
         self._logger.log(5, "Returning %s", result)
         return result
 
@@ -304,9 +314,29 @@ class ExperimentAssistant(object):
 
             else:
                 step_best.append(best_candidate.result)
+
+        non_finished_evals = []
+        non_finished_xs = []
+        x_from = 0
+        if x:
+            x_from = x[-1]
+
+        for i, e in enumerate(sorted(self._experiment.candidates_pending, key=lambda v: v.generated_time)):
+            non_finished_xs.append(x_from + i)
+            non_finished_evals.append(e.result)
+
+        if non_finished_evals:
+            x_from = non_finished_xs[-1]
+        for i, e in enumerate(sorted(self._experiment.candidates_working, key=lambda v: v.generated_time)):
+            non_finished_xs.append(x_from + i)
+            non_finished_evals.append(e.result)
+
+
+
         self._logger.debug("Returning x: %s, step_eval: %s and step_best %s",
                            x, step_evaluation, step_best)
-        return x, step_evaluation, step_best
+        return x, step_evaluation, step_best, \
+               non_finished_xs, non_finished_evals
 
     def get_candidates(self):
         """
