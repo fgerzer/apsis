@@ -230,18 +230,23 @@ def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None
         ax.scatter(x, y, label=label, color=color)
         if len(x) > 1 and max(y) != min(y):
             for i in range(len(x)):
-                arrow_len = (plot_max - plot_min) * 0.05
+                if plot_min is None or plot_min is None:
+                    arrow_len = 0.05
+                else:
+                    arrow_len = (plot_max - plot_min) * 0.05
                 arrow_factor_min = abs(y[i] - min(y)) / (max(y) - min(y)) + 0.1
                 arrow_factor_max = abs(max(y) - y[i]) / (max(y) - min(y)) + 0.1
                 arrow_len_min = arrow_len * arrow_factor_min
                 arrow_len_max = arrow_len * arrow_factor_max
                 head_width = 0.2
-                if plot_min > y[i]:
-                    ax.arrow(x[i], plot_min+1.1*arrow_len_min, 0, -arrow_len_min/10, fc="k", ec="k",
-                        head_width=head_width, head_length=arrow_len_min, color=color)
-                if plot_max < y[i]:
-                    ax.arrow(x[i], plot_max-1.1*arrow_len_max, 0, arrow_len_max/10, fc="k", ec="k",
-                        head_width=head_width, head_length=arrow_len_max, color=color)
+                if plot_min is not None:
+                    if plot_min > y[i]:
+                        ax.arrow(x[i], plot_min+1.1*arrow_len_min, 0, -arrow_len_min/10, fc="k", ec="k",
+                            head_width=head_width, head_length=arrow_len_min, color=color)
+                if plot_max is not None:
+                    if plot_max < y[i]:
+                        ax.arrow(x[i], plot_max-1.1*arrow_len_max, 0, arrow_len_max/10, fc="k", ec="k",
+                            head_width=head_width, head_length=arrow_len_max, color=color)
     ax.set_xlim(xmin=0)
     return ax
 
