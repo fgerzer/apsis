@@ -304,6 +304,7 @@ class ExperimentAssistant(object):
         if plot_up_to is None:
             plot_up_to = len(self._experiment.candidates_finished)
         self._logger.debug("Plotting %s candidates", plot_up_to)
+        x_from = 0
         for i, e in enumerate(self._experiment.candidates_finished
                               [:plot_up_to]):
             x.append(i)
@@ -314,21 +315,19 @@ class ExperimentAssistant(object):
 
             else:
                 step_best.append(best_candidate.result)
+            x_from += 1
 
         non_finished_evals = []
         non_finished_xs = []
-        x_from = 0
-        if x:
-            x_from = x[-1]
 
         for i, e in enumerate(sorted(self._experiment.candidates_pending, key=lambda v: v.generated_time)):
-            non_finished_xs.append(x_from + i)
+            x_from += 1
+            non_finished_xs.append(x_from)
             non_finished_evals.append(e.result)
 
-        if non_finished_evals:
-            x_from = non_finished_xs[-1]
         for i, e in enumerate(sorted(self._experiment.candidates_working, key=lambda v: v.generated_time)):
-            non_finished_xs.append(x_from + i)
+            x_from += 1
+            non_finished_xs.append(x_from)
             non_finished_evals.append(e.result)
 
 
