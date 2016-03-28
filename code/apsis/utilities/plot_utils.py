@@ -247,7 +247,6 @@ def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None
                     if plot_max < y[i]:
                         ax.arrow(x[i], plot_max-1.1*arrow_len_max, 0, arrow_len_max/10, fc="k", ec="k",
                             head_width=head_width, head_length=arrow_len_max, color=color)
-    ax.set_xlim(xmin=0)
     return ax
 
 
