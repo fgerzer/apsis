@@ -332,6 +332,7 @@ def _polish_figure(ax, fig_options=None):
         # Put a legend below current axis
         #fig.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
         #  fancybox=True, shadow=True, ncol=5)
+    ax.set_xlim(left=0)
     if legend_loc == "no":
         #do nothing right now, since no legend
         pass
