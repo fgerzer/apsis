@@ -319,19 +319,6 @@ def _polish_figure(ax, fig_options=None):
 
     legend_loc = fig_options.get("legend_loc", "upper right")
 
-    #if legend_loc == "below":
-        #TODO This code doesn't work yet, needs to be fixed - but before
-        # matplotlib usage has to be refactored to use pure object
-        #oriented mode.
-
-        # Shrink current axis's height by 10% on the bottom
-        #box = fig.get_position()
-        #fig.set_position([box.x0, box.y0 + box.height * 0.1,
-        #         box.width, box.height * 0.9])
-
-        # Put a legend below current axis
-        #fig.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-        #  fancybox=True, shadow=True, ncol=5)
     ax.set_xlim(left=0)
     if legend_loc == "no":
         #do nothing right now, since no legend
