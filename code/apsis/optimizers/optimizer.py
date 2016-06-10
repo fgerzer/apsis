@@ -35,6 +35,8 @@ class Optimizer(object):
     name = None
     _logger = None
 
+    treat_failed = None
+
     def __init__(self, experiment, optimizer_params):
         """
         Initializes the optimizer.
@@ -46,6 +48,18 @@ class Optimizer(object):
         optimizer_params : dict, optional
             Dictionary of the optimizer parameters. If None, some standard
             parameters will be assumed.
+            One existing parameter is 'treat_failed', which changes the
+            treatment of failed candidates. Possible is
+                - 'ignore': Ignores the failed parameters
+                - 'fixed_value': Changes all occurences of failed values
+                    to a fixed value. Default value is 1e6 or 1e-6.
+                - 'worst_mult': Changes all occurences of failed values to a
+                    fixed multiplied of the worst result. Specifically, the
+                    new value will be (worst_value - best_value) * x +
+                    worst_value. The default. Default value is x=10.
+            All of these can either be specified as strings (and use a
+            standard value) or as tuples, in which case the first entry is
+            treated as the string and the second as the value for the parameter.
 
         Raises
         ------
@@ -60,6 +74,21 @@ class Optimizer(object):
                                          self.SUPPORTED_PARAM_TYPES,
                                          experiment.parameter_definitions))
         self._experiment = experiment
+        if optimizer_params is None:
+            optimizer_params = {}
+        self.treat_failed = optimizer_params.get("treat_failed", "worst_mult")
+        second_value = None
+        if not isinstance(self.treat_failed, tuple):
+            if self.treat_failed == "ignore":
+                second_value = False
+            elif self.treat_failed == "fixed_value":
+                if self._experiment.minimization_problem:
+                    second_value = 1e6
+                else:
+                    second_value = 1e-6
+            elif self.treat_failed == "worst_mult":
+                second_value = 2
+            self.treat_failed = (self.treat_failed, second_value)
 
     def update(self, experiment):
         """

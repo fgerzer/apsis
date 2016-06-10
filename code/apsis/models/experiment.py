@@ -274,8 +274,8 @@ class Experiment(object):
         Determines whether CandidateA is better than candidateB in the context
         of this experiment.
         This is done as follows:
-        If candidateA's result is None, it is not better.
-        If candidateB's result is None, it is better.
+        If candidateA's result is None or it failed, it is not better.
+        If candidateB's result is None or it failed, it is better.
         If it is a minimization problem and the result is smaller than B's, it
         is better. Corresponding for being a maximization problem.
 
@@ -322,9 +322,9 @@ class Experiment(object):
         b_result = candidateB.result
 
         comparison = None
-        if a_result is None:
+        if a_result is None or candidateA.failed:
             comparison = False
-        elif b_result is None:
+        elif b_result is None or candidateB.failed:
             comparison = True
         elif self.minimization_problem:
             if a_result < b_result:
@@ -380,61 +380,6 @@ class Experiment(object):
             warped_out[name] = self.parameter_definitions[name].warp_out(value)
         self._logger.debug("Warped-out parameters: %s", warped_out)
         return warped_out
-
-    def to_csv_results(self, delimiter=",", line_delimiter="\n",
-                       key_order=None, wHeader=True, fromIndex=0):
-        """
-        Generates a csv result string from this experiment.
-
-        Parameters
-        ----------
-            delimiter : string, optional
-                The column delimiter
-            line_delimiter : string, optional
-                The line delimiter
-            key_order : list of strings, optional
-                The order in which the parameters should be written. If None,
-                the order is defined by sorting the parameter names.
-            wHeader : bool, optional
-                Whether a header should be written. Defaults to true.
-            from_index : int, optional
-                Beginning from which result the csv should be generated.
-
-        Returns
-        -------
-            csv_string : string
-                The corresponding csv string
-            steps_included : int
-                The number of steps included in the csv.
-        """
-        self._logger.debug("Converting experiment to csv. Parameters are: "
-                           "delimiter: %s, line_delimiter: %s, key_order: %s,"
-                           "wHeader: %s, from_Index: %s", delimiter,
-                           line_delimiter, key_order, wHeader, fromIndex)
-        csv_string = ""
-        if key_order is None:
-            key_order = sorted(self.parameter_definitions.keys())
-            self._logger.debug("Had to generate new key order; is %s",
-                               key_order)
-
-        if wHeader:
-            csv_string += "step" + delimiter + "cand_id" + delimiter
-            for k in key_order:
-                csv_string += k + delimiter
-            csv_string += "cost" + delimiter + "result" + delimiter + \
-                          "best_result" + line_delimiter
-
-        steps_included = 0
-        for c in range(fromIndex, len(self.candidates_finished)):
-            cand = self.candidates_finished[c]
-            csv_string += str(c + 1) + delimiter + \
-                          cand.to_csv_entry(delimiter=delimiter,key_order=key_order) \
-                          + delimiter + str(self.best_candidate.result) + line_delimiter
-
-            steps_included += 1
-        self._logger.debug("Finished generating. csv_string is %s, "
-                           "steps_included %s", csv_string, steps_included)
-        return csv_string, steps_included
 
     def clone(self):
         """
@@ -575,11 +520,12 @@ class Experiment(object):
         with open(path + '/experiment.json', 'w') as outfile:
             json.dump(self.to_dict(), outfile)
 
-global_logger = logging_utils.get_logger("models.experiment.py")
+
+global_logger = logging_utils.get_logger("models.Experiment")
 
 
 def from_dict(d):
-    global_logger.debug("Reconstructing experiment from dict %d", d)
+    global_logger.log(5, "Reconstructing experiment from dict %d", d)
     name = d["name"]
     param_defs = dict_to_param_defs(d["parameter_definitions"])
     minimization_problem = d["minimization_problem"]
@@ -598,7 +544,7 @@ def from_dict(d):
     cands_working = []
     for c in cand_dict_working:
         cands_working.append(candidate.from_dict(c))
-    global_logger.debug("Reconstructed candidates.")
+    global_logger.log(5, "Reconstructed candidates.")
     best_candidate = d["best_candidate"]
 
     exp = Experiment(name, param_defs, exp_id, notes, minimization_problem)
@@ -608,5 +554,8 @@ def from_dict(d):
     exp.candidates_working = exp.candidates_working
     exp._update_best()
     exp.last_update_time = d.get("last_update_time", time.time())
-    global_logger.debug("Finished reconstruction. Exp is %s.", exp)
+
+
+    global_logger.log(5, "Finished reconstruction. Exp is %s.", exp)
+
     return exp

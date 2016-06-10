@@ -104,13 +104,6 @@ class TestExperiment(object):
         cand_out = self.exp.warp_pt_out(self.exp.warp_pt_in(cand.params))
         assert_dict_equal(cand.params, cand_out)
 
-    def test_csv(self):
-        cand = Candidate({"x": 1, "name": "A"})
-        self.exp.add_finished(cand)
-        string, steps_incl = self.exp.to_csv_results()
-        assert_equal(steps_incl, 1)
-        assert_equal(string, "step,cand_id,name,x,cost,result,best_result\n1,%s,A,1,None,None,None\n"%cand.cand_id)
-
     def test_to_dict(self):
         cand = Candidate({"x": 1, "name": "A"})
         self.exp.add_finished(cand)

@@ -3,8 +3,7 @@ __author__ = 'Frederik Diehl'
 from apsis.optimizers.random_search import RandomSearch
 from apsis.optimizers.optimizer import Optimizer, QueueBasedOptimizer
 from apsis.optimizers.bayesian_optimization import BayesianOptimizer
-
-
+import numpy as np
 
 AVAILABLE_OPTIMIZERS = {"RandomSearch": RandomSearch,
                         "BayOpt": BayesianOptimizer}

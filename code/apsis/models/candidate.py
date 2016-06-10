@@ -29,6 +29,9 @@ class Candidate(object):
         The results of evaluating the parameter set. This value is optimized
         over.
 
+    failed : bool
+        Whether the evaluation has been successful. Default is false.
+
     cost : float
         The cost of evaluating the parameter set. This may correspond to
         runtime, cost of ingredients or human attention required.
@@ -49,6 +52,7 @@ class Candidate(object):
     params = None
     result = None
     cost = None
+    failed = None
     worker_information = None
     _logger = None
 
@@ -94,6 +98,7 @@ class Candidate(object):
                                params)
             raise ValueError("No parameter dictionary given, received %s "
                              "instead" %params)
+        self.failed = False
         self.params = params
         self.worker_information = worker_information
         self.last_update_time = time.time()
@@ -145,41 +150,6 @@ class Candidate(object):
         string = str(cand_dict)
         return string
 
-    def to_csv_entry(self, delimiter=",", key_order=None):
-        """
-        Returns a csv entry representing this candidate.
-
-        It is delimited by `delimiter`, and first consists of the id, followed
-        by all parameters in the order defined by `key_order`, followed by the
-        cost and result.
-
-        Parameters
-        ----------
-            delimiter : string, optional
-                The string delimiting csv entries
-            key_order : list of param names, optional
-                A list defining the order of keys written to csv. If None, the
-                order will be set by sorting the keys.
-
-        Returns
-        -------
-            string : string
-                The (one-line) string representing this Candidate as a csv line
-        """
-        self._logger.debug("Generating candidate csv entry. Delimiter %s,"
-                           "key_order %s", delimiter, key_order)
-        if key_order is None:
-            key_order = sorted(self.params.keys())
-            self._logger.debug("Generated new key order; is %s", key_order)
-        string = ""
-        string += str(self.cand_id) + delimiter
-        for k in key_order:
-            string += str(self.params[k]) + delimiter
-        string += str(self.cost) + delimiter
-        string += str(self.result)
-        self._logger.debug("csv entry is %s", string)
-        return string
-
     def to_dict(self, do_logging=True):
         """
         Converts this candidate to a dictionary.
@@ -195,6 +165,8 @@ class Candidate(object):
                 each with the string name as key and the value as value.
             "result" : float or None
                 The result of the Candidate
+            "failed" : bool
+                Whether the evaluation failed.
             "cost" : float or None
                 The cost of evaluating the Candidate
             "worker_information" : any jsonable or None
@@ -205,6 +177,7 @@ class Candidate(object):
         d = {"cand_id": self.cand_id,
              "params": self._param_defs_to_dict(do_logging=do_logging),
              "result": self.result,
+             "failed": self.failed,
              "cost": self.cost,
              "last_update_time": self.last_update_time,
              "generated_time": self.generated_time,
@@ -231,7 +204,7 @@ class Candidate(object):
             self._logger.debug("param_def dict is %s", d)
         return d
 
-global_logger = get_logger("candidate_global")
+global_logger = get_logger("models.candidate")
 
 
 def from_dict(d):
@@ -248,15 +221,16 @@ def from_dict(d):
     c : Candidate
         The corresponding candidate.
     """
-    global_logger.debug("Constructing new candidate from dict %s.", d)
+    global_logger.log(5, "Constructing new candidate from dict %s.", d)
     cand_id = None
     if "cand_id" in d:
         cand_id = d["cand_id"]
     c = Candidate(d["params"], cand_id=cand_id)
     c.result = d.get("result", None)
     c.cost = d.get("cost", None)
+    c.failed = d.get("failed", False)
     c.last_update_time = d.get("last_update_time")
     c.generated_time = d.get("generated_time")
     c.worker_information = d.get("worker_information", None)
-    global_logger.debug("Constructed candidate is %s", c)
+    global_logger.log(5, "Constructed candidate is %s", c)
     return c
