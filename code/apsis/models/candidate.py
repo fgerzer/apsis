@@ -40,6 +40,9 @@ class Candidate(object):
 
     last_update_time : float
         The time the last update to this candidate happened.
+
+    generated_time : float
+        The time this candidate has been generated.
     """
 
     cand_id = None
@@ -50,6 +53,7 @@ class Candidate(object):
     _logger = None
 
     last_update_time = None
+    generated_time = None
 
     def __init__(self, params, cand_id=None, worker_information=None):
         """
@@ -93,6 +97,7 @@ class Candidate(object):
         self.params = params
         self.worker_information = worker_information
         self.last_update_time = time.time()
+        self.generated_time = time.time()
         self._logger.debug("Finished initializing the candidate.")
 
     def __eq__(self, other):
@@ -202,6 +207,7 @@ class Candidate(object):
              "result": self.result,
              "cost": self.cost,
              "last_update_time": self.last_update_time,
+             "generated_time": self.generated_time,
              "worker_information": self.worker_information}
         if do_logging:
             self._logger.debug("Generated dict %s", d)
@@ -250,6 +256,7 @@ def from_dict(d):
     c.result = d.get("result", None)
     c.cost = d.get("cost", None)
     c.last_update_time = d.get("last_update_time")
+    c.generated_time = d.get("generated_time")
     c.worker_information = d.get("worker_information", None)
     global_logger.debug("Constructed candidate is %s", c)
     return c
