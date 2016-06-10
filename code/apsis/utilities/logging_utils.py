@@ -36,6 +36,9 @@ def get_logger(module, extra_info=None, save_path=None):
         been specified in the config file, this is also ignored (and a warning
         is issued). Otherwise, this path replaces all instances of the token
         <SAVE_PATH> in the file_name of all handlers.
+        If it does not end with "/" we'll automatically add it. That means both
+        "/tmp/APSIS_WRITING" and "/tmp/APSIS_WRITING/" is treated identically,
+        and logging is added in "/tmp/APSIS_WRITING/logs".
 
     Returns
     -------
@@ -64,6 +67,8 @@ def get_logger(module, extra_info=None, save_path=None):
         for h in handler_keys:
             if "filename" in handlers[h]:
                 if "<SAVE_PATH>" in handlers[h]["filename"]:
+                    if not save_path.endswith("/"):
+                        save_path += "/"
                     handlers[h]["filename"] = handlers[h]["filename"].replace(
                         "<SAVE_PATH>/", save_path).replace("<SAVE_PATH>",
                                                            save_path)
