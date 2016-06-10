@@ -521,16 +521,16 @@ class Experiment(object):
             json.dump(self.to_dict(), outfile)
 
 
-global_logger = logging_utils.get_logger("models.Experiment")
 
 def from_dict(d):
-    global_logger.log(5, "Reconstructing experiment from dict %d", d)
+    experiment_logger = logging_utils.get_logger("models.Experiment")
+    experiment_logger.log(5, "Reconstructing experiment from dict %d", d)
     name = d["name"]
     param_defs = dict_to_param_defs(d["parameter_definitions"])
     minimization_problem = d["minimization_problem"]
     notes = d["notes"]
     exp_id = d["exp_id"]
-    global_logger.debug("Reconstructed attributes.")
+    experiment_logger.debug("Reconstructed attributes.")
     cand_dict_finished = d["candidates_finished"]
     cands_finished = []
     for c in cand_dict_finished:
@@ -543,7 +543,7 @@ def from_dict(d):
     cands_working = []
     for c in cand_dict_working:
         cands_working.append(candidate.from_dict(c))
-    global_logger.log(5, "Reconstructed candidates.")
+    experiment_logger.log(5, "Reconstructed candidates.")
     best_candidate = d["best_candidate"]
 
     exp = Experiment(name, param_defs, exp_id, notes, minimization_problem)
@@ -554,7 +554,6 @@ def from_dict(d):
     exp._update_best()
     exp.last_update_time = d.get("last_update_time", time.time())
 
-
-    global_logger.log(5, "Finished reconstruction. Exp is %s.", exp)
+    experiment_logger.log(5, "Finished reconstruction. Exp is %s.", exp)
 
     return exp

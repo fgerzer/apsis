@@ -204,8 +204,6 @@ class Candidate(object):
             self._logger.debug("param_def dict is %s", d)
         return d
 
-global_logger = get_logger("models.Candidate")
-
 
 def from_dict(d):
     """
@@ -221,7 +219,8 @@ def from_dict(d):
     c : Candidate
         The corresponding candidate.
     """
-    global_logger.log(5, "Constructing new candidate from dict %s.", d)
+    cand_logger = get_logger("models.Candidate")
+    cand_logger.log(5, "Constructing new candidate from dict %s.", d)
     cand_id = None
     if "cand_id" in d:
         cand_id = d["cand_id"]
@@ -232,5 +231,5 @@ def from_dict(d):
     c.last_update_time = d.get("last_update_time")
     c.generated_time = d.get("generated_time")
     c.worker_information = d.get("worker_information", None)
-    global_logger.log(5, "Constructed candidate is %s", c)
+    cand_logger.log(5, "Constructed candidate is %s", c)
     return c
