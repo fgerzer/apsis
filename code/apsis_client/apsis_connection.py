@@ -41,7 +41,7 @@ class Connection(object):
     server_address = None
     repeat_time = None
 
-    def __init__(self, server_address, repeat_time=0.1):
+    def __init__(self, server_address, repeat_time=1):
         """
         Initializes the apsis connection.
 

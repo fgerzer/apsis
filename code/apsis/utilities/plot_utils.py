@@ -155,7 +155,7 @@ def _get_y_min_max(y, plot_at_least):
     """
     if len(y) == 0:
         return None, None
-    sorted_y = sorted(y)
+    sorted_y = sorted([x for x in y if str(x) != 'nan'])
     if plot_at_least[0] == 1:
         min_y_new = min(y)
     else:

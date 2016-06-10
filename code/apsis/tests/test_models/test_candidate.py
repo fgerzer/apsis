@@ -64,18 +64,6 @@ class TestCandidate(object):
         cand1.cost = 2
         str(cand1)
 
-    def test_to_csv_entry(self):
-        """
-        Tests the correctness of the csv entry generation
-        """
-        params = {
-            "x": 1,
-            "name": "B"
-        }
-        cand1 = Candidate(params)
-        entry = cand1.to_csv_entry()
-        assert_equal(entry, "%s,B,1,None,None" %cand1.cand_id)
-
     def test_dict(self):
         """
         Tests the to-dict and from-dict methods.
@@ -91,6 +79,7 @@ class TestCandidate(object):
              "cost": None,
              "last_update_time": cand1.last_update_time,
              "worker_information": None,
+             "failed": False,
              "generated_time": cand1.generated_time,
              "cand_id": cand1.cand_id}
         assert_dict_equal(entry, d)

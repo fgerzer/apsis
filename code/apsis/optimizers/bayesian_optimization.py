@@ -8,6 +8,7 @@ from apsis.models.candidate import Candidate
 from apsis.optimizers.bayesian.acquisition_functions import *
 from apsis.utilities.acquisition_utils import check_acquisition
 import GPy
+import apsis.utilities.acquisition_utils as acq_utils
 
 
 class BayesianOptimizer(Optimizer):
@@ -178,27 +179,12 @@ class BayesianOptimizer(Optimizer):
 
         self.return_max = True
 
-        parameter_warped_size = 0
-        for p in experiment.parameter_definitions.values():
-            parameter_warped_size += p.warped_size()
-        self._logger.debug("Computed warped size as %s", parameter_warped_size)
+        candidate_matrix, results_vector = acq_utils.create_cand_matrix_vector(
+            experiment, self.treat_failed)
 
-        candidate_matrix = np.zeros((len(experiment.candidates_finished),
-                                     parameter_warped_size))
-        results_vector = np.zeros((len(experiment.candidates_finished), 1))
-
-        param_names = sorted(experiment.parameter_definitions.keys())
-        self.kernel = self._check_kernel(self.kernel, len(param_names),
+        self.kernel = self._check_kernel(self.kernel, candidate_matrix.shape[1],
                                          kernel_params=self.kernel_params)
         self._logger.debug("Checked kernel. Kernel is %s", self.kernel)
-
-        for i, c in enumerate(self._experiment.candidates_finished):
-            warped_in = self._experiment.warp_pt_in(c.params)
-            param_values = []
-            for pn in param_names:
-                param_values.extend(warped_in[pn])
-            candidate_matrix[i, :] = param_values
-            results_vector[i] = c.result
 
         self._logger.log(5, "Refitting gp with cand %s and results %s"
                           %(candidate_matrix, results_vector))

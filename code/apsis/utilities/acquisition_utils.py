@@ -1,6 +1,7 @@
 __author__ = 'Frederik Diehl'
 
 from apsis.optimizers.bayesian import acquisition_functions
+import numpy as np
 
 AVAILABLE_ACQUISITIONS = {
     "ExpectedImprovement": acquisition_functions.ExpectedImprovement,
@@ -52,3 +53,57 @@ def check_acquisition(acquisition, acquisition_params):
         raise ValueError("%s is of type %s, not AcquisitionFunction type."
                          %(acquisition, type(acquisition)))
     return acquisition(acquisition_params)
+
+
+
+def create_cand_matrix_vector(experiment, failed_treat):
+    """
+    Creates the candidate matrix and result vector.
+    """
+    parameter_warped_size = 0
+    for p in experiment.parameter_definitions.values():
+        parameter_warped_size += p.warped_size()
+
+    if failed_treat[0] is "ignore":
+        treated_candidates = 0
+        for c in experiment.candidates_finished:
+            if not c.failed:
+                treated_candidates += 1
+    else:
+        treated_candidates = len(experiment.candidates_finished)
+
+    candidate_matrix = np.zeros((treated_candidates,
+                                 parameter_warped_size))
+    results_vector = np.zeros((treated_candidates, 1))
+
+    param_names = sorted(experiment.parameter_definitions.keys())
+
+    best_candidate = experiment.candidates_finished[0]
+    worst_candidate = experiment.candidates_finished[0]
+
+    for c in experiment.candidates_finished:
+        if not c.failed:
+            if experiment.better_cand(c, best_candidate):
+                best_candidate = c
+            if experiment.better_cand(worst_candidate, c):
+                worst_candidate = c
+
+    if failed_treat[0] == "fixed_value":
+        failed_value = failed_treat[1]
+    elif failed_treat[0] == "worst_mult":
+        failed_value = (worst_candidate.result - best_candidate.result) * \
+                       failed_treat[1] + worst_candidate.result
+    else:
+        raise ValueError("failed_treat %s is not supported." %failed_treat)
+
+    for i, c in enumerate(experiment.candidates_finished):
+        warped_in = experiment.warp_pt_in(c.params)
+        param_values = []
+        for pn in param_names:
+            param_values.extend(warped_in[pn])
+        candidate_matrix[i, :] = param_values
+        if c.failed:
+            results_vector[i] = failed_value
+        else:
+            results_vector[i] = c.result
+    return candidate_matrix, results_vector

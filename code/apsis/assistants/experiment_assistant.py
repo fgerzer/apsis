@@ -4,6 +4,7 @@ from apsis.models.experiment import Experiment
 from apsis.models.candidate import Candidate
 from apsis.utilities.optimizer_utils import check_optimizer
 from apsis.utilities.file_utils import ensure_directory_exists
+import numpy as np
 import datetime
 import os
 import time
@@ -140,7 +141,7 @@ class ExperimentAssistant(object):
         """
         self._logger.debug("Returning experiment as dict.")
         exp_dict = self._experiment.to_dict()
-        self._logger.debug("Exp_dict is %s" %exp_dict)
+        self._logger.log(5, "Exp_dict is %s" %exp_dict)
         return exp_dict
 
     def update(self, candidate, status="finished"):
@@ -179,6 +180,8 @@ class ExperimentAssistant(object):
                           candidate.result)
 
         if status == "finished":
+            if (candidate.result is None or not np.isfinite(candidate.result)):
+                candidate.failed = True
             self._experiment.add_finished(candidate)
             self._logger.debug("Was finished, updating optimizer.")
             # And we rebuild the new optimizer.
@@ -308,13 +311,19 @@ class ExperimentAssistant(object):
         for i, e in enumerate(self._experiment.candidates_finished
                               [:plot_up_to]):
             x.append(i)
-            step_evaluation.append(e.result)
-            if self._experiment.better_cand(e, best_candidate):
-                best_candidate = e
-                step_best.append(e.result)
-
+            if not e.failed:
+                step_evaluation.append(e.result)
+                if self._experiment.better_cand(e, best_candidate):
+                    best_candidate = e
+                    step_best.append(e.result)
+                else:
+                    step_best.append(best_candidate.result)
             else:
-                step_best.append(best_candidate.result)
+                step_evaluation.append(float("NaN"))
+                if best_candidate is None:
+                    step_best.append(float("NaN"))
+                else:
+                    step_best.append(best_candidate.result)
             x_from += 1
 
         non_finished_evals = []
@@ -329,8 +338,6 @@ class ExperimentAssistant(object):
             x_from += 1
             non_finished_xs.append(x_from)
             non_finished_evals.append(e.result)
-
-
 
         self._logger.debug("Returning x: %s, step_eval: %s and step_best %s",
                            x, step_evaluation, step_best)
