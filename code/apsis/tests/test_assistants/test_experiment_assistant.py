@@ -1,14 +1,17 @@
 __author__ = 'Frederik Diehl'
 
+from apsis.utilities import logging_utils
+logging_utils.logging_tests()
+
+
 from apsis.assistants.experiment_assistant import ExperimentAssistant
 from nose.tools import assert_equal, assert_items_equal, assert_dict_equal, \
     assert_is_none, assert_raises, raises, assert_greater_equal, \
     assert_less_equal, assert_in, assert_true, assert_false, with_setup
-from apsis.utilities.logging_utils import get_logger
 from apsis.models.parameter_definition import *
-from apsis.optimizers.random_search import RandomSearch
 import time
 from apsis.models import experiment
+
 
 class TestExperimentAssistant(object):
     """

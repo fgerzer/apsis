@@ -523,7 +523,6 @@ class Experiment(object):
 
 global_logger = logging_utils.get_logger("models.Experiment")
 
-
 def from_dict(d):
     global_logger.log(5, "Reconstructing experiment from dict %d", d)
     name = d["name"]

@@ -1,26 +1,22 @@
 # Fix for TclError: no display name and no $DISPLAY environment variable if
-#directly starting from start_apsis.
+# directly starting from start_apsis.
 import matplotlib
+
 matplotlib.use('Agg')
-
-
 
 from flask import Flask, request, jsonify, render_template
 from apsis.assistants.lab_assistant import LabAssistant
-from apsis.models.candidate import Candidate, from_dict
+from apsis.models.candidate import from_dict
 from functools import wraps
 from apsis.utilities.param_def_utilities import dict_to_param_defs
-import os
 import sys
 import signal
+import time
 import urllib
 import StringIO
-import datetime
-import time
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from apsis.utilities import file_utils
 from apsis.utilities import logging_utils
-import traceback
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
@@ -38,12 +34,13 @@ lAss = None
 
 should_fail_deadly = False
 
+
 def set_exit(_signo, _stack_frame):
     """
     Sets the exit for the lab assistant.
     """
     _logger.warning("Shutting down apsis server, due to signal %s with "
-                    "stackframe %s" %(_signo, _stack_frame))
+                    "stackframe %s" % (_signo, _stack_frame))
     IOLoop.instance().stop()
     lAss.set_exit()
     http_server.stop()
@@ -51,17 +48,20 @@ def set_exit(_signo, _stack_frame):
     exited = True
     sys.exit()
 
+
 signal.signal(signal.SIGINT, set_exit)
 
 
-def start_apsis(port=5000, continue_path=None, fail_deadly=False):
+def start_apsis(save_path, port=5000, fail_deadly=False):
     """
     Starts apsis.
 
     Initializes logger, LabAssistant and the REST app.
     """
     global lAss, _logger
-    _logger = logging_utils.get_logger("webservice.REST_interface")
+    file_utils.ensure_directory_exists(save_path)
+    _logger = logging_utils.get_logger("webservice.REST_interface",
+                                       save_path=save_path)
     if fail_deadly:
         print("WARNING! Fail deadly is active. Make sure you know what you do."
               "State of the program might be lost at any time, and the "
@@ -70,24 +70,14 @@ def start_apsis(port=5000, continue_path=None, fail_deadly=False):
                         "what you do. State of the program might be lost at "
                         "any time, and the program might crash unexpectedly.")
 
+    write_dir = save_path
+    file_utils.ensure_directory_exists(write_dir)
 
-
-    if continue_path:
-        write_dir = continue_path
-    else:
-        if os.name == "nt":
-            write_dir = os.path.relpath("APSIS_WRITING")
-        else:
-            write_dir = "/tmp/APSIS_WRITING"
-        date_name = datetime.datetime.utcfromtimestamp(
-                time.time()).strftime("%Y-%m-%d_%H.%M.%S")
-        write_dir = os.path.join(write_dir, date_name)
     global should_fail_deadly, http_server, exited
     should_fail_deadly = fail_deadly
     exited = False
-    file_utils.ensure_directory_exists(write_dir)
-    lAss = LabAssistant(write_dir=write_dir)
 
+    lAss = LabAssistant(write_dir=write_dir)
 
     http_server = HTTPServer(WSGIContainer(app))
     http_server.listen(port)
@@ -103,6 +93,7 @@ def exception_handler(func):
     written to the "result" field. Any failure is catched and logged.
     If failed, "result" is set to "failed".
     """
+
     @wraps(func)
     def handle_exception(*args, **kwargs):
         global exited
@@ -117,12 +108,13 @@ def exception_handler(func):
                 request.environ.get('werkzeug.server.shutdown')()
                 lAss.set_exit()
                 raise RuntimeError("Exception raised and fail_deadly active."
-                                " Raising general exception. Original "
-                                "exception is " + str(e))
+                                   " Raising general exception. Original "
+                                   "exception is " + str(e))
             elif exited:
                 raise SystemExit()
 
             return jsonify(result="failed")
+
     return handle_exception
 
 
@@ -176,7 +168,7 @@ def client_init_experiment():
     if lAss.contains_id(exp_id):
         _logger.warning("%s already in exp_ids. (Exp_ids known are %s). "
                         "Failing the initialization."
-                        %(exp_id, lAss.get_ids()))
+                        % (exp_id, lAss.get_ids()))
         return "failed"
     optimizer = data_received.get("optimizer", None)
     optimizer_arguments = data_received.get("optimizer_arguments", None)
@@ -185,7 +177,8 @@ def client_init_experiment():
     param_defs = dict_to_param_defs(param_defs)
     _logger.debug("Initializing experiment.")
     exp_id = lAss.init_experiment(name, optimizer, param_defs,
-                              exp_id, notes, optimizer_arguments, minimization)
+                                  exp_id, notes, optimizer_arguments,
+                                  minimization)
     _logger.info("Initialized new experiment of name %s. exp_id is %s",
                  name, exp_id)
     return exp_id
@@ -229,7 +222,7 @@ def get_experiment(experiment_id):
     best_candidate_string = exp_dict["best_candidate"]
     fig = lAss.get_plot_result_per_step(experiment_id)
     fig.autofmt_xdate()
-    canvas=FigureCanvas(fig)
+    canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
     canvas.print_png(png_output)
     png_output = png_output.getvalue().encode("base64")
@@ -420,9 +413,6 @@ def _filter_data(json):
         if isinstance(json[k], unicode):
             json[k] = str(json[k])
     return json
-
-
-
 
 @app.context_processor
 def client_date_formatting():

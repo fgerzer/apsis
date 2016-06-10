@@ -204,7 +204,7 @@ class Candidate(object):
             self._logger.debug("param_def dict is %s", d)
         return d
 
-global_logger = get_logger("models.candidate")
+global_logger = get_logger("models.Candidate")
 
 
 def from_dict(d):

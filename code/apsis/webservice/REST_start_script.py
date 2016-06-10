@@ -8,18 +8,19 @@ matplotlib.use('Agg')
 import REST_interface
 import argparse
 
-def start_rest(port=5000, continue_path=None, fail_deadly=False):
+
+def start_rest(save_path, port=5000, fail_deadly=False):
     print("Initialized apsis on port %s" %port)
     print("Fail_deadly is %s" %fail_deadly)
-    REST_interface.start_apsis(port, continue_path=continue_path,
+    REST_interface.start_apsis(save_path, port,
                                fail_deadly=fail_deadly)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", help="Set the apsis server's port.")
-    parser.add_argument("--continue_path", help="Continue a previous "
-                                                "experiment.")
+    parser.add_argument("save_path", help="Set a path to store logging and "
+                                       "continuation information.")
     parser.add_argument("--fail_deadly", help="Fails with every exception "
                                               "instead of catching them. "
                                               "Warning! Dangerous. Do not use "
@@ -29,10 +30,10 @@ if __name__ == "__main__":
     port = 5000
     if args.port:
         port = args.port
-    continue_path = None
+    save_path = None
     fail_deadly = False
-    if args.continue_path:
-        continue_path = args.continue_path
+    if args.save_path:
+        save_path = args.save_path
     if args.fail_deadly:
         fail_deadly = True
-    start_rest(port, continue_path, fail_deadly)
+    start_rest(save_path, port, fail_deadly)
