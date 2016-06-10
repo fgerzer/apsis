@@ -6,7 +6,8 @@ import os
 from matplotlib.colors import colorConverter
 
 
-def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None, plot_max=None):
+def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None,
+               plot_max=None):
     """
     Plots several functions.
 
@@ -66,9 +67,11 @@ def plot_lists(to_plot_list, fig_options=None, ax=None, plot_min=None, plot_max=
         if not "cutoff_percent" in p:
             continue
         if fig_options.get("minimizing", True):
-            plot_min_this, plot_max_this = _get_y_min_max(p["y"], (1, p.get("cutoff_percent", 1)))
+            plot_min_this, plot_max_this = _get_y_min_max(p["y"], (
+                1, p.get("cutoff_percent", 1)))
         else:
-            plot_min_this, plot_max_this = _get_y_min_max(p["y"], (p.get("cutoff_percent", 1), 1))
+            plot_min_this, plot_max_this = _get_y_min_max(p["y"], (
+                p.get("cutoff_percent", 1), 1))
         if plot_min is None or plot_min > plot_min_this:
             plot_min = plot_min_this
         if plot_max is None or plot_max > plot_max_this:
@@ -160,14 +163,16 @@ def _get_y_min_max(y, plot_at_least):
     if plot_at_least[1] == 1:
         max_y_new = max(y)
     else:
-        max_y_new = sorted_y[min(len(sorted_y)-1, int(plot_at_least[1] * len(sorted_y)))]
+        max_y_new = sorted_y[min(len(sorted_y)-1, int(plot_at_least[1] *
+                                                      len(sorted_y)))]
 
     return min_y_new, max_y_new
 
 COLORS = ["g", "r", "c", "b", "m", "y"]
 
 
-def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None):
+def plot_single(to_plot, ax=None, fig_options=None, plot_min=None,
+                plot_max=None):
     """
     Plots a single function.
 
@@ -223,30 +228,41 @@ def plot_single(to_plot, ax=None, fig_options=None, plot_min=None, plot_max=None
     #the arrow colors. Cause is unclear.
     if type == "line":
         if "var" in to_plot:
-            ax.errorbar(x, y, label=label, yerr=var, color=color, linewidth=2.0, capthick=4, capsize=8.0)
+            ax.errorbar(x, y, label=label, yerr=var, color=color,
+                        linewidth=2.0, capthick=4, capsize=8.0)
         else:
             ax.plot(x, y, label=label, color=color, linewidth=2.0)
     elif type=="scatter":
         ax.scatter(x, y, label=label, color=color)
         if len(x) > 1 and max(y) != min(y):
             for i in range(len(x)):
-                arrow_len = (plot_max - plot_min) * 0.05
+                if plot_min is None or plot_min is None:
+                    arrow_len = 0.05
+                else:
+                    arrow_len = (plot_max - plot_min) * 0.05
                 arrow_factor_min = abs(y[i] - min(y)) / (max(y) - min(y)) + 0.1
                 arrow_factor_max = abs(max(y) - y[i]) / (max(y) - min(y)) + 0.1
                 arrow_len_min = arrow_len * arrow_factor_min
                 arrow_len_max = arrow_len * arrow_factor_max
                 head_width = 0.2
-                if plot_min > y[i]:
-                    ax.arrow(x[i], plot_min+1.1*arrow_len_min, 0, -arrow_len_min/10, fc="k", ec="k",
-                        head_width=head_width, head_length=arrow_len_min, color=color)
-                if plot_max < y[i]:
-                    ax.arrow(x[i], plot_max-1.1*arrow_len_max, 0, arrow_len_max/10, fc="k", ec="k",
-                        head_width=head_width, head_length=arrow_len_max, color=color)
-    ax.set_xlim(xmin=0)
+                if plot_min is not None:
+                    if plot_min > y[i]:
+                        ax.arrow(x[i], plot_min+1.1*arrow_len_min, 0,
+                                 -arrow_len_min/10, fc="k", ec="k",
+                                 head_width=head_width,
+                                 head_length=arrow_len_min,
+                                 color=color)
+                if plot_max is not None:
+                    if plot_max < y[i]:
+                        ax.arrow(x[i], plot_max-1.1*arrow_len_max, 0,
+                                 arrow_len_max/10, fc="k", ec="k",
+                                 head_width=head_width,
+                                 head_length=arrow_len_max, color=color)
     return ax
 
 
-def write_plot_to_file(fig, filename, store_path,  file_format="png", transparent=False):
+def write_plot_to_file(fig, filename, store_path,  file_format="png",
+                       transparent=False):
     """
     Write out plot to the file given in filename. Assumes that all
     directories already exist.
@@ -264,8 +280,10 @@ def write_plot_to_file(fig, filename, store_path,  file_format="png", transparen
     transparent : boolean, optional
         Specifies if a transparent figure is written. Default is False.
     """
-    filename_w_extension = os.path.join(store_path, filename + "." + file_format)
-    fig.savefig(filename_w_extension, format=file_format, transparent=transparent)
+    filename_w_extension = os.path.join(store_path, filename + "." +
+                                        file_format)
+    fig.savefig(filename_w_extension, format=file_format,
+                transparent=transparent)
 
 
 def create_figure(fig_options=None):
@@ -315,21 +333,9 @@ def _polish_figure(ax, fig_options=None):
 
     legend_loc = fig_options.get("legend_loc", "upper right")
 
-    #if legend_loc == "below":
-        #TODO This code doesn't work yet, needs to be fixed - but before
-        # matplotlib usage has to be refactored to use pure object
-        #oriented mode.
-
-        # Shrink current axis's height by 10% on the bottom
-        #box = fig.get_position()
-        #fig.set_position([box.x0, box.y0 + box.height * 0.1,
-        #         box.width, box.height * 0.9])
-
-        # Put a legend below current axis
-        #fig.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-        #  fancybox=True, shadow=True, ncol=5)
+    ax.set_xlim(left=0)
     if legend_loc == "no":
-        #do nothing right now, since no legend
+        # do nothing right now, since no legend
         pass
     else:
         ax.legend(loc=legend_loc)
