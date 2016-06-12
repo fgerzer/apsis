@@ -23,7 +23,8 @@ from tornado.ioloop import IOLoop
 
 CONTEXT_ROOT = ""
 
-app = Flask('apsis')
+app = Flask('apsis', static_folder="./webservice/static",
+            template_folder="./webservice/templates")
 
 _logger = None
 
