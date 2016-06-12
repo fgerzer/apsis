@@ -15,16 +15,18 @@
                 <th>name</th>
                 <th>id</th>
                 <th>last updated</th>
-                <th>candidates<br> f/w/p</th>
+                <th colspan="3">candidates<br> f/w/p</th>
                 <th>notes</th>
             </tr>
             {% for e in experiments%}
         <tr>
-              <th>{{e["name"]}}</th>
-              <th><a href={{ "/experiments/" ~ e["exp_id"]}}> {{e["exp_id"]}}</a></th>
-              <th>{{format_datetime(e["last_update_time"])}}</th>
-              <th>{{e["candidates_finished"]|length}}/{{e["candidates_working"]|length}}/{{e["candidates_pending"]|length}}</th>
-              <th>{{e["notes"]}}</th>
+              <td>{{e["name"]}}</td>
+              <td><a href={{ "/experiments/" ~ e["exp_id"]}}> {{e["exp_id"]}}</a></td>
+              <td>{{format_datetime(e["last_update_time"])}}</td>
+              <td>{{e["candidates_finished"]|length}}</td>
+              <td>{{e["candidates_working"]|length}}</td>
+              <td>{{e["candidates_pending"]|length}}</td>
+              <td>{{e["notes"]}}</td>
           </tr>
             {% endfor %}
          </table>
