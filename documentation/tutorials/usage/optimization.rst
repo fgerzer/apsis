@@ -5,38 +5,39 @@ apsis implements a technique called Bayesian Optimization for optimizing hyperpa
 
 There are several reasons why hyperparameter optimization is difficult: Your machine learning algorithm usually takes a long time to run, punishing an excessive number of evaluations. The fitness landscape usually has a very high dimensionality. It is impossible (or very difficult) to compute gradients of the hyperparameters with respect to the final performance. And, lastly, there's little to no previous knowledge for a truly novel ML algorithm.
 
-Bayesian Optimization uses Gaussian processes to optimize hyperparameters. Intuitively, a point in the fitness landscape (that is, a certain hyperparameter configuration for your ML algorithm) should tell you something about points which are closeby - you intuitively expect the weather in London to tell you more about the weather in Oxford than the weather in Sidney. By leveraging this locality through Gaussian processes, we gain a predicted mean and a predicted variance for each point on our fitness landscape - even those we haven't seen yet. In this way, our Gaussian functions as a surrogate function to our real fitness landscape.
+Bayesian Optimization uses Gaussian processes to optimize hyperparameters. Intuitively, a point in the fitness landscape (that is, a certain hyperparameter configuration for your ML algorithm) should tell you something about points which are closeby - you expect the weather in London to tell you more about the weather in Oxford than the weather in Sidney. By leveraging this locality through Gaussian processes, we are able to predict the performance of any hyperparameter configuration. One nice aspect of using Gaussian Processes is that we get both a predicted mean and a predicted variance for each point on our fitness landscape - even those we haven't seen yet. In this way, our Gaussian functions acts as a surrogate function to our real fitness landscape.
 
-We then try to choose points in a way that both tells us more about our fitness landscape (exploration) and minimizes or maximizes it (exploitation). Choosing the correct point is done by maximizing the so-called acquisition function, which uses the mean and variance at each point to compute its score. One example computes the expected improvement compared to the current best result. This acquisition function is far, far cheaper to evaluate than our machine learning algorithm and usually differentiable. We therefore can easily use the usual optimization methods like LBFSG.
+We then try to choose points in a way that both tells us more about our fitness landscape (exploration) and minimizes or maximizes our performance (exploitation). Choosing the correct point is done by maximizing the so-called acquisition function, which uses the mean and variance at each point to compute its score. One example computes the expected improvement compared to the current best result. This acquisition function is far, far cheaper to evaluate than our machine learning algorithm and usually differentiable. We therefore can easily use the usual optimization methods like LBFSG.
+
+To sum up: We use Gaussian processes as a surrogate function to model our expensive function, then optimize on this cheap surrogate function. Whether we want to explore or exploit is defined by the acquisition function.
 
 A comprehensive introduction to the field of hyperparameter optimization for machine learning algorithms can be found in 
 
-.. [1] James Bergstra, Rémy Bardenet, Yoshua Bengio, and Balazs Kegl. Algorithms for hyper-parameter optimization. In NIPS’2011, 2011. `See here for downloading the paper. <http://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf>`_
+.. [1] James Bergstra, Rémy Bardenet, Yoshua Bengio, and Balazs Kegl. `Algorithms for hyper-parameter optimization. <http://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf>`_ In NIPS’2011, 2011.
 
 It also includes a very short introduction to Bayesian Optimization. 
 
 For a more in-depth explanation of Bayesian Optimization, the following tutorial is a must-read:
 
-.. [2] Eric Brochu, Vlad M. Cora, and Nando de Freitas. A Tutorial on Bayesian Optimization of Expensive Cost Functions, with Application to Active User Modeling and Hierarchical Reinforcement Learning. IEEE Transactions on Reliability, 2010. `See here for downloading the paper. <http://arxiv.org/abs/1012.2599>`_
+.. [2] Eric Brochu, Vlad M. Cora, and Nando de Freitas. `A Tutorial on Bayesian Optimization of Expensive Cost Functions, with Application to Active User Modeling and Hierarchical Reinforcement Learning. <http://arxiv.org/abs/1012.2599>`_ IEEE Transactions on Reliability, 2010. 
 
 Finally the following paper provides a comprehensive introduction in the usage of Bayesian Optimization for hyperparameter optimization. It includes some tricks which we use in apsis.
 
-.. [3] Jasper Snoek, Hugo Larochelle, and Ryan P Adams. Practical bayesian optimization of machine learning algorithms. In NIPS, pages 2960–2968, 2012. `See here for downloading the paper. <http://arxiv.org/pdf/1206.2944.pdf>`_
+.. [3] Jasper Snoek, Hugo Larochelle, and Ryan P Adams. `Practical bayesian optimization of machine learning algorithms. <http://arxiv.org/pdf/1206.2944.pdf>`_ In NIPS, pages 2960–2968, 2012.
 
 
-
-This tutorial gives an overview on how to switch around between several possibilities implemented in apsis, including how to switch acquisition functions, kernels or the way acquisition functions are optimized.
+The remainder of this tutorial gives an overview on how to switch around between several possibilities implemented in apsis, including how to switch acquisition functions, kernels or the way acquisition functions are optimized.
 
 
 Choosing Acquisition Functions
 ===============================
 
-So far apsis contains two acquisition functions, the :class:`ProbabilityOfImprovement <apsis.optimizers.bayesian.acquisition_functions.ProbabilityOfImprovement>` function, as well as :class:`ExpectedImprovement <apsis.optimizers.bayesian.acquisition_functions.ExpectedImprovement>`. You can easily provide your own acquisition functions by extending to the :class:`AcquisitionFunction <apsis.optimizers.bayesian.acquisition_functions.AcquisitionFunction>` class. 
+So far apsis contains two acquisition functions, the :class:`ProbabilityOfImprovement <apsis.optimizers.bayesian.acquisition_functions.ProbabilityOfImprovement>` function, as well as :class:`ExpectedImprovement <apsis.optimizers.bayesian.acquisition_functions.ExpectedImprovement>`. You can easily provide your own acquisition functions by extending the :class:`AcquisitionFunction <apsis.optimizers.bayesian.acquisition_functions.AcquisitionFunction>` class. 
 Probability Of Improvement is mainly included for the sake of completeness - the Expected Improvement function is the one most commonly used in Bayesian Optimization. It is said to have a good balance between exploration of unknown regions and exploitation of well-known but promising regions. 
 
-You can choose the acquisition function - or, indeed, most of the optimizer parameters - by passing it to init_experiment using the `optimizer_arguments` parameter. A full list of available arguments can be found in TODO!! ..TODO!..
-
+You can choose the acquisition function - or, indeed, most of the optimizer parameters - by passing it to ``init_experiment`` using the ``optimizer_arguments`` parameter.
 As an example, you can use::
+
     optimizer_params = {
         "acquisition": "ExpectedImprovement"
     }
@@ -61,9 +62,9 @@ Furthermore an acquisition function can receive hyperparameters, e.g. for tellin
 Choosing Kernels
 =================
 
-Another central point of tweaking the performance of bayesian optimization is the kernel. apsis supports the Matern 5-2 and the RBF kernel. The first one is the standard choice. Both kernels use the GPy package. Choosing your kernel works similar to choosing your acquisition function.
+Another central point of tweaking the performance of bayesian optimization is the kernel. apsis supports the Matern 5-2 and the RBF kernel. The first one is the standard choice. Both kernels use the GPy package. Choosing your kernel works similarly to choosing your acquisition function.
 
-You can either specify the kernel as one of those two strings ["matern52", "rbf"] or supply a class inheriting from the GPy.kern.Kern class.::
+You can either specify the kernel as one of those two strings ``["matern52", "rbf"]`` or supply a class inheriting from the GPy.kern.Kern class.::
 
     optimizer_params = {
         "kernel": "Matern52",
@@ -81,7 +82,7 @@ By default the Matern 5-2 kernel with ARD will be used.
 Minimizing or Maximizing your Objective Function
 ================================================
 
-By default apsis assumes you want to minimize your objective function, e.g. that it represents the error of your machine learning algorithm. However, apsis can easily be switched to assume maximization by specifying the minimization property of :class:`LabAssistant <apsis.assistants.lab_assistant.BasicLabAssistant>` or :class:`ExperimentAssistant <apsis.assistants.experiment_assistant.PrettyExperimentAssistant>`.::
+By default apsis assumes you want to minimize your objective function, e.g. that it represents the error of your machine learning algorithm. However, apsis can easily be switched to assume maximization by specifying so when initializing an experiment::
 
     exp_id = conn.init_experiment(name, optimizer, 
                               param_defs, minimization=False)
@@ -89,13 +90,12 @@ By default apsis assumes you want to minimize your objective function, e.g. that
 Expected Improvement
 ====================
 
-This section describes how Expected Improvement is implemented in apsis. You migh also want to see the `source code. <https://github.com/FrederikDiehl/apsis/blob/master/code/apsis/optimizers/bayesian/acquisition_functions.py>`_.
+The Expected Improvement function implemented in apsis has a couple of places that can be tuned.
+    
+The parameter ``exploitation_exploration_tradeoff`` has been suggested in the Brochu paper (originally from Lisotte 2008). It is a positive number, and has been suggested to be set to ``0.01``.
 
-The Expected Improvement function implemented in apsis has a couple of places that can be tuned
+By default, Expected Improvement uses LBFGSB to optimize the function. It is suggested you keep this.
 
-    * maximization method of ExpectedImprovement
-    * exploration/exploitation tradeoff
-    * minimization or maximization
     
     
 Closed Form Computation and Gradient
