@@ -26,6 +26,37 @@ class AcquisitionFunction(object):
     an own good_proposals list as a second return value (or None). These are
     evaluated proposals which are not in the first list, and are used to
     reuse computation.
+
+    ``max_searcher`` and ``multi_searcher`` functions are searched for by
+    taking the key with which they are referred to, and prepending
+    multi_searcher and max_searcher respectively. For example, the key
+    ``'random'`` as a max_searcher is used to refer to the function
+    ``max_searcher_random``.
+
+    This class already implements several of these searchers:
+
+    * ``max_searcher_random`` randomly draws several proposals and returns the
+        best one.
+    * ``multi_searcher_random_best`` randomly draws several proposals and
+        returns the n best.
+    * ``multi_searcher_random_weighted`` randomly draws several proposals, and
+        returns a list of n proposals such that the probability of each
+        proposal getting returned is proportional to the quality of its result.
+
+    Attributes
+    ----------
+    _logger : logger instance
+        The logger used to log details.
+    params : dict or None
+        The dictionary of parameters defining the behaviour of the
+        acquisition function. Supports at least max_searcher and
+        multi_searcher.
+    minimizes : bool
+        Whether the goal is to minimize or maximize the acquisition function.
+    default_max_searcher : string
+        Which max_searcher to use if it is not defined in params.
+    default_multi_searcher : string
+        Which multi_searcher to use if it is not defined in params.
     """
 
     _logger = None
@@ -442,8 +473,11 @@ class GradientAcquisitionFunction(AcquisitionFunction):
     This represents an acquisition function whose gradient we can compute.
 
     This allows us to introduce some more (and nicer) optimizations.
-    """
 
+    It mostly implements the compute_minimizing_gradient and the
+    LBFGSB-max-searcher. This allows easily implementing any acquisition
+    function with an analytical by implementing the ``gradient`` method.
+    """
 
     default_max_searcher = "LBFGSB"
     default_multi_searcher = "random_weighted"
@@ -456,7 +490,9 @@ class GradientAcquisitionFunction(AcquisitionFunction):
 
         Signature is the same as evaluate.
         """
-        pass
+        raise NotImplementedError("Every subclass of "
+                                  "GradientAcquisitionFunction must implement"
+                                  " the gradient method.")
 
     def _compute_minimizing_gradient(self, x, gp, experiment):
         """
