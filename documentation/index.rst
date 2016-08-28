@@ -3,8 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: ../diagrams/apsis_logo.png
+
 Welcome to apsis's documentation!
 =================================
+
+
 
 A toolkit for hyperparameter optimization for machine learning algorithms.
 

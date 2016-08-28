@@ -236,6 +236,9 @@ def plot_single(to_plot, ax=None, fig_options=None, plot_min=None,
         ax.scatter(x, y, label=label, color=color)
         if len(x) > 1 and max(y) != min(y):
             for i in range(len(x)):
+                if y[i] is None:
+                    continue
+
                 if plot_min is None or plot_min is None:
                     arrow_len = 0.05
                 else:
