@@ -1,3 +1,5 @@
+![apsis logo](/diagrams/apsis_logo.png)
+
 apsis
 =====
 
