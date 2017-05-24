@@ -1,3 +1,11 @@
+Development has ceased
+======================
+Unfortunately, due to a new job, I have been unable to find the time to continue developing apsis. If you are still interested in bayesian hyperparameter optimization, you can take a look at, for example, [mlrMBO](http://mlr-org.github.io/mlrMBO/).
+Should you want to continue this project, feel free to do so, and feel free to contact me for any questions.
+
+
+
+
 ![apsis logo](/diagrams/apsis_logo.png)
 
 apsis
